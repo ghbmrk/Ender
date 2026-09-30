@@ -40,6 +40,8 @@ export type FixtureProviderOptions = {
   fallback?: InferenceProvider;
   /** Don't write missing requests (e.g. read-only test runs). */
   recordMissing?: boolean;
+  /** Also record requests that already have a fixture (used by fixtures:collect). */
+  recordAll?: boolean;
 };
 
 /**
@@ -60,7 +62,14 @@ export class FixtureInferenceProvider implements InferenceProvider {
   private async run<T>(kind: InferenceKind, request: unknown, fallback: () => Promise<InferenceEnvelope<T>>): Promise<InferenceEnvelope<T>> {
     const hash = requestHash(kind, request);
     const path = join(this.opts.fixturesDir, kind, `${hash}.json`);
+    const reqPath = join(this.opts.requestsDir, kind, `${hash}.json`);
+    const record = () => {
+      if (existsSync(reqPath)) return;
+      mkdirSync(dirname(reqPath), { recursive: true });
+      writeFileSync(reqPath, JSON.stringify({ type: kind, requestHash: hash, request: JSON.parse(canonicalize(request)) }, null, 1));
+    };
     if (existsSync(path)) {
+      if (this.opts.recordAll) record();
       const file = JSON.parse(readFileSync(path, "utf8")) as FixtureFile<T>;
       const parsed = RESULT_SCHEMAS[kind].safeParse(file.result);
       if (!parsed.success) throw new Error(`invalid fixture ${kind}/${hash}: ${parsed.error.message}`);
@@ -71,11 +80,7 @@ export class FixtureInferenceProvider implements InferenceProvider {
         provenance: { provider: "fixture", requestHash: hash, fixtureVersion: file.fixtureVersion },
       };
     }
-    const reqPath = join(this.opts.requestsDir, kind, `${hash}.json`);
-    if (this.opts.recordMissing !== false && !existsSync(reqPath)) {
-      mkdirSync(dirname(reqPath), { recursive: true });
-      writeFileSync(reqPath, JSON.stringify({ type: kind, requestHash: hash, request: JSON.parse(canonicalize(request)) }, null, 1));
-    }
+    if (this.opts.recordMissing !== false) record();
     this.misses.push({ kind, hash });
     if (this.opts.strict) throw new FixtureRequired(kind, hash, reqPath);
     return fallback();

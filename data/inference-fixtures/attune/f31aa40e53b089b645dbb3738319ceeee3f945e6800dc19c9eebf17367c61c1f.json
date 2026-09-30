@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "f31aa40e53b089b645dbb3738319ceeee3f945e6800dc19c9eebf17367c61c1f",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Bastion Weave",
+  "epithet": "the Burdened",
+  "observations": [
+   {
+    "quality": "knots",
+    "significance": "strong",
+    "text": "Deeply intricate, as the Keep likes."
+   },
+   {
+    "quality": "burden",
+    "significance": "weak",
+    "text": "Crushingly heavy for the Keep."
+   },
+   {
+    "quality": "flex",
+    "significance": "weak",
+    "text": "Pliant where the Keep wants rigidity."
+   }
+  ],
+  "suggestedAction": "sell",
+  "summary": "Intricate and bonded, but heavy, pliant and expensive to produce. Better sold than carried."
+ }
+}

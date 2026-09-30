@@ -1,0 +1,26 @@
+{
+ "type": "transform",
+ "requestHash": "172f07d331c3ca276659eae3baaec1e1b18b1cefa57fb5426bfa487ab80e989c",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "choices": [
+   {
+    "candidateId": "form-1w9u3ik",
+    "emphasis": "improve",
+    "rationale": "Keeps the full Knots and gains real Bonds, the Keep's clearest gain."
+   },
+   {
+    "candidateId": "form-mmfebe",
+    "emphasis": "explore",
+    "rationale": "A different shape: moderate Knots with genuine Bonds, far lighter."
+   },
+   {
+    "candidateId": "form-lofypa",
+    "emphasis": "economize",
+    "rationale": "Much lighter and cheaper to produce, trading away some intricacy."
+   }
+  ],
+  "summary": "This Form is intricate but crushingly heavy. The strongest path adds Bonds; the lighter paths give up Knots for weight and cost."
+ }
+}

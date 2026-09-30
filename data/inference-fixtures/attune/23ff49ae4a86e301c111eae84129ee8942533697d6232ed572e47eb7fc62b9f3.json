@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "23ff49ae4a86e301c111eae84129ee8942533697d6232ed572e47eb7fc62b9f3",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Pale Sliver",
+  "epithet": "the Unknotted",
+  "observations": [
+   {
+    "quality": "burden",
+    "significance": "strong",
+    "text": "Light in the hand, as the Vault prefers."
+   },
+   {
+    "quality": "veil",
+    "significance": "strong",
+    "text": "Its Veil is close to the Vault's balance point."
+   },
+   {
+    "quality": "knots",
+    "significance": "weak",
+    "text": "Almost no Knots, the Vault's chief demand."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "Light, well-veiled and cheap to make, but nearly unknotted. A careful transformation toward intricacy could make it a strong Vault Form."
+ }
+}

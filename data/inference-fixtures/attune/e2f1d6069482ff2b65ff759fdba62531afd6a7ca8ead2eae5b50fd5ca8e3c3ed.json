@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "e2f1d6069482ff2b65ff759fdba62531afd6a7ca8ead2eae5b50fd5ca8e3c3ed",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Glass Wick",
+  "epithet": "the Short-Sighted",
+  "observations": [
+   {
+    "quality": "reach",
+    "significance": "uncertain",
+    "text": "Some Reach, though the Fen wants far more."
+   },
+   {
+    "quality": "flex",
+    "significance": "weak",
+    "text": "Stiff where the Fen rewards suppleness."
+   },
+   {
+    "quality": "veil",
+    "significance": "uncertain",
+    "text": "Its Veil is somewhat thin for the Fen."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "Cheap and unremarkable. Nothing here is broken, but nothing excels; transform toward more Reach and Flex."
+ }
+}

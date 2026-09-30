@@ -1,25 +1,25 @@
 {
  "type": "attune",
- "requestHash": "077a32aae8d8e0705728d6aa5667c0586066140dc33ff96db23aa1acee4a6892",
+ "requestHash": "23ff49ae4a86e301c111eae84129ee8942533697d6232ed572e47eb7fc62b9f3",
  "request": {
   "artifact": {
-   "fantasyId": "form-1h4mdsv",
+   "fantasyId": "form-13gzc6v",
    "qualities": {
-    "bond": 4,
-    "burden": 79,
-    "flex": 14.2,
-    "knots": 44,
-    "reach": 4,
-    "veil": 47
+    "bond": 0,
+    "burden": 22.4,
+    "flex": 42,
+    "knots": 8,
+    "reach": 0,
+    "veil": 50
    }
   },
   "buildPolicy": {
-   "arbitrage": 0.25,
-   "critique": 0.3,
-   "efficiency": 0.3,
+   "arbitrage": 0.2,
+   "critique": 0.2,
+   "efficiency": 0.5,
    "evidence": 0.3,
-   "exploration": 0.35,
-   "optimization": 0.35
+   "exploration": 0.15,
+   "optimization": 0.9
   },
   "knownEvidence": [
    {
@@ -28,16 +28,16 @@
    }
   ],
   "marketContext": {
-   "currentDemand": 1,
+   "currentDemand": 3,
    "essenceScarcity": {
-    "ash": 85.6,
-    "ember": 70.6,
-    "glass": 80.8,
-    "root": 100,
-    "storm": 60.6,
-    "tide": 47.4
+    "ash": 58.6,
+    "ember": 28.2,
+    "glass": 49.6,
+    "root": 50.5,
+    "storm": 49.7,
+    "tide": 34.7
    },
-   "productionCost": 379.3
+   "productionCost": 59.4
   },
   "realmObjective": {
    "constraints": [

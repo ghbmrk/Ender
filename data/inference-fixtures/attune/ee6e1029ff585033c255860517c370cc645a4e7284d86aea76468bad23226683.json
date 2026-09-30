@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "ee6e1029ff585033c255860517c370cc645a4e7284d86aea76468bad23226683",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Crown of Excess",
+  "epithet": "the Boundless",
+  "observations": [
+   {
+    "quality": "reach",
+    "significance": "strong",
+    "text": "Reach without limit; the Fen loves it."
+   },
+   {
+    "quality": "flex",
+    "significance": "strong",
+    "text": "Fully supple, another Fen virtue."
+   },
+   {
+    "quality": "veil",
+    "significance": "weak",
+    "text": "Its Veil is far too deep for the Fen's balance."
+   }
+  ],
+  "suggestedAction": "trial",
+  "summary": "Superb Reach and Flex, marred by an overdeep Veil and a heavy production cost. Trial it before committing Essences to it."
+ }
+}

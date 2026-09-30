@@ -1,0 +1,26 @@
+{
+ "type": "transform",
+ "requestHash": "4855ae40e2a2d38359e81dc1c6b8b16f7761ad20805005c1bf4e08fbac4cdb0b",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "choices": [
+   {
+    "candidateId": "form-1k509py",
+    "emphasis": "improve",
+    "rationale": "More Knots and a few Bonds for a similar Essence cost."
+   },
+   {
+    "candidateId": "form-bjxe55",
+    "emphasis": "economize",
+    "rationale": "Nearly as strong, fully rigid, and costs a fraction of the Essences."
+   },
+   {
+    "candidateId": "form-19ja8bo",
+    "emphasis": "repair",
+    "rationale": "Mends its only pliancy and gains a few Bonds, cheaply."
+   }
+  ],
+  "summary": "Small steps from a cheap, rigid Form. Intricacy is the Keep's lever; the frugal choice nearly matches it."
+ }
+}

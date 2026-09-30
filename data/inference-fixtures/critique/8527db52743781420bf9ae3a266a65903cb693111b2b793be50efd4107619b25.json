@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "8527db52743781420bf9ae3a266a65903cb693111b2b793be50efd4107619b25",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "knots",
+   "text": "Its modest Knots set the ceiling on how well it can do here."
+  },
+  "verdict": "sound",
+  "summary": "The reflections agree; it holds under other lights. Its limit is intricacy, not stability."
+ }
+}

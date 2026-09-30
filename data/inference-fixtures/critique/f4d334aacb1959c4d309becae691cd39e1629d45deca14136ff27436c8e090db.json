@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "f4d334aacb1959c4d309becae691cd39e1629d45deca14136ff27436c8e090db",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "burden",
+   "text": "Heavy for the Vault; its weight costs it more than its Knots earn."
+  },
+  "verdict": "fragile",
+  "summary": "Superbly intricate but heavy and deeply veiled. Half its cost is Glass."
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "46a1a8d328ffd67e77911fb3c63063087e36df7e3f4f296832062f8c45a10652",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "knots",
+   "text": "Hardly knotted; every reflection is capped by that."
+  },
+  "verdict": "fragile",
+  "summary": "The reflections agree within tolerance, but all are modest. Steady, not strong."
+ }
+}

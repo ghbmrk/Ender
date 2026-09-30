@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "0620dda0daa7c4cac5a395428954711ecdae5a6ee3c967217e155a61ec3aa3d0",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "bond",
+   "text": "No Bonds, where the Keep asks for a firm middle measure of them."
+  },
+  "verdict": "fragile",
+  "summary": "Light, rigid and cheap, with a few more Knots than before. The missing Bonds still hold it back."
+ }
+}

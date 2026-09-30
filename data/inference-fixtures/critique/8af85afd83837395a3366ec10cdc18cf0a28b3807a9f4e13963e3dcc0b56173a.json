@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "8af85afd83837395a3366ec10cdc18cf0a28b3807a9f4e13963e3dcc0b56173a",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "bond",
+   "text": "Its missing Bonds keep it middling under every light."
+  },
+  "verdict": "fragile",
+  "summary": "The reflections agree within tolerance, but every one is modest. Steady, not strong."
+ }
+}

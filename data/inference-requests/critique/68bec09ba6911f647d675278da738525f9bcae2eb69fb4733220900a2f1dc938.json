@@ -1,0 +1,64 @@
+{
+ "type": "critique",
+ "requestHash": "68bec09ba6911f647d675278da738525f9bcae2eb69fb4733220900a2f1dc938",
+ "request": {
+  "artifact": {
+   "fantasyId": "form-4r8bgg",
+   "qualities": {
+    "bond": 50,
+    "burden": 6.3,
+    "flex": 7.1,
+    "knots": 3.4,
+    "reach": 29.3,
+    "veil": 21.9
+   }
+  },
+  "buildPolicy": {
+   "arbitrage": 0.2,
+   "critique": 0.2,
+   "efficiency": 0.5,
+   "evidence": 0.3,
+   "exploration": 0.15,
+   "optimization": 0.9
+  },
+  "marketContext": {
+   "costByEssence": {
+    "ember": 30
+   },
+   "currentDemand": 4,
+   "essenceScarcity": {
+    "ash": 58.6,
+    "ember": 28.2,
+    "glass": 49.6,
+    "root": 50.5,
+    "storm": 49.7,
+    "tide": 34.7
+   },
+   "productionCost": 30
+  },
+  "mode": "fracture",
+  "realmObjective": {
+   "constraints": [
+    {
+     "mode": "minimize",
+     "quality": "burden",
+     "weight": 0.35
+    },
+    {
+     "mode": "maximize",
+     "quality": "knots",
+     "weight": 0.4
+    },
+    {
+     "mode": "target",
+     "quality": "veil",
+     "target": 45,
+     "tolerance": 20,
+     "weight": 0.25
+    }
+   ],
+   "id": "ashen-vault"
+  },
+  "wantSecond": false
+ }
+}

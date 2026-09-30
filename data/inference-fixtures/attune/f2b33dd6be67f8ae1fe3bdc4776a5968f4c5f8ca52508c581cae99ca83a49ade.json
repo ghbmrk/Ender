@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "f2b33dd6be67f8ae1fe3bdc4776a5968f4c5f8ca52508c581cae99ca83a49ade",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Tidebound Spar",
+  "epithet": "the Unveiled",
+  "observations": [
+   {
+    "quality": "reach",
+    "significance": "strong",
+    "text": "Long Reach, just what the Fen wants."
+   },
+   {
+    "quality": "veil",
+    "significance": "weak",
+    "text": "No Veil at all; the Fen expects some."
+   },
+   {
+    "quality": "bond",
+    "significance": "neutral",
+    "text": "Heavily bonded, which the Fen ignores."
+   }
+  ],
+  "suggestedAction": "trial",
+  "summary": "A far-reaching Form with no Veil. Trial it to measure how much the missing Veil costs."
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "ac2b4d3d102cb1c7bcbb62928e4562f50b1a9cbdec1ba0f5856eabf60378afdd",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "burden",
+   "text": "Nearly as heavy as a Form can be; the Vault wants lightness."
+  },
+  "verdict": "flawed",
+  "summary": "Extreme in every quality and very expensive to produce. Its weight undoes its intricacy in the Vault."
+ }
+}

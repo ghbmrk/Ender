@@ -1,0 +1,65 @@
+{
+ "type": "attune",
+ "requestHash": "ee6e1029ff585033c255860517c370cc645a4e7284d86aea76468bad23226683",
+ "request": {
+  "artifact": {
+   "fantasyId": "form-1du0afo",
+   "qualities": {
+    "bond": 94,
+    "burden": 100,
+    "flex": 100,
+    "knots": 100,
+    "reach": 100,
+    "veil": 97
+   }
+  },
+  "buildPolicy": {
+   "arbitrage": 0.1,
+   "critique": 0.25,
+   "efficiency": 0.2,
+   "evidence": 0.25,
+   "exploration": 0.85,
+   "optimization": 0.2
+  },
+  "knownEvidence": [
+   {
+    "label": "Lore unread",
+    "tier": "unsynced"
+   }
+  ],
+  "marketContext": {
+   "currentDemand": 0,
+   "essenceScarcity": {
+    "ash": 45.8,
+    "ember": 48.7,
+    "glass": 76.2,
+    "root": 58.9,
+    "storm": 36.7,
+    "tide": 23.2
+   },
+   "productionCost": 752.5
+  },
+  "realmObjective": {
+   "constraints": [
+    {
+     "mode": "maximize",
+     "quality": "reach",
+     "weight": 0.3
+    },
+    {
+     "mode": "target",
+     "quality": "veil",
+     "target": 40,
+     "tolerance": 25,
+     "weight": 0.35
+    },
+    {
+     "mode": "maximize",
+     "quality": "flex",
+     "weight": 0.35
+    }
+   ],
+   "id": "glass-fen"
+  }
+ }
+}

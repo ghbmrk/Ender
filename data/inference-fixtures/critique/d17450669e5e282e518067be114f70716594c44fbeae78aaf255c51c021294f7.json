@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "d17450669e5e282e518067be114f70716594c44fbeae78aaf255c51c021294f7",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "knots",
+   "text": "Too few Knots for the Vault, whose first wish is intricacy."
+  },
+  "verdict": "fragile",
+  "summary": "Light and well veiled, with a fair cost. The crack runs through its Knots."
+ }
+}

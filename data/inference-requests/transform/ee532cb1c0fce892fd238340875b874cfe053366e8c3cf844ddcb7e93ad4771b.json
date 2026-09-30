@@ -1,0 +1,269 @@
+{
+ "type": "transform",
+ "requestHash": "ee532cb1c0fce892fd238340875b874cfe053366e8c3cf844ddcb7e93ad4771b",
+ "request": {
+  "artifact": {
+   "fantasyId": "form-bjxe55",
+   "predictedTechnicalScore": 33.3,
+   "productionCost": 6.4,
+   "qualities": {
+    "bond": 1,
+    "burden": 10,
+    "flex": 0,
+    "knots": 17,
+    "reach": 0,
+    "veil": 32
+   }
+  },
+  "buildPolicy": {
+   "arbitrage": 0.1,
+   "critique": 0.25,
+   "efficiency": 0.2,
+   "evidence": 0.25,
+   "exploration": 0.85,
+   "optimization": 0.2
+  },
+  "candidates": [
+   {
+    "candidateId": "form-lqttvw",
+    "distance": 8.6,
+    "efficiency": 68.9,
+    "lore": "unsynced",
+    "marketValue": 389,
+    "predictedTechnicalScore": 35,
+    "productionCost": 12.7,
+    "qualities": {
+     "bond": 0,
+     "burden": 25,
+     "flex": 0,
+     "knots": 0,
+     "reach": 0,
+     "veil": 41
+    }
+   },
+   {
+    "candidateId": "form-h6e2nl",
+    "distance": 12,
+    "efficiency": 78.1,
+    "lore": "unsynced",
+    "marketValue": 396,
+    "predictedTechnicalScore": 37.7,
+    "productionCost": 8.5,
+    "qualities": {
+     "bond": 0,
+     "burden": 6,
+     "flex": 5,
+     "knots": 9,
+     "reach": 4,
+     "veil": 37
+    }
+   },
+   {
+    "candidateId": "form-1k509py",
+    "distance": 12.8,
+    "efficiency": 53.5,
+    "lore": "unsynced",
+    "marketValue": 377,
+    "predictedTechnicalScore": 30.3,
+    "productionCost": 21.2,
+    "qualities": {
+     "bond": 0,
+     "burden": 23,
+     "flex": 3,
+     "knots": 14,
+     "reach": 0,
+     "veil": 55
+    }
+   },
+   {
+    "candidateId": "form-vdctpq",
+    "distance": 14.5,
+    "efficiency": 55.2,
+    "lore": "unsynced",
+    "marketValue": 383,
+    "predictedTechnicalScore": 32.4,
+    "productionCost": 21.2,
+    "qualities": {
+     "bond": 5,
+     "burden": 16,
+     "flex": 0,
+     "knots": 0,
+     "reach": 4,
+     "veil": 52
+    }
+   },
+   {
+    "candidateId": "form-e4pjt9",
+    "distance": 14.8,
+    "efficiency": 77.8,
+    "lore": "unsynced",
+    "marketValue": 394,
+    "predictedTechnicalScore": 36.9,
+    "productionCost": 8.5,
+    "qualities": {
+     "bond": 0,
+     "burden": 8,
+     "flex": 0,
+     "knots": 15,
+     "reach": 8,
+     "veil": 36
+    }
+   },
+   {
+    "candidateId": "form-u4ik4x",
+    "distance": 15.4,
+    "efficiency": 83.6,
+    "lore": "unsynced",
+    "marketValue": 353,
+    "predictedTechnicalScore": 40.5,
+    "productionCost": 6.4,
+    "qualities": {
+     "bond": 9,
+     "burden": 28,
+     "flex": 22,
+     "knots": 11,
+     "reach": 0,
+     "veil": 31
+    }
+   },
+   {
+    "candidateId": "form-1xmt6dm",
+    "distance": 16.1,
+    "efficiency": 54.8,
+    "lore": "unsynced",
+    "marketValue": 348,
+    "predictedTechnicalScore": 38.5,
+    "productionCost": 25.6,
+    "qualities": {
+     "bond": 0,
+     "burden": 38,
+     "flex": 10,
+     "knots": 4,
+     "reach": 0,
+     "veil": 41
+    }
+   },
+   {
+    "candidateId": "form-7mh2cw",
+    "distance": 16.1,
+    "efficiency": 51.7,
+    "lore": "unsynced",
+    "marketValue": 386,
+    "predictedTechnicalScore": 33.8,
+    "productionCost": 25.4,
+    "qualities": {
+     "bond": 0,
+     "burden": 25,
+     "flex": 15,
+     "knots": 4,
+     "reach": 5,
+     "veil": 58
+    }
+   },
+   {
+    "candidateId": "form-5tmb3z",
+    "distance": 16.1,
+    "efficiency": 82.3,
+    "lore": "unsynced",
+    "marketValue": 344,
+    "predictedTechnicalScore": 36.9,
+    "productionCost": 6.4,
+    "qualities": {
+     "bond": 0,
+     "burden": 10,
+     "flex": 8,
+     "knots": 23,
+     "reach": 6,
+     "veil": 30
+    }
+   },
+   {
+    "candidateId": "form-19ja8bo",
+    "distance": 16.2,
+    "efficiency": 68.5,
+    "lore": "unsynced",
+    "marketValue": 339,
+    "predictedTechnicalScore": 34.9,
+    "productionCost": 12.9,
+    "qualities": {
+     "bond": 0,
+     "burden": 39,
+     "flex": 0,
+     "knots": 7,
+     "reach": 3,
+     "veil": 34
+    }
+   },
+   {
+    "candidateId": "form-1ew21th",
+    "distance": 17.5,
+    "efficiency": 76.8,
+    "lore": "unsynced",
+    "marketValue": 389,
+    "predictedTechnicalScore": 35,
+    "productionCost": 8.5,
+    "qualities": {
+     "bond": 0,
+     "burden": 22,
+     "flex": 0,
+     "knots": 18,
+     "reach": 0,
+     "veil": 39
+    }
+   },
+   {
+    "candidateId": "form-1dj5o3l",
+    "distance": 20.2,
+    "efficiency": 71,
+    "lore": "unsynced",
+    "marketValue": 399,
+    "predictedTechnicalScore": 38.6,
+    "productionCost": 12.7,
+    "qualities": {
+     "bond": 4,
+     "burden": 5,
+     "flex": 10,
+     "knots": 6,
+     "reach": 1,
+     "veil": 43
+    }
+   }
+  ],
+  "costWeight": 0,
+  "count": 3,
+  "marketContext": {
+   "currentDemand": 4,
+   "essenceScarcity": {
+    "ash": 45.8,
+    "ember": 48.7,
+    "glass": 76.2,
+    "root": 58.9,
+    "storm": 36.7,
+    "tide": 23.2
+   },
+   "productionCost": 6.4
+  },
+  "realmObjective": {
+   "constraints": [
+    {
+     "mode": "maximize",
+     "quality": "reach",
+     "weight": 0.3
+    },
+    {
+     "mode": "target",
+     "quality": "veil",
+     "target": 40,
+     "tolerance": 25,
+     "weight": 0.35
+    },
+    {
+     "mode": "maximize",
+     "quality": "flex",
+     "weight": 0.35
+    }
+   ],
+   "id": "glass-fen"
+  }
+ }
+}

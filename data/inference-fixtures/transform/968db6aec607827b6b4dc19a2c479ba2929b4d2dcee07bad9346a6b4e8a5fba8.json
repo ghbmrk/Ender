@@ -1,0 +1,26 @@
+{
+ "type": "transform",
+ "requestHash": "968db6aec607827b6b4dc19a2c479ba2929b4d2dcee07bad9346a6b4e8a5fba8",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "choices": [
+   {
+    "candidateId": "form-4r8bgg",
+    "emphasis": "improve",
+    "rationale": "Lighter with a deeper Veil, the best predicted fit for the Vault."
+   },
+   {
+    "candidateId": "form-d0uajc",
+    "emphasis": "economize",
+    "rationale": "Better balanced and far cheaper to produce."
+   },
+   {
+    "candidateId": "form-xyaz70",
+    "emphasis": "repair",
+    "rationale": "Adds Knots, the gap the Vault cares about most."
+   }
+  ],
+  "summary": "This Form is light but plain and thinly veiled. Each choice closes a different gap; the frugal one is also the most efficient."
+ }
+}

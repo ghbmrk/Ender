@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "02ca9ba9084351e2510ea34d78e59df198a70197ba14e308e3b9a628bbab5daa",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "reach",
+   "text": "It does not reach at all, and Reach is what the Fen wants first."
+  },
+  "verdict": "flawed",
+  "summary": "Cheap and a little supple now, but still without Reach. The crack runs through its Reach."
+ }
+}

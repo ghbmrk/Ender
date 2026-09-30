@@ -16,10 +16,12 @@ function requestNumbers(request: unknown): Set<number> {
   return out;
 }
 
+/** Free-text fields only: IDs and enum values are checked structurally, not for numbers. */
+const NON_TEXT_KEYS = new Set(["candidateId", "quality", "essence", "emphasis", "significance", "suggestedAction", "kind", "verdict"]);
 function texts(v: unknown, out: string[] = []): string[] {
   if (typeof v === "string") out.push(v);
   else if (Array.isArray(v)) v.forEach((x) => texts(x, out));
-  else if (v && typeof v === "object") Object.values(v).forEach((x) => texts(x, out));
+  else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) if (!NON_TEXT_KEYS.has(k)) texts(x, out);
   return out;
 }
 
@@ -45,7 +47,7 @@ export function validateFixture(kind: InferenceKind, request: unknown, fixture: 
   }
   const nums = requestNumbers(request);
   for (const t of texts(parsed.data)) {
-    for (const m of t.matchAll(/-?\d+(?:\.\d+)?/g)) {
+    for (const m of t.matchAll(/(?<![\w.])-?\d+(?:\.\d+)?(?![\w])/g)) {
       const n = Number(m[0]);
       if (!nums.has(Math.round(n)) && !nums.has(n)) errors.push(`number ${m[0]} in "${t}" not found in request`);
     }

@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "619435171f8aac43328f1dba009783975dd93726491a248399c3166727eaca23",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "burden",
+   "text": "Its weight drags it down whenever the Keep leans on lightness."
+  },
+  "verdict": "fragile",
+  "summary": "Strong in the Keep's own light, but one reflection falls past tolerance. Its Burden is the weak point."
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "99e8a2f4a731ebeff30e759485a54f6db90b6ad40f43cdf2c9255e8c9c6b660f",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "flex",
+   "text": "Its middling Flex swings the score when the Fen weighs suppleness differently."
+  },
+  "verdict": "fragile",
+  "summary": "Under other lights it wavers: one reflection falls and another rises, both just past tolerance."
+ }
+}

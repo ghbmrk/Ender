@@ -1,0 +1,70 @@
+{
+ "type": "attune",
+ "requestHash": "c6a69949f1121024b13e43132077c8bb988212df9e22003c3d9eecaf35b12a40",
+ "request": {
+  "artifact": {
+   "fantasyId": "form-6ysnms",
+   "qualities": {
+    "bond": 9,
+    "burden": 100,
+    "flex": 21,
+    "knots": 100,
+    "reach": 7,
+    "veil": 87
+   }
+  },
+  "buildPolicy": {
+   "arbitrage": 0.1,
+   "critique": 0.25,
+   "efficiency": 0.2,
+   "evidence": 0.25,
+   "exploration": 0.85,
+   "optimization": 0.2
+  },
+  "knownEvidence": [
+   {
+    "label": "Lore unread",
+    "tier": "unsynced"
+   }
+  ],
+  "marketContext": {
+   "currentDemand": 1,
+   "essenceScarcity": {
+    "ash": 45.8,
+    "ember": 48.7,
+    "glass": 76.2,
+    "root": 58.9,
+    "storm": 36.7,
+    "tide": 23.2
+   },
+   "productionCost": 361.9
+  },
+  "realmObjective": {
+   "constraints": [
+    {
+     "mode": "minimize",
+     "quality": "burden",
+     "weight": 0.3
+    },
+    {
+     "mode": "maximize",
+     "quality": "knots",
+     "weight": 0.3
+    },
+    {
+     "mode": "target",
+     "quality": "bond",
+     "target": 55,
+     "tolerance": 15,
+     "weight": 0.2
+    },
+    {
+     "mode": "minimize",
+     "quality": "flex",
+     "weight": 0.2
+    }
+   ],
+   "id": "hollow-keep"
+  }
+ }
+}

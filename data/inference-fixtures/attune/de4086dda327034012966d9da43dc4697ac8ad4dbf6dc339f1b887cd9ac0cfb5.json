@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "de4086dda327034012966d9da43dc4697ac8ad4dbf6dc339f1b887cd9ac0cfb5",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Knotted Pyre",
+  "epithet": "the Dense",
+  "observations": [
+   {
+    "quality": "knots",
+    "significance": "strong",
+    "text": "Knotted to the limit; the Vault's favourite trait."
+   },
+   {
+    "quality": "veil",
+    "significance": "uncertain",
+    "text": "Its Veil runs deeper than the Vault's balance point."
+   },
+   {
+    "quality": "burden",
+    "significance": "neutral",
+    "text": "Middling weight, a modest cost in the Vault."
+   }
+  ],
+  "suggestedAction": "trial",
+  "summary": "Its Knots are superb. The Veil overshoots and the weight costs a little; Trial it to see whether the intricacy wins out."
+ }
+}

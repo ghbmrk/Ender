@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "d705234092f0d6d3d7813aed4c7df0f97f6a11c7b8f314a1b9bbc50b4063c357",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "veil",
+   "text": "It has no Veil, and the Fen expects a balanced one."
+  },
+  "verdict": "fragile",
+  "summary": "Its Reach is excellent; its missing Veil is the crack. Most of its cost is Ember."
+ }
+}

@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "39afd73bf02724fdb0acf6091e4f1df85bba9b71d17d1dc6dbc635341956f559",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Drowned Bough",
+  "epithet": "the Supple Weight",
+  "observations": [
+   {
+    "quality": "flex",
+    "significance": "strong",
+    "text": "Remarkably supple; the Fen rewards this."
+   },
+   {
+    "quality": "veil",
+    "significance": "weak",
+    "text": "Its Veil is much deeper than the Fen's balance point."
+   },
+   {
+    "quality": "reach",
+    "significance": "weak",
+    "text": "Its Reach falls short of what the Fen wants."
+   }
+  ],
+  "suggestedAction": "trial",
+  "summary": "Its Flex is exceptional, but the Veil overshoots and the Reach is modest. Trial it to learn whether the Flex carries the rest."
+ }
+}

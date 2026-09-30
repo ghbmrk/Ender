@@ -10,6 +10,8 @@ export type ServerConfig = {
   strictFixtures: boolean;
   /** Record missing fixture requests to data/inference-requests. */
   recordMissing: boolean;
+  /** Record every inference request, including ones that hit a fixture. */
+  recordAllRequests?: boolean;
   /** Replay date a new world starts on. */
   startDate: string;
   devRoutes: boolean;

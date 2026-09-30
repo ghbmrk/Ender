@@ -1,0 +1,26 @@
+{
+ "type": "transform",
+ "requestHash": "89c397c8c7bbeef40a678d0ae93544a53aa443c0e9a33faa1586cbb07be2fbfb",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "choices": [
+   {
+    "candidateId": "form-wr34u7",
+    "emphasis": "improve",
+    "rationale": "Gains Flex and a balanced Veil while keeping its Reach."
+   },
+   {
+    "candidateId": "form-1q3gec1",
+    "emphasis": "economize",
+    "rationale": "Solid gains and cheaper to produce than the current Form."
+   },
+   {
+    "candidateId": "form-6xr0vt",
+    "emphasis": "explore",
+    "rationale": "Reaches further, leaving the Veil thin."
+   }
+  ],
+  "summary": "The Fen wants Flex and a balanced Veil. The first choice fixes both; the second is the thrifty route."
+ }
+}

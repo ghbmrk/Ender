@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "c6a69949f1121024b13e43132077c8bb988212df9e22003c3d9eecaf35b12a40",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Iron Litany",
+  "epithet": "the Ponderous",
+  "observations": [
+   {
+    "quality": "knots",
+    "significance": "strong",
+    "text": "Knotted to the limit, which the Keep prizes."
+   },
+   {
+    "quality": "burden",
+    "significance": "weak",
+    "text": "As heavy as a Form can be."
+   },
+   {
+    "quality": "bond",
+    "significance": "weak",
+    "text": "Few Bonds, far from what the Keep wants."
+   }
+  ],
+  "suggestedAction": "sell",
+  "summary": "Intricate but crushingly heavy and costly. Its value lies with a buyer, not in the Keep."
+ }
+}

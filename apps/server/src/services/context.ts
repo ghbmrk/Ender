@@ -27,6 +27,7 @@ export function selectInferenceProvider(config: ServerConfig): InferenceProvider
     requestsDir: resolve(config.dataDir, "inference-requests"),
     strict: config.strictFixtures,
     recordMissing: config.recordMissing,
+    recordAll: config.recordAllRequests,
     fallback: new RuleInferenceProvider(),
   });
 }

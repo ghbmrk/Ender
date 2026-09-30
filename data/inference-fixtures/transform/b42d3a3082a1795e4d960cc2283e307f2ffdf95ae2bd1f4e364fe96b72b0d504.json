@@ -1,0 +1,26 @@
+{
+ "type": "transform",
+ "requestHash": "b42d3a3082a1795e4d960cc2283e307f2ffdf95ae2bd1f4e364fe96b72b0d504",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "choices": [
+   {
+    "candidateId": "form-if3dnj",
+    "emphasis": "improve",
+    "rationale": "Adds Knots and sheds weight while holding its Veil."
+   },
+   {
+    "candidateId": "form-1t7gyw9",
+    "emphasis": "explore",
+    "rationale": "A new direction: little Reach, but balanced Veil and a low cost."
+   },
+   {
+    "candidateId": "form-wr34u7",
+    "emphasis": "economize",
+    "rationale": "Holds its ground for almost no Essences."
+   }
+  ],
+  "summary": "The Veil is already right; the Vault wants Knots and lightness. The first choice gives both, the others trade for cost or novelty."
+ }
+}

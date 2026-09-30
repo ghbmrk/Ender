@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "68bec09ba6911f647d675278da738525f9bcae2eb69fb4733220900a2f1dc938",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "knots",
+   "text": "Almost unknotted, and the Vault prizes intricacy most."
+  },
+  "verdict": "fragile",
+  "summary": "Feather-light and well bonded, but plain. The crack runs through its Knots."
+ }
+}
