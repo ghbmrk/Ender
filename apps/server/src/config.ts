@@ -29,4 +29,4 @@ export function configFromEnv(overrides: Partial<ServerConfig> = {}): ServerConf
 }
 
 /** A turning where one Essence is clearly dear, so the first Bazaar visit has a story. */
-export const DEFAULT_START_DATE = "2025-04-11";
+export const DEFAULT_START_DATE = "2023-08-04";

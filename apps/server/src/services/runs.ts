@@ -34,7 +34,7 @@ export type RunPlan = {
   boss: { name: string; hp: number; wardTargets: readonly number[] };
 };
 
-const ENEMY_COST: Record<EnemyKind, number> = { husk: 1, wisp: 1, hound: 1, keeper: 3, seer: 2, swarm: 2 };
+const ENEMY_COST: Record<EnemyKind, number> = { husk: 1, wisp: 1, hound: 1, keeper: 3, seer: 2, swarm: 3 };
 
 function obstacles(r: Rng, kind: RoomKind) {
   if (kind === "shrine") return [];
@@ -69,7 +69,7 @@ function composeWave(r: Rng, realm: RealmTemplate, budget: number): PlannedEnemy
     if (ENEMY_COST[k] > left && left < 3) continue;
     left -= ENEMY_COST[k];
     const p = spawnPoint(r);
-    if (k === "swarm") for (let i = 0; i < 5; i++) out.push({ kind: "swarm", x: p.x + r.int(-40, 40), y: p.y + r.int(-40, 40) });
+    if (k === "swarm") for (let i = 0; i < 4; i++) out.push({ kind: "swarm", x: p.x + r.int(-40, 40), y: p.y + r.int(-40, 40) });
     else out.push({ kind: k, ...p });
   }
   return out;

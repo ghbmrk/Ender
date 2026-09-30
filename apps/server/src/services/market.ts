@@ -455,7 +455,7 @@ export function bazaarView(ctx: Ctx, charId: string) {
       history: prices,
       trend: trend.text,
       change5: trend.change,
-      status: ratio > 1.6 ? "dear" : ratio > 1.2 ? "rising" : ratio < 0.7 ? "cheap" : "steady",
+      status: ratio > 1.8 ? "dear" : ratio > 1.25 ? "rising" : ratio < 0.7 ? "cheap" : "steady",
       priceRatio: round(ratio, 2),
       band: passives.priceBand ? { low: round(lo, 2), high: round(hi, 2) } : null,
       nextUncertainty,

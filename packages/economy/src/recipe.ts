@@ -3,7 +3,7 @@ import { RECIPE_DRIVERS } from "@weave/content";
 
 /**
  * Deterministic fantasy production recipe from a quality profile.
- * Each quality above 35 demands its Essence: qty = round((q − 25) / 4).
+ * Each quality above 35 demands its Essence: qty = round((q − 25) / 6).
  * (high Burden → Ash, Knots → Glass, Veil → Tide, Reach → Root, Flex → Storm, Bond → Ember.)
  * An economic abstraction only; it does not describe chemical manufacture.
  */
@@ -11,7 +11,7 @@ export function productionRecipe(q: FormQualities): ProductionRecipe {
   const essenceCosts: Partial<Record<EssenceId, number>> = {};
   for (const k of QUALITY_KEYS) {
     const v = q[k];
-    if (v >= 35) essenceCosts[RECIPE_DRIVERS[k]] = Math.round((v - 25) / 4);
+    if (v >= 35) essenceCosts[RECIPE_DRIVERS[k]] = Math.round((v - 25) / 6);
   }
   // Every Form needs at least a pinch of Ash to hold together.
   if (!Object.keys(essenceCosts).length) essenceCosts.ash = 1;
