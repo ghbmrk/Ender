@@ -1,0 +1,26 @@
+{
+ "type": "transform",
+ "requestHash": "ee532cb1c0fce892fd238340875b874cfe053366e8c3cf844ddcb7e93ad4771b",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "choices": [
+   {
+    "candidateId": "form-u4ik4x",
+    "emphasis": "improve",
+    "rationale": "Gains real Flex, the Fen's second wish, at no added cost."
+   },
+   {
+    "candidateId": "form-1dj5o3l",
+    "emphasis": "repair",
+    "rationale": "Brings the Veil to the Fen's balance and adds some Flex."
+   },
+   {
+    "candidateId": "form-e4pjt9",
+    "emphasis": "explore",
+    "rationale": "Finds a little Reach while keeping its Knots."
+   }
+  ],
+  "summary": "A humble, stiff Form with no Reach. Every choice here is cheap; Flex is the gain within easiest reach."
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "05fc82a51fc9fc03bac7cd5ebc54031f4b65382453ebf7929aed192d7e860dfb",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "burden",
+   "text": "It is as heavy as a Form can be, and the Keep punishes weight above all."
+  },
+  "verdict": "flawed",
+  "summary": "Intricate, but its weight and pliancy both work against the Keep. The crack runs through its Burden."
+ }
+}

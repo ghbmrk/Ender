@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "84aad5b2b11391f294e014ac643271098390791ba395049d65a2a3e3cd1dfb58",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Keep Splinter",
+  "epithet": "the Rigid",
+  "observations": [
+   {
+    "quality": "flex",
+    "significance": "strong",
+    "text": "Rigid, as the Keep's halls demand."
+   },
+   {
+    "quality": "bond",
+    "significance": "weak",
+    "text": "No Bonds at all, a clear gap for the Keep."
+   },
+   {
+    "quality": "knots",
+    "significance": "weak",
+    "text": "Few Knots for a Realm that prizes intricacy."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "Rigid and almost free to produce, but unbonded and simple. A cheap base to transform from."
+ }
+}

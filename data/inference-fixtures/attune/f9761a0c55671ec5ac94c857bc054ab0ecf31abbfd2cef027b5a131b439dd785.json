@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "f9761a0c55671ec5ac94c857bc054ab0ecf31abbfd2cef027b5a131b439dd785",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Fen Pebble",
+  "epithet": "the Humble",
+  "observations": [
+   {
+    "quality": "reach",
+    "significance": "weak",
+    "text": "No Reach at all, the Fen's first demand."
+   },
+   {
+    "quality": "flex",
+    "significance": "weak",
+    "text": "Entirely stiff."
+   },
+   {
+    "quality": "veil",
+    "significance": "strong",
+    "text": "Its Veil sits close to the Fen's balance point."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "Almost free to produce and correctly veiled, but it neither reaches nor bends. A cheap starting point for transformation."
+ }
+}

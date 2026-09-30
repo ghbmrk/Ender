@@ -1,0 +1,69 @@
+{
+ "type": "critique",
+ "requestHash": "0620dda0daa7c4cac5a395428954711ecdae5a6ee3c967217e155a61ec3aa3d0",
+ "request": {
+  "artifact": {
+   "fantasyId": "form-1k509py",
+   "qualities": {
+    "bond": 0,
+    "burden": 16.5,
+    "flex": 7.1,
+    "knots": 10.8,
+    "reach": 0,
+    "veil": 47.8
+   }
+  },
+  "buildPolicy": {
+   "arbitrage": 0.2,
+   "critique": 0.2,
+   "efficiency": 0.5,
+   "evidence": 0.3,
+   "exploration": 0.15,
+   "optimization": 0.9
+  },
+  "marketContext": {
+   "costByEssence": {
+    "tide": 17.9
+   },
+   "currentDemand": 6,
+   "essenceScarcity": {
+    "ash": 38.5,
+    "ember": 44.9,
+    "glass": 58.6,
+    "root": 50.7,
+    "storm": 68.6,
+    "tide": 20.6
+   },
+   "productionCost": 17.9
+  },
+  "mode": "fracture",
+  "realmObjective": {
+   "constraints": [
+    {
+     "mode": "minimize",
+     "quality": "burden",
+     "weight": 0.3
+    },
+    {
+     "mode": "maximize",
+     "quality": "knots",
+     "weight": 0.3
+    },
+    {
+     "mode": "target",
+     "quality": "bond",
+     "target": 55,
+     "tolerance": 15,
+     "weight": 0.2
+    },
+    {
+     "mode": "minimize",
+     "quality": "flex",
+     "weight": 0.2
+    }
+   ],
+   "id": "hollow-keep"
+  },
+  "wantSecond": false
+ }
+}

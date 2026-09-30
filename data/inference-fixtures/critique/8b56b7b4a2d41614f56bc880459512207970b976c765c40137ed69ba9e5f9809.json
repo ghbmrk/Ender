@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "8b56b7b4a2d41614f56bc880459512207970b976c765c40137ed69ba9e5f9809",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "burden",
+   "text": "Heavy, which the Keep punishes; its Knots and Bonds carry it despite that."
+  },
+  "verdict": "sound",
+  "summary": "A strong Keep Form: fully intricate with real Bonds. The crack runs through its Burden, and most of its cost is Glass."
+ }
+}

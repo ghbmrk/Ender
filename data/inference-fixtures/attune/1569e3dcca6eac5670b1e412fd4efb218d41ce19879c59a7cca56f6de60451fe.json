@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "1569e3dcca6eac5670b1e412fd4efb218d41ce19879c59a7cca56f6de60451fe",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Fen Tether",
+  "epithet": "the Stiff Mooring",
+  "observations": [
+   {
+    "quality": "flex",
+    "significance": "weak",
+    "text": "It does not bend at all, and the Fen wants suppleness."
+   },
+   {
+    "quality": "reach",
+    "significance": "weak",
+    "text": "Short Reach for a Realm that prizes distance."
+   },
+   {
+    "quality": "veil",
+    "significance": "uncertain",
+    "text": "Its Veil runs thin, a little under what the Fen asks."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "Rigid and short-reaching, this Form fights the Fen on every axis it cares about. Transform it or sell it on."
+ }
+}

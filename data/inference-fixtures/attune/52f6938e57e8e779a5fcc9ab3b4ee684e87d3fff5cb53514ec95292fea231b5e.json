@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "52f6938e57e8e779a5fcc9ab3b4ee684e87d3fff5cb53514ec95292fea231b5e",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Ember Mote",
+  "epithet": "the Featherweight",
+  "observations": [
+   {
+    "quality": "burden",
+    "significance": "strong",
+    "text": "Among the lightest Forms you have found."
+   },
+   {
+    "quality": "veil",
+    "significance": "strong",
+    "text": "Its Veil sits right at the Vault's balance point."
+   },
+   {
+    "quality": "knots",
+    "significance": "weak",
+    "text": "Only a few Knots; the Vault wants more."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "Nearly ideal in weight and Veil, and very cheap to produce. Adding Knots is the one improvement worth chasing."
+ }
+}

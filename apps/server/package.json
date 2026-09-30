@@ -1,0 +1,27 @@
+{
+  "name": "@ender/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@ender/content": "workspace:*",
+    "@ender/domain": "workspace:*",
+    "@ender/economy": "workspace:*",
+    "@ender/inference": "workspace:*",
+    "@ender/reality": "workspace:*",
+    "@ender/shared": "workspace:*",
+    "fastify": "^5.12.5",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
+  },
+  "exports": {
+    ".": "./src/app.ts",
+    "./browser": "./src/browser.ts"
+  }
+}

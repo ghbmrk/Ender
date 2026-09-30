@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "440c2b5008f5b93ca4c097b4252925cbdb9efb542e722f0a5dd5ce6b547da5d7",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Hollow Filament",
+  "epithet": "the Plain Thread",
+  "observations": [
+   {
+    "quality": "burden",
+    "significance": "strong",
+    "text": "Very light, a clear strength in the Vault."
+   },
+   {
+    "quality": "knots",
+    "significance": "weak",
+    "text": "It has no Knots to speak of."
+   },
+   {
+    "quality": "veil",
+    "significance": "uncertain",
+    "text": "A thin Veil, well below the Vault's balance point."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "Cheap and light, but plain. It needs intricacy and a deeper Veil; transform it toward a knotted neighbour."
+ }
+}

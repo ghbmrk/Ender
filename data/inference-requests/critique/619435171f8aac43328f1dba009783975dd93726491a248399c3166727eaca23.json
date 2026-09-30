@@ -1,0 +1,83 @@
+{
+ "type": "critique",
+ "requestHash": "619435171f8aac43328f1dba009783975dd93726491a248399c3166727eaca23",
+ "request": {
+  "artifact": {
+   "fantasyId": "form-1w9u3ik",
+   "qualities": {
+    "bond": 50,
+    "burden": 89.3,
+    "flex": 14.2,
+    "knots": 100,
+    "reach": 37.6,
+    "veil": 73.5
+   }
+  },
+  "buildPolicy": {
+   "arbitrage": 0.1,
+   "critique": 0.25,
+   "efficiency": 0.2,
+   "evidence": 0.25,
+   "exploration": 0.85,
+   "optimization": 0.2
+  },
+  "marketContext": {
+   "costByEssence": {
+    "ash": 61.3,
+    "ember": 38,
+    "glass": 195.8,
+    "root": 18.3,
+    "tide": 35.8
+   },
+   "currentDemand": 1,
+   "essenceScarcity": {
+    "ash": 38.5,
+    "ember": 44.9,
+    "glass": 58.6,
+    "root": 50.7,
+    "storm": 68.6,
+    "tide": 20.6
+   },
+   "productionCost": 349
+  },
+  "mode": "mirror",
+  "realmObjective": {
+   "constraints": [
+    {
+     "mode": "minimize",
+     "quality": "burden",
+     "weight": 0.3
+    },
+    {
+     "mode": "maximize",
+     "quality": "knots",
+     "weight": 0.3
+    },
+    {
+     "mode": "target",
+     "quality": "bond",
+     "target": 55,
+     "tolerance": 15,
+     "weight": 0.2
+    },
+    {
+     "mode": "minimize",
+     "quality": "flex",
+     "weight": 0.2
+    }
+   ],
+   "id": "hollow-keep"
+  },
+  "trial": {
+   "mirrorScores": [
+    61,
+    75.7,
+    66.2,
+    69.5
+   ],
+   "technicalScore": 69.3,
+   "tolerance": 6
+  },
+  "wantSecond": false
+ }
+}

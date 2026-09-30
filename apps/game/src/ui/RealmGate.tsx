@@ -1,0 +1,85 @@
+import { useEffect, useState } from "react";
+import { enterRealm, refreshWorld } from "../game/flow";
+import { toast, useStore } from "../state/store";
+import { Panel } from "./Panel";
+import { crowns, essenceColor, essenceGlyph } from "../economy/format";
+
+export function RealmGate() {
+  const world = useStore((s) => s.world);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    refreshWorld().catch((e) => toast(e.message, "loss"));
+  }, []);
+  if (!world) return <Panel title="Realm Gate">Listening to the Gate…</Panel>;
+  const go = async (id: string) => {
+    setBusy(true);
+    try {
+      await enterRealm(id);
+    } catch (e) {
+      toast((e as Error).message, "loss");
+      setBusy(false);
+    }
+  };
+  return (
+    <Panel title="Realm Gate" subtitle={world.headline} wide testId="realm-gate">
+      <div className="realm-grid">
+        {world.realms.map((r: any) => (
+          <div key={r.id} className="realm-card" data-testid={`realm-${r.id}`}>
+            <div className="realm-head">
+              <h3>{r.name}</h3>
+              <span className="diff">Difficulty {r.difficultyLabel}</span>
+            </div>
+            <p className="dim">{r.tagline}</p>
+            <div className="kv">
+              <div className="k">Forms here are</div>
+              <div className="v">{r.bias.join(" · ")}</div>
+            </div>
+            <div className="kv">
+              <div className="k">Likely Essences</div>
+              <div className="v">
+                {r.expectedEssences.slice(0, 3).map((e: any) => (
+                  <span key={e.essence} className="ess-chip" style={{ color: essenceColor(e.essence), borderColor: essenceColor(e.essence) }}>
+                    {essenceGlyph(e.essence)} {e.name} {Math.round(e.share * 100)}% · {e.price.toFixed(1)}
+                    {e.glut ? " · glut" : ""}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="kv">
+              <div className="k">Expected haul</div>
+              <div className="v">≈ {crowns(r.haulValue)} in Essences at today's prices</div>
+            </div>
+            <div className="kv">
+              <div className="k">Demand</div>
+              <div className="v">
+                {r.demand.length === 0 && <span className="dim">No special demand</span>}
+                {r.demand.map((d: any) => (
+                  <div key={d.contractId} className={`demand ${d.arrows === "↑↑" ? "hot" : ""}`}>
+                    {d.label} <b>{d.arrows}</b> <span className="dim">· contract {crowns(d.reward)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {r.events.map((e: string) => (
+              <div key={e} className="event">
+                {e}
+              </div>
+            ))}
+            <button className="primary" disabled={busy} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
+              Enter {r.name}
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="contracts-strip">
+        <h4>Open contracts</h4>
+        {world.contracts.map((c: any) => (
+          <div key={c.id} className="contract-line">
+            <b>{c.title}</b> — {c.description} <span className="reward">{crowns(c.reward)}</span>
+            <div className="dim small">{c.reason}</div>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}

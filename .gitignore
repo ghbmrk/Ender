@@ -1,0 +1,9 @@
+node_modules
+.local
+dist
+test-results
+playwright-report
+scratch
+*.sqlite*
+.vite
+dist-web

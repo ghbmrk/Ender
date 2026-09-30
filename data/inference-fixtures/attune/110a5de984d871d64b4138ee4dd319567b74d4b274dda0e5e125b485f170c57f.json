@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "110a5de984d871d64b4138ee4dd319567b74d4b274dda0e5e125b485f170c57f",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Ashen Lattice",
+  "epithet": "the Loose-Knotted",
+  "observations": [
+   {
+    "quality": "veil",
+    "significance": "strong",
+    "text": "Its Veil sits almost exactly where the Vault wants it."
+   },
+   {
+    "quality": "knots",
+    "significance": "weak",
+    "text": "Barely knotted. The Vault rewards an intricacy this Form lacks."
+   },
+   {
+    "quality": "burden",
+    "significance": "neutral",
+    "text": "Moderately light: neither a gift nor a flaw here."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "A well-veiled Form let down by its Knots. Transform it toward a more intricate neighbour before you trust it in the Vault."
+ }
+}

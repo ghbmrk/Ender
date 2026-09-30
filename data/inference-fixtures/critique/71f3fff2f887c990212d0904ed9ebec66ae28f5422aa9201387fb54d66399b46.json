@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "71f3fff2f887c990212d0904ed9ebec66ae28f5422aa9201387fb54d66399b46",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "veil",
+   "text": "Its Veil runs thin of the Fen's balance point."
+  },
+  "verdict": "fragile",
+  "summary": "Balanced and cheap, with fair Reach and some Flex. A deeper Veil is the next gain."
+ }
+}

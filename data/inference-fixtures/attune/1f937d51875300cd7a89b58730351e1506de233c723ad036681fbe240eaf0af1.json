@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "1f937d51875300cd7a89b58730351e1506de233c723ad036681fbe240eaf0af1",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Crown of Excess",
+  "epithet": "the Overwrought",
+  "observations": [
+   {
+    "quality": "knots",
+    "significance": "strong",
+    "text": "Knotted to the limit; the Vault loves that."
+   },
+   {
+    "quality": "burden",
+    "significance": "weak",
+    "text": "Crushingly heavy, which the Vault punishes hard."
+   },
+   {
+    "quality": "veil",
+    "significance": "weak",
+    "text": "Its Veil is far deeper than the Vault's balance point."
+   }
+  ],
+  "suggestedAction": "sell",
+  "summary": "Extreme in everything and very costly to produce. Its intricacy is real but its weight ruins it here; let a buyer who wants excess pay for it."
+ }
+}

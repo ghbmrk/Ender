@@ -1,0 +1,15 @@
+{
+ "type": "critique",
+ "requestHash": "145190e571da9f461bea9993a33f3f4fb6e222c69703149f6468ad9c93a56b8f",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "weakness": {
+   "kind": "technical",
+   "quality": "reach",
+   "text": "Its lack of Reach shows the moment the Fen leans on distance."
+  },
+  "verdict": "fragile",
+  "summary": "Under other lights it wavers: two reflections stray past tolerance in opposite directions."
+ }
+}

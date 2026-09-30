@@ -1,0 +1,29 @@
+{
+ "type": "attune",
+ "requestHash": "714dd6d1c41bb84728739efa0e038664e8de73fca17616df2dc93a9f82cfa9b1",
+ "fixtureVersion": "1",
+ "author": "coding-agent (hand-authored from recorded request)",
+ "result": {
+  "fantasyName": "Pale Sliver",
+  "epithet": "the Unbonded",
+  "observations": [
+   {
+    "quality": "bond",
+    "significance": "weak",
+    "text": "It holds no Bonds, and the Keep wants them."
+   },
+   {
+    "quality": "flex",
+    "significance": "weak",
+    "text": "Too supple for the Keep's rigid halls."
+   },
+   {
+    "quality": "burden",
+    "significance": "strong",
+    "text": "Light, which the Keep rewards."
+   }
+  ],
+  "suggestedAction": "transform",
+  "summary": "Light but unbonded and pliant: the wrong shape for the Keep. Transform toward a rigid, bonded neighbour."
+ }
+}
