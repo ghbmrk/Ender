@@ -7,6 +7,9 @@ import * as THREE from '../vendor/three.module.min.js';
 const q = new URLSearchParams(location.search);
 const SHOT = q.get('shot') || 'room';
 const COLORBLIND = q.get('cb') === '1';
+// 'mj' (default): cinematic, painterly grade in the classic Midjourney vein. 'spec': the restrained section 75-85 look.
+const STYLE = q.get('style') || 'mj';
+const MJ = STYLE === 'mj';
 const W = 1920, H = 1080;
 
 // ---------- palette (section 76) ----------
@@ -403,7 +406,7 @@ function brazier(pos) {
   g.add(mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.9, 5), metal(P.coldStone), CLS.env, [0, 0.45, 0]));
   const fire = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), new THREE.MeshBasicMaterial({ color: 0xe0a060, transparent: true, opacity: 0.8 }));
   fire.position.y = 1.28; fire.scale.y = 1.4; g.add(fx(fire));
-  const l = new THREE.PointLight(0xe8a868, 6, 7, 1.8); l.position.y = 1.6; g.add(l);
+  const l = new THREE.PointLight(0xe8a868, MJ ? 22 : 6, MJ ? 10 : 7, 1.8); l.position.y = 1.6; g.add(l);
   return place(g, pos);
 }
 function banner(pos, yaw) {
@@ -418,7 +421,7 @@ function shrine(pos) {
   g.add(mesh(new THREE.OctahedronGeometry(0.28, 0), mat(P.interact, { emissive: P.interact, emissiveIntensity: 0.55 }), cls, [0, 1.8, 0]));
   const ring = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.52, 48), new THREE.MeshBasicMaterial({ color: P.interact, transparent: true, opacity: 0.55, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(fx(ring));
-  const l = new THREE.PointLight(0x7fc0b0, 10, 7, 1.6); l.position.y = 2; g.add(l);
+  const l = new THREE.PointLight(0x7fc0b0, MJ ? 30 : 10, MJ ? 10 : 7, 1.6); l.position.y = 2; g.add(l);
   return place(g, pos);
 }
 
@@ -530,15 +533,29 @@ function projectile(from, to, t) {
   brushStroke([back, back.clone().lerp(p, 0.5).add(new THREE.Vector3(0, 0.05, 0)), p], P.danger, 0.07, 0.5);
 }
 
-// ---------- lighting: continuous, restrained ----------
-scene.add(new THREE.HemisphereLight(0xd8cdb8, 0x393641, SHOT === 'boss' ? 0.9 : 1.05));
-const key = new THREE.DirectionalLight(0xf0e2c8, SHOT === 'boss' ? 1.4 : 1.9);
-key.position.set(-6, 14, 4); key.castShadow = true;
+// ---------- lighting ----------
+// spec: continuous and restrained. mj: low warm key, cool teal fill, strong rim, pools of light.
+scene.add(MJ ? new THREE.HemisphereLight(0x6f98b0, 0x16141c, SHOT === 'boss' ? 0.5 : 0.6)
+             : new THREE.HemisphereLight(0xd8cdb8, 0x393641, SHOT === 'boss' ? 0.9 : 1.05));
+const key = MJ ? new THREE.DirectionalLight(0xffb878, SHOT === 'boss' ? 1.9 : 2.2) : new THREE.DirectionalLight(0xf0e2c8, SHOT === 'boss' ? 1.4 : 1.9);
+key.position.set(MJ ? -10 : -6, MJ ? 9 : 14, MJ ? 6 : 4); key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
 Object.assign(key.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 40 });
 key.shadow.bias = -0.0008; key.shadow.radius = 5;
 scene.add(key);
-const rim = new THREE.DirectionalLight(0x8a94c8, 0.5); rim.position.set(6, 5, -8); scene.add(rim);
+const rim = new THREE.DirectionalLight(MJ ? 0x7fd0e0 : 0x8a94c8, MJ ? 1.6 : 0.5); rim.position.set(6, 5, -8); scene.add(rim);
+if (MJ) {
+  // a shaft of warm light over the fight, and drifting embers / dust motes
+  const pool = new THREE.SpotLight(0xffc890, SHOT === 'boss' ? 45 : 32, 30, 0.36, 0.9, 1.2);
+  pool.position.set(-3, 16, 3); pool.target.position.set(0, 0, 0); scene.add(pool, pool.target);
+  const n = 420, pos = new Float32Array(n * 3), cols = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    pos.set([(hash3(i, 1, 2) - 0.5) * 26, 0.2 + hash3(i, 3, 4) * 5, (hash3(i, 5, 6) - 0.5) * 26], i * 3);
+    const warm = hash3(i, 7, 8) > 0.35; cols.set(warm ? [1, 0.72, 0.4] : [0.6, 0.85, 0.95], i * 3);
+  }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  scene.add(fx(new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.07, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }))));
+}
 
 // ---------- floor ----------
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(34, 34), new THREE.MeshStandardMaterial({ map: floorTexture(SHOT), roughness: 0.9 }));
@@ -682,11 +699,11 @@ function renderId() {
 const post = new THREE.ShaderMaterial({
   uniforms: {
     tColor: { value: rtColor.texture }, tNormal: { value: rtNormal.texture }, tDepth: { value: rtNormal.depthTexture }, tId: { value: rtId.texture },
-    res: { value: new THREE.Vector2(W, H) }, near: { value: camera.near }, far: { value: camera.far },
+    res: { value: new THREE.Vector2(W, H) }, near: { value: camera.near }, far: { value: camera.far }, mj: { value: MJ ? 1 : 0 },
   },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
   fragmentShader: /* glsl */ `
-    uniform sampler2D tColor, tNormal, tDepth, tId; uniform vec2 res; uniform float near, far;
+    uniform sampler2D tColor, tNormal, tDepth, tId; uniform vec2 res; uniform float near, far, mj;
     varying vec2 vUv;
     float lin(float d){ float z = d*2.-1.; return (2.*near*far)/(far+near - z*(far-near)); }
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
@@ -768,8 +785,41 @@ const post = new THREE.ShaderMaterial({
       vec3 ink = inkFor(eid);
       float inkA = cover * (.9 + .1*noise(sp/3.));
       col = mix(col, ink, inkA);
-      // restrained vignette
-      vec2 q = vUv - .5; col *= 1. - .35*dot(q*vec2(1.2,1.), q*vec2(1.2,1.));
+      vec2 q = vUv - .5;
+      if(mj > .5){
+        // bloom: soft glow from bright pigment and light sources
+        vec3 glow = vec3(0.);
+        for(int k=0; k<24; k++){
+          float a = float(k)*2.39996, r = 4. + float(k)*1.6;
+          vec3 c = toSRGB(texture2D(tColor, vUv + vec2(cos(a), sin(a))*r*px).rgb);
+          float l = dot(c, vec3(.3,.59,.11));
+          glow += c * smoothstep(.55, .95, l) * (1. - float(k)/28.);
+        }
+        col = min(col + glow/24. * vec3(1.15, .95, .75) * 1.3, vec3(1.25));
+        // atmospheric haze: far = warmer, dustier, lighter
+        float depthK = smoothstep(13., 21., d0);
+        col = mix(col, vec3(.36,.36,.42), depthK*.3);
+        // god rays falling from the upper left
+        vec2 rd = normalize(vec2(.55, -1.));
+        float band = fbm(vec2(dot(sp, vec2(-rd.y, rd.x))/38., dot(sp, rd)/900.));
+        float shaft = smoothstep(.5, .78, band) * smoothstep(.95, .1, vUv.y*.2 + (1.-vUv.x)*.0 + (1. - vUv.y)*.9) ;
+        col += vec3(1., .78, .5) * shaft * .16;
+        // split-tone grade: teal shadows, amber highlights, gentle S-curve, richer colour
+        float L = dot(col, vec3(.3,.59,.11));
+        col = mix(col, col*vec3(.78,.98,1.12), (1.-smoothstep(.0,.45,L))*.55);
+        col = mix(col, col*vec3(1.12,1.0,.82), smoothstep(.45,1.,L)*.5);
+        col = clamp(sat(col, 1.18), 0., 1.);
+        col = mix(col, col*col*(3.-2.*col), .45);
+        // painterly brush texture: short strokes along a diagonal
+        vec2 bd = vec2(.8,.6);
+        float br = noise(vec2(dot(sp,bd)/14., dot(sp, vec2(-bd.y,bd.x))/3.2));
+        col *= 1. + (br - .5)*.07;
+        // cinematic vignette
+        col *= 1. - .75*dot(q*vec2(1.1,1.), q*vec2(1.1,1.));
+      } else {
+        // restrained vignette
+        col *= 1. - .35*dot(q*vec2(1.2,1.), q*vec2(1.2,1.));
+      }
       gl_FragColor = vec4(col, 1.);
     }`,
 });

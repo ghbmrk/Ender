@@ -21,6 +21,7 @@ const SHOTS = {
   'scene-room-colorblind': 'scenes/scene.html?shot=room&cb=1',
   'hud-on-scene': 'hud.html?bg=scene',
   'scene-lineup': 'scenes/scene.html?shot=lineup',
+  'scene-room-spec': 'scenes/scene.html?shot=room&style=spec',
 };
 
 const server = createServer(async (req, res) => {
