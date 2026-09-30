@@ -6,3 +6,4 @@ playwright-report
 scratch
 *.sqlite*
 .vite
+dist-web
