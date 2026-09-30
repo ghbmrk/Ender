@@ -33,7 +33,7 @@ renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1c1a21);
+scene.background = new THREE.Color(MJ ? 0x0c0a16 : 0x1c1a21);
 const camera = new THREE.PerspectiveCamera(38, W / H, 1, 60);
 const YAW = THREE.MathUtils.degToRad(45), PITCH = THREE.MathUtils.degToRad(52);
 const ARM = SHOT === 'lineup' ? 7.5 : 15.5; // lineup is a closer reference view, not the game camera
@@ -67,8 +67,9 @@ function jitter(geo, amt) {
   geo.computeVertexNormals();
   return geo;
 }
-const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0, flatShading: true, ...o });
-const metal = (color) => mat(color, { metalness: 0.65, roughness: 0.68 });
+// mj: smooth shading and a little sheen so light rolls over forms like paint; spec: matte and faceted.
+const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: MJ ? 0.6 : 0.82, metalness: 0, flatShading: !MJ, ...o });
+const metal = (color) => mat(color, MJ ? { metalness: 0.45, roughness: 0.4 } : { metalness: 0.65, roughness: 0.68 });
 function mesh(geo, material, cls, pos = [0, 0, 0], rot = [0, 0, 0], scl = [1, 1, 1]) {
   const m = new THREE.Mesh(geo, material);
   m.position.set(...pos); m.rotation.set(...rot); m.scale.set(...scl);
@@ -404,9 +405,9 @@ function brazier(pos) {
   const g = new THREE.Group();
   g.add(mesh(jitter(new THREE.CylinderGeometry(0.35, 0.2, 0.4, 7), 0.03), metal(P.coldStone), CLS.env, [0, 1.0, 0]));
   g.add(mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.9, 5), metal(P.coldStone), CLS.env, [0, 0.45, 0]));
-  const fire = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), new THREE.MeshBasicMaterial({ color: 0xe0a060, transparent: true, opacity: 0.8 }));
+  const fire = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), new THREE.MeshBasicMaterial(MJ ? { color: new THREE.Color(3.2, 1.6, 0.5) } : { color: 0xe0a060, transparent: true, opacity: 0.8 }));
   fire.position.y = 1.28; fire.scale.y = 1.4; g.add(fx(fire));
-  const l = new THREE.PointLight(0xe8a868, MJ ? 22 : 6, MJ ? 10 : 7, 1.8); l.position.y = 1.6; g.add(l);
+  const l = new THREE.PointLight(MJ ? 0xff9440 : 0xe8a868, MJ ? 45 : 6, MJ ? 12 : 7, 1.8); l.position.y = 1.6; g.add(l);
   return place(g, pos);
 }
 function banner(pos, yaw) {
@@ -421,15 +422,17 @@ function shrine(pos) {
   g.add(mesh(new THREE.OctahedronGeometry(0.28, 0), mat(P.interact, { emissive: P.interact, emissiveIntensity: 0.55 }), cls, [0, 1.8, 0]));
   const ring = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.52, 48), new THREE.MeshBasicMaterial({ color: P.interact, transparent: true, opacity: 0.55, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(fx(ring));
-  const l = new THREE.PointLight(0x7fc0b0, MJ ? 30 : 10, MJ ? 10 : 7, 1.6); l.position.y = 2; g.add(l);
+  const l = new THREE.PointLight(MJ ? 0x60e0c8 : 0x7fc0b0, MJ ? 24 : 10, MJ ? 12 : 7, 1.6); l.position.y = 2; g.add(l);
   return place(g, pos);
 }
 
 // ---------- telegraphs (sections 44, 83): 2 px ink perimeter, 25% danger wash ----------
+// mj: the perimeter burns instead of being inked, so danger reads as glowing magic in the dark.
+const TELE_RIM = MJ ? new THREE.Color(P.danger).multiplyScalar(2.6) : P.ink;
 function teleMat(opacity = 0.25) {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false,
-    uniforms: { col: { value: new THREE.Color(P.danger) }, op: { value: opacity }, cb: { value: COLORBLIND ? 1 : 0 } },
+    uniforms: { col: { value: new THREE.Color(P.danger).multiplyScalar(MJ ? 1.25 : 1) }, op: { value: MJ ? opacity * 0.6 : opacity }, cb: { value: COLORBLIND ? 1 : 0 } },
     vertexShader: 'varying vec3 wp; void main(){ vec4 w = modelMatrix*vec4(position,1.); wp=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }',
     fragmentShader: `uniform vec3 col; uniform float op; uniform float cb; varying vec3 wp;
       float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
@@ -442,7 +445,7 @@ function teleMat(opacity = 0.25) {
 function telegraphCircle(center, r, active = false) {
   const g = new THREE.Group();
   const fill = new THREE.Mesh(new THREE.CircleGeometry(r, 64), teleMat(active ? 0.55 : 0.25));
-  const rim = new THREE.Mesh(new THREE.RingGeometry(r - 0.04, r + (COLORBLIND ? 0.06 : 0.025), 96), new THREE.MeshBasicMaterial({ color: P.ink, transparent: true, opacity: 0.9, depthWrite: false }));
+  const rim = new THREE.Mesh(new THREE.RingGeometry(r - 0.04, r + (COLORBLIND ? 0.06 : 0.025), 96), new THREE.MeshBasicMaterial({ color: TELE_RIM, transparent: true, opacity: 0.9, depthWrite: false }));
   const inner = new THREE.Mesh(new THREE.RingGeometry(r - 0.12, r - 0.06, 96), new THREE.MeshBasicMaterial({ color: active ? P.paper : P.danger, transparent: true, opacity: 0.6, depthWrite: false }));
   for (const m of [fill, rim, inner]) { m.rotation.x = -Math.PI / 2; g.add(m); }
   fill.position.y = 0.02; inner.position.y = 0.025; rim.position.y = 0.03;
@@ -454,7 +457,7 @@ function telegraphCone(apex, dirYaw, range, arcDeg) {
   const fill = new THREE.Mesh(new THREE.CircleGeometry(range, 48, -a / 2, a), teleMat(0.28));
   const rimShape = new THREE.Shape(); rimShape.moveTo(0, 0); rimShape.absarc(0, 0, range, -a / 2, a / 2, false); rimShape.lineTo(0, 0);
   const rimPts = rimShape.getPoints(64).map((p) => new THREE.Vector3(p.x, p.y, 0));
-  const rim = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rimPts, true, 'catmullrom', 0.01), 200, 0.03, 4, true), new THREE.MeshBasicMaterial({ color: P.ink }));
+  const rim = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rimPts, true, 'catmullrom', 0.01), 200, 0.03, 4, true), new THREE.MeshBasicMaterial({ color: TELE_RIM }));
   for (const m of [fill, rim]) { m.rotation.x = -Math.PI / 2; g.add(m); }
   fill.position.y = 0.02; rim.position.y = 0.03;
   g.position.copy(apex); g.rotation.y = dirYaw - Math.PI / 2;
@@ -465,7 +468,7 @@ function telegraphLane(center, yaw, length, width, active = false) {
   const fill = new THREE.Mesh(new THREE.PlaneGeometry(width, length), teleMat(active ? 0.55 : 0.25));
   fill.rotation.x = -Math.PI / 2; fill.position.y = 0.02; g.add(fill);
   for (const s of [-1, 1]) {
-    const e = new THREE.Mesh(new THREE.PlaneGeometry(0.06, length), new THREE.MeshBasicMaterial({ color: P.ink, transparent: true, opacity: 0.9, depthWrite: false }));
+    const e = new THREE.Mesh(new THREE.PlaneGeometry(0.06, length), new THREE.MeshBasicMaterial({ color: TELE_RIM, transparent: true, opacity: 0.9, depthWrite: false }));
     e.rotation.x = -Math.PI / 2; e.position.set(s * width / 2, 0.03, 0); g.add(e);
   }
   g.position.copy(center); g.rotation.y = yaw;
@@ -535,26 +538,44 @@ function projectile(from, to, t) {
 
 // ---------- lighting ----------
 // spec: continuous and restrained. mj: low warm key, cool teal fill, strong rim, pools of light.
-scene.add(MJ ? new THREE.HemisphereLight(0x6f98b0, 0x16141c, SHOT === 'boss' ? 0.5 : 0.6)
+scene.add(MJ ? new THREE.HemisphereLight(0x4050a0, 0x0a0812, SHOT === 'boss' ? 0.3 : 0.36)
              : new THREE.HemisphereLight(0xd8cdb8, 0x393641, SHOT === 'boss' ? 0.9 : 1.05));
-const key = MJ ? new THREE.DirectionalLight(0xffb878, SHOT === 'boss' ? 1.9 : 2.2) : new THREE.DirectionalLight(0xf0e2c8, SHOT === 'boss' ? 1.4 : 1.9);
+// mj key is cool moonlight; the warmth comes from fire, the light shaft and magic, for strong chiaroscuro
+const key = MJ ? new THREE.DirectionalLight(0x9aa8ff, SHOT === 'boss' ? 0.9 : 1.1) : new THREE.DirectionalLight(0xf0e2c8, SHOT === 'boss' ? 1.4 : 1.9);
 key.position.set(MJ ? -10 : -6, MJ ? 9 : 14, MJ ? 6 : 4); key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
 Object.assign(key.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 40 });
 key.shadow.bias = -0.0008; key.shadow.radius = 5;
 scene.add(key);
-const rim = new THREE.DirectionalLight(MJ ? 0x7fd0e0 : 0x8a94c8, MJ ? 1.6 : 0.5); rim.position.set(6, 5, -8); scene.add(rim);
+const rim = new THREE.DirectionalLight(MJ ? 0xb088ff : 0x8a94c8, MJ ? 2.4 : 0.5); rim.position.set(6, 5, -8); scene.add(rim);
+// round, soft-edged motes instead of square points
+function moteTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.4, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(c);
+}
 if (MJ) {
-  // a shaft of warm light over the fight, and drifting embers / dust motes
-  const pool = new THREE.SpotLight(0xffc890, SHOT === 'boss' ? 45 : 32, 30, 0.36, 0.9, 1.2);
-  pool.position.set(-3, 16, 3); pool.target.position.set(0, 0, 0); scene.add(pool, pool.target);
-  const n = 420, pos = new Float32Array(n * 3), cols = new Float32Array(n * 3);
+  // a golden shaft of light over the fight
+  const pool = new THREE.SpotLight(0xffc070, SHOT === 'boss' ? 90 : 75, 30, 0.27, 0.8, 1.2);
+  pool.position.set(-3, 16, 3); pool.target.position.set(0, 0, 0); pool.castShadow = true;
+  pool.shadow.mapSize.set(1024, 1024); scene.add(pool, pool.target);
+  // drifting embers (warm) and weave motes (blue-violet), additive so they bloom
+  const n = 900, pos = new Float32Array(n * 3), cols = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
-    pos.set([(hash3(i, 1, 2) - 0.5) * 26, 0.2 + hash3(i, 3, 4) * 5, (hash3(i, 5, 6) - 0.5) * 26], i * 3);
-    const warm = hash3(i, 7, 8) > 0.35; cols.set(warm ? [1, 0.72, 0.4] : [0.6, 0.85, 0.95], i * 3);
+    const near = i < 260; // motes gather around the Binder
+    const r = near ? 0.5 + hash3(i, 9, 1) * 3.2 : 0, a = hash3(i, 2, 9) * 6.283;
+    pos.set(near ? [Math.cos(a) * r, 0.3 + hash3(i, 3, 4) * 2.6, Math.sin(a) * r]
+                 : [(hash3(i, 1, 2) - 0.5) * 26, 0.2 + hash3(i, 3, 4) * 6, (hash3(i, 5, 6) - 0.5) * 26], i * 3);
+    const k = 1.5 + hash3(i, 7, 7) * 2.5;
+    cols.set(near ? [0.55 * k, 0.6 * k, 1.6 * k] : hash3(i, 7, 8) > 0.3 ? [1.6 * k, 0.8 * k, 0.28 * k] : [0.4 * k, 1.0 * k, 1.3 * k], i * 3);
   }
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(cols, 3));
-  scene.add(fx(new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.07, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }))));
+  scene.add(fx(new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.06, map: moteTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))));
+  // the Binder's weave glows
+  const wl = new THREE.PointLight(0x7a8cff, 14, 6, 1.6); wl.position.set(0.3, 1.8, 0.3); scene.add(wl);
+  if (SHOT === 'boss') { const kl = new THREE.PointLight(0xa070ff, 40, 12, 1.4); kl.position.copy(at(0.5, 5.0)).setY(3.2); scene.add(kl); }
 }
 
 // ---------- floor ----------
@@ -823,6 +844,126 @@ const post = new THREE.ShaderMaterial({
       gl_FragColor = vec4(col, 1.);
     }`,
 });
+
+// ---------- mj: oil paint → depth of field, glow, atmosphere and a jewel-tone grade ----------
+// Classic Midjourney fantasy reads as a dark, jewel-toned oil painting: no ink line, soft brush blocks,
+// luminous light sources against deep indigo shadow, heavy atmosphere and a shallow focus plane.
+const GLSL_COMMON = /* glsl */ `
+  uniform sampler2D tColor, tDepth, tId, tPaint; uniform vec2 res; uniform float near, far;
+  varying vec2 vUv;
+  float lin(float d){ float z = d*2.-1.; return (2.*near*far)/(far+near - z*(far-near)); }
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+    return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x), u.y); }
+  float fbm(vec2 p){ float v=0., a=.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.03+17.1; a*=.5; } return v; }
+  vec3 toSRGB(vec3 c){ return pow(max(c, 0.), vec3(1./2.2)); }
+  float luma(vec3 c){ return dot(c, vec3(.299,.587,.114)); }
+  vec3 sat(vec3 c, float s){ float l = luma(c); return mix(vec3(l), c, s); }
+`;
+const rtPaint = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+const mjUniforms = {
+  tColor: { value: rtColor.texture }, tDepth: { value: rtNormal.depthTexture }, tId: { value: rtId.texture }, tPaint: { value: rtPaint.texture },
+  res: { value: new THREE.Vector2(W, H) }, near: { value: camera.near }, far: { value: camera.far },
+};
+const vsQuad = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }';
+// Pass 1: oriented Kuwahara. Four sectors along a noise-driven stroke direction; the calmest sector wins,
+// which flattens detail into brush blocks while keeping edges.
+const paint = new THREE.ShaderMaterial({
+  uniforms: mjUniforms, vertexShader: vsQuad,
+  fragmentShader: GLSL_COMMON + /* glsl */ `
+    void main(){
+      vec2 px = 1./res, sp = vUv*res;
+      float ang = fbm(sp/260.)*6.283 + .6;
+      mat2 R = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
+      vec3 m[4]; vec3 s2[4];
+      for(int k=0;k<4;k++){ m[k]=vec3(0.); s2[k]=vec3(0.); }
+      for(int j=0;j<=4;j++) for(int i=0;i<=4;i++){
+        vec2 o = vec2(float(i), float(j)) * vec2(1.9, 1.1); // elongated: strokes, not squares
+        vec3 a = toSRGB(texture2D(tColor, vUv + R*vec2( o.x,  o.y)*px).rgb);
+        vec3 b = toSRGB(texture2D(tColor, vUv + R*vec2(-o.x,  o.y)*px).rgb);
+        vec3 c = toSRGB(texture2D(tColor, vUv + R*vec2( o.x, -o.y)*px).rgb);
+        vec3 d = toSRGB(texture2D(tColor, vUv + R*vec2(-o.x, -o.y)*px).rgb);
+        m[0]+=a; s2[0]+=a*a; m[1]+=b; s2[1]+=b*b; m[2]+=c; s2[2]+=c*c; m[3]+=d; s2[3]+=d*d;
+      }
+      vec3 col = vec3(0.); float best = 1e9;
+      for(int k=0;k<4;k++){
+        vec3 mu = m[k]/25.; vec3 v = s2[k]/25. - mu*mu;
+        float e = v.r+v.g+v.b;
+        if(e < best){ best = e; col = mu; }
+      }
+      // keep figures crisper than the backdrop so they still read in play
+      int id = int(floor(texture2D(tId, vUv).r*10.+.5));
+      vec3 raw = toSRGB(texture2D(tColor, vUv).rgb);
+      if(id > 0) col = mix(col, raw, .35);
+      // soft painted contour on figures only: a darker, hue-matched edge, not an ink line
+      float edge = 0.;
+      for(int k=0;k<8;k++){
+        float a = float(k)*.785398;
+        vec2 uv = vUv + vec2(cos(a), sin(a))*2.2*px;
+        int i1 = int(floor(texture2D(tId, uv).r*10.+.5));
+        if(i1 != id && max(i1,id) > 0) edge += .125;
+      }
+      col = mix(col, col*vec3(.35,.3,.5), clamp(edge*1.6, 0., 1.)*.55);
+      gl_FragColor = vec4(col, 1.);
+    }`,
+});
+// Pass 2: focus falloff, glow, atmosphere, grade, canvas.
+const finish = new THREE.ShaderMaterial({
+  uniforms: mjUniforms, vertexShader: vsQuad,
+  fragmentShader: GLSL_COMMON + /* glsl */ `
+    void main(){
+      vec2 px = 1./res, sp = vUv*res;
+      float d0 = lin(texture2D(tDepth, vUv).r);
+      float focus = lin(texture2D(tDepth, vec2(.5,.47)).r);
+      // shallow focus: the fight is sharp, the far wall and the near floor go soft (tilt-shift miniature)
+      float coc = clamp((abs(d0 - focus) - 1.2)/5.5, 0., 1.) * 7.;
+      vec3 col = texture2D(tPaint, vUv).rgb; float wsum = 1.;
+      for(int k=0;k<28;k++){
+        float a = float(k)*2.39996, r = sqrt(float(k)+.5)/sqrt(28.) * coc;
+        vec2 uv = vUv + vec2(cos(a), sin(a))*r*px;
+        col += texture2D(tPaint, uv).rgb; wsum += 1.;
+      }
+      col /= wsum;
+      // luminous glow: two radii, bright pigment only, warm-biased
+      vec3 g1 = vec3(0.), g2 = vec3(0.);
+      for(int k=0;k<32;k++){
+        float a = float(k)*2.39996, f = sqrt(float(k)+.5)/sqrt(32.);
+        vec3 c1 = texture2D(tPaint, vUv + vec2(cos(a), sin(a))*f*22.*px).rgb;
+        vec3 c2 = texture2D(tPaint, vUv + vec2(cos(a+1.), sin(a+1.))*f*90.*px).rgb;
+        g1 += c1 * smoothstep(.5, 1.1, luma(c1));
+        g2 += c2 * smoothstep(.42, 1.0, luma(c2));
+      }
+      col += g1/32. * .9 + g2/32. * vec3(1.05,.85,.95) * 1.1;
+      // atmosphere: violet-blue haze deepens with distance, lit gold where the shaft falls
+      float haze = smoothstep(focus + 1.5, focus + 9., d0);
+      col = mix(col, vec3(.13,.11,.27), haze*.6);
+      vec2 rd = normalize(vec2(.5, -1.));
+      float band = fbm(vec2(dot(sp, vec2(-rd.y, rd.x))/55., dot(sp, rd)/1100.));
+      float shaft = smoothstep(.48, .8, band) * smoothstep(.0, .7, vUv.y) * (1. - smoothstep(.55, 1.05, vUv.x));
+      col += vec3(1., .74, .38) * shaft * .13;
+      // jewel-tone grade: indigo/violet shadows, teal mids, gold highlights
+      float L = luma(col);
+      vec3 shadow = vec3(.10,.07,.24), mid = vec3(.20,.42,.50), high = vec3(1.,.82,.52);
+      vec3 tint = mix(mix(shadow, mid, smoothstep(.0,.45,L)), high, smoothstep(.45,1.,L));
+      col = mix(col, tint * (L*1.5 + .08), .16);
+      col = sat(col, 1.32);
+      // chiaroscuro: push the darks down so the lights glow
+      col *= smoothstep(-.02, .5, L)*.55 + .45;
+      col = max(col, 0.);
+      col = col / (1. + col*.35) * 1.3; // soft shoulder
+      col = mix(col, smoothstep(0., 1., clamp(col,0.,1.)), .4);
+      // oil on canvas: fine weave plus directional impasto ridges
+      float weave = (noise(vec2(sp.x/1.6, sp.y/5.)) + noise(vec2(sp.x/5., sp.y/1.6)) - 1.)*.035;
+      vec2 bd = vec2(cos(fbm(sp/240.)*6.28), sin(fbm(sp/240.)*6.28));
+      float ridge = noise(vec2(dot(sp,bd)/18., dot(sp, vec2(-bd.y,bd.x))/2.6)) - .5;
+      col *= 1. + weave + ridge*.09*(.4 + L);
+      // deep violet vignette frames the lit centre
+      vec2 q = vUv - vec2(.5,.52);
+      float v = smoothstep(.25, .95, length(q*vec2(1.25,1.)) * 1.35);
+      col = mix(col, col*vec3(.18,.12,.3), v*.85);
+      gl_FragColor = vec4(clamp(col,0.,1.), 1.);
+    }`,
+});
 const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post);
 const postScene = new THREE.Scene(); postScene.add(quad);
 const postCam = new THREE.Camera();
@@ -838,5 +979,8 @@ withHidden(() => {
   renderId();
 });
 renderer.setRenderTarget(null);
-renderer.render(postScene, postCam);
+if (MJ) {
+  quad.material = paint; renderer.setRenderTarget(rtPaint); renderer.render(postScene, postCam);
+  quad.material = finish; renderer.setRenderTarget(null); renderer.render(postScene, postCam);
+} else renderer.render(postScene, postCam);
 window.__ready = true;
