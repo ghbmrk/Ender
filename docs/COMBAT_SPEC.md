@@ -29,6 +29,7 @@ Combat numbers live in two layers:
 | §30 damage model | `Damage::*` | `AbilitySystem/EnderDamageExecution`, `Combat/EnderCombatStatics::ApplyDamage` |
 | §31 hit detection | none | `Combat/EnderTargetSweepComponent` (SphereSweep, CapsuleSweep, ConeQuery, RadialQuery, LaneQuery) |
 | §32 hit feel | `HitFeelFor` | `Combat/EnderHitFeelSubsystem`, `EnderCharacterBase::PlayHitFlash` and `PauseAnimation` |
+| Platform-fighter feel (Mark, 2026-09-30): shared hitlag, knockback, directional influence | `ControllerFeelRules.h` | `EnderHitFeelSubsystem::PlayHit`, `EnderPlayerCharacter::HandleDamaged` |
 | §33 health and Draughts | `Draught::*` | `Abilities/EnderAbility_Draught`, `EnderPlayerCharacter::OnDealtDamage` |
 | §34–40 the Hushed, elites | `EnemyRules.h` | `AI/` |
 | §41 attack tokens | `FAttackTokenPools` | `Combat/EnderCombatDirector` |
@@ -65,6 +66,18 @@ When a montage has no `ANS_AttackWindow` (placeholder animation), `UEnderGamepla
 | Global hitstop | World time dilation for 28 or 42 ms, counted in real time. UMG and audio don't read world dilation, so they keep running. | §32 |
 | Crit roll | Rolled at hit time from the run's crit stream and carried in the effect context | This keeps it deterministic and replayable (§30). |
 
+## Platform-fighter controller feel
+
+Mark asked (2026-09-30) for Smash-style controller combat built on open source if it exists. No open-licensed project can be the base: the MIT and Apache ones are side-view platform fighters in JavaScript or Unity, and the rest are GPL or run Nintendo's own code (see `docs/THIRD_PARTY.md`, "Reference only"). Ender already had the input buffer, cancel windows and hitstop, so three techniques were added with Ender's own numbers:
+
+| Technique | Rule | Effect |
+|---|---|---|
+| Shared hitlag | `SharedHitlag`: 25 ms + 0.6 ms per damage, +15 ms for heavy or ultimate, cap 100 ms | Attacker and victim both pause their animation on every connecting hit, in both directions. A Lash (32) freezes 44 ms; Sever caps at 100 ms. The cap stays under the 120 ms input buffer, so a press made at impact still fires. |
+| Knockback | `KnockbackSpeed`: 300 cm/s + 15 per health lost, cap 900 | The Binder slides away from the attacker during its 0.20 s hit-stun. Barrier suppression still skips it. |
+| Directional influence | `ApplyDI`: up to 15° | The move stick held across the push bends it; holding along or against it does nothing. |
+
+This adds to §32 rather than replacing it: normal hits used to have no pause at all. When a montage has no `ANS_AttackWindow`, the fallback timeline runs on world time and does not pause with the animation.
+
 ## Spec conflicts to resolve in tuning
 
 The spec sets telegraph floors (§44) and also gives some boss attacks telegraphs below them. The code keeps the spec's attack numbers, classes each attack by the floor it meets, and the rule tests assert it:
@@ -79,5 +92,5 @@ To follow the floors instead, raise these three in `BossRules.h` and in the Boun
 
 ## Verified here vs. untested
 
-- **Verified** (`tests/cpp/run.sh`, g++ 13 and clang 18): every rule header, the Evade integral, Unravel continuity, damage and crit rate, input buffer ordering and expiry, token caps, telegraph floors, boss phases, stagger and exclusion, loot rates and bias, and 100 seeded rooms with 0 token violations, 0 prohibited spawns, 0 off-screen attacks and 0 cap violations.
+- **Verified** (`tests/cpp/run.sh`, g++ 13 and clang 18): every rule header, shared hitlag, knockback and DI, the Evade integral, Unravel continuity, damage and crit rate, input buffer ordering and expiry, token caps, telegraph floors, boss phases, stagger and exclusion, loot rates and bias, and 100 seeded rooms with 0 token violations, 0 prohibited spawns, 0 off-screen attacks and 0 cap violations.
 - **Untested:** all Unreal C++ (never compiled; no engine in the build container), feel targets (input→animation ≤50 ms, damage/visual ≤20 cm, telegraph ≤50 ms), frame-rate targets and the Niagara, audio and material passes. These need a Windows machine with UE 5.8.3 (`docs/UNREAL_BUILD.md`).

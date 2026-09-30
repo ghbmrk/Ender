@@ -16,6 +16,7 @@
 #include "Inventory/EnderInventoryComponent.h"
 #include "MotionWarpingComponent.h"
 #include "Rules/CombatRules.h"
+#include "Rules/ControllerFeelRules.h"
 
 AEnderPlayerCharacter::AEnderPlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -160,6 +161,25 @@ void AEnderPlayerCharacter::HandleDamaged(const FEnderDamageEvent& Event)
 	AbilitySystem->CancelAllAbilities();
 	UEnderCombatStatics::ApplyStatusTag(this, this, EnderTags::State_HitReact, HitStunDuration);
 	if (HitReactMontage) PlayAnimMontage(HitReactMontage);
+
+	// Platform-fighter feel: shared hitlag with the attacker, then a push away from it
+	// that the move stick can bend (directional influence). Friction ends the slide.
+	AEnderCharacterBase* Attacker = Cast<AEnderCharacterBase>(Event.Instigator);
+	const float Hitlag = static_cast<float>(EnderRules::ControllerFeel::SharedHitlag(Event.Amount, EnderConvert::ToRules(Event.HitWeight)));
+	if (Hitlag > 0.f)
+	{
+		PauseAnimation(Hitlag);
+		if (Attacker) Attacker->PauseAnimation(Hitlag);
+	}
+	const FVector Away = Attacker ? (GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal2D() : FVector::ZeroVector;
+	const double Speed = EnderRules::ControllerFeel::KnockbackSpeed(Event.HealthLost);
+	if (!Away.IsNearlyZero() && Speed > 0)
+	{
+		const FVector Stick = GetMovementInput();
+		const EnderRules::ControllerFeel::FVec2 Launch = EnderRules::ControllerFeel::ApplyDI({Away.X, Away.Y}, {Stick.X, Stick.Y});
+		// Set velocity directly rather than LaunchCharacter, which would switch to Falling and hop.
+		GetCharacterMovement()->Velocity = FVector(Launch.X, Launch.Y, 0.0) * Speed;
+	}
 }
 
 void AEnderPlayerCharacter::HandleDeath(AActor* Killer)
@@ -176,7 +196,7 @@ void AEnderPlayerCharacter::OnDealtDamage(UEnderAbilitySystemComponent* Victim, 
 	if (UEnderHitFeelSubsystem* Feel = GetWorld()->GetSubsystem<UEnderHitFeelSubsystem>())
 	{
 		const FVector Dir = VictimActor ? (VictimActor->GetActorLocation() - GetActorLocation()) : GetActorForwardVector();
-		Feel->PlayHit(VictimActor, Event.HitWeight, Event.bCrit, Event.bFirstUltimateImpact, Dir);
+		Feel->PlayHit(this, VictimActor, Event.Amount, Event.HitWeight, Event.bCrit, Event.bFirstUltimateImpact, Dir);
 	}
 
 	if (Event.bKilled && Victim)

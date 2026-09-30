@@ -7,8 +7,9 @@
 #include "GameFramework/WorldSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Rules/CombatRules.h"
+#include "Rules/ControllerFeelRules.h"
 
-void UEnderHitFeelSubsystem::PlayHit(AEnderCharacterBase* Victim, EEnderHitWeight Weight, bool bCrit, bool bFirstUltimateImpact, const FVector& HitDirection)
+void UEnderHitFeelSubsystem::PlayHit(AEnderCharacterBase* Attacker, AEnderCharacterBase* Victim, float Damage, EEnderHitWeight Weight, bool bCrit, bool bFirstUltimateImpact, const FVector& HitDirection)
 {
 	const EnderRules::FHitFeel Feel = EnderRules::HitFeelFor(EnderConvert::ToRules(Weight), bCrit, bFirstUltimateImpact);
 
@@ -16,6 +17,14 @@ void UEnderHitFeelSubsystem::PlayHit(AEnderCharacterBase* Victim, EEnderHitWeigh
 	{
 		Victim->PlayHitFlash(static_cast<float>(Feel.EnemyFlash));
 		if (Feel.EnemyAnimPause > 0) Victim->PauseAnimation(static_cast<float>(Feel.EnemyAnimPause));
+	}
+
+	// Shared hitlag: both sides freeze together; PauseAnimation keeps the longer of the two pauses.
+	const float Hitlag = static_cast<float>(EnderRules::ControllerFeel::SharedHitlag(Damage, EnderConvert::ToRules(Weight)));
+	if (Hitlag > 0.f)
+	{
+		if (Victim) Victim->PauseAnimation(Hitlag);
+		if (Attacker) Attacker->PauseAnimation(Hitlag);
 	}
 
 	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))

@@ -41,6 +41,18 @@ Exact versions are pinned in `pnpm-lock.yaml`.
 - `game/Tools/Art/Shaders/*.hlsl`
 - All inference fixtures in `data/inference-fixtures/`. They were written by the coding agent from recorded requests, and no paid AI was used.
 
+## Reference only (reviewed 2026-09-30, nothing copied)
+
+Reviewed when Mark asked to build combat on an open-source Smash-style implementation. The techniques in `Rules/ControllerFeelRules.h` (shared hitlag, knockback, directional influence) are genre-wide; the code and numbers there are original.
+
+| Name | Source | License | Why not used as a base |
+|---|---|---|---|
+| Melee Light | github.com/schmooblidon/meleelight | MIT | JavaScript canvas side-view fighter; its formulas and characters recreate Nintendo's Melee, which §92 forbids copying |
+| Platform-Fighter-Engine | github.com/MonadoBoy16/Platform-Fighter-Engine | Apache-2.0 | Unity C#, side-view, work in progress |
+| Universal Smash System | github.com/digiholic/universalSmashSystem | GPL-3.0 | GPL would make Ender GPL; Python/pygame |
+| Godot-Smash-Engine | github.com/NyxTheShield/Godot-Smash-Engine | GPL-3.0 | GPL; Godot |
+| OpenSmash | github.com/turtlesoupy/opensmash | MIT (pipeline only) | Runs decompiled Smash 64 and Melee with the player's own ROM; the game logic is Nintendo's |
+
 ## Planned sources (approved by the spec, nothing committed yet)
 
 | Source | License | Intended use |
