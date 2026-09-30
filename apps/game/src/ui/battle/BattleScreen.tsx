@@ -18,7 +18,8 @@ import {
   type RootId,
   type Unit,
 } from "@ender/battle";
-import { backdropFor } from "../../art/registry";
+import { backdropFor, backdropId } from "../../art/registry";
+import { SceneBackdrop } from "../../art/SceneBackdrop";
 import { STAGE_H, useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH } from "../affinity";
 import { Fig, Head, figureBox } from "./Figure";
@@ -553,7 +554,9 @@ export function BattleScreen({
   return (
     <div className={`battle phase-${phase.k}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
       <div className="world" style={{ top: worldTop }}>
-      <div className="backdrop">{Backdrop && <Backdrop className="backdrop-svg" />}</div>
+      <div className="backdrop">
+        <SceneBackdrop id={backdropId(realmId, boss)} Drawn={Backdrop} />
+      </div>
 
       {/* units: foes behind, heroes in front */}
       <div className="field">
@@ -722,9 +725,12 @@ function Statuses({ u }: { u: Unit }) {
   );
 }
 
+/** Matches .foe-tag's width in frame.css, so tags near the edges stay on screen. */
+const FOE_TAG_W = 300;
+
 function FoeTag({ u, h, x }: { u: Unit; h: number; x: number }) {
   // Keep the tag on screen near the edges.
-  const left = Math.max(10, Math.min(1070 - 260, x - 130)) - x;
+  const left = Math.max(10, Math.min(1070 - FOE_TAG_W, x - FOE_TAG_W / 2)) - x;
   return (
     <div className="foe-tag" style={{ top: -h - 34, left }}>
       <div className="foe-name">

@@ -21,3 +21,6 @@ export function backdropFor(realmId: string, boss: boolean): BackdropModule | un
   return { "ashen-vault": byName.AshenVault, "glass-fen": byName.GlassFen, "hollow-keep": byName.HollowKeep }[realmId];
 }
 export const crossingBackdrop = () => byName.Crossing;
+
+/** The id of the painted backdrop (art/prompts.json "bg-<id>") that stands in for a realm's drawn one. */
+export const backdropId = (realmId: string, boss: boolean) => (boss ? (realmId === "glass-fen" ? "fen-lair" : "throne") : realmId);

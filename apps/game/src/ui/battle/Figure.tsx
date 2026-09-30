@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { figureFor } from "../../art/registry";
+import { paintedFigure } from "../../art/painted";
 import type { Pose } from "../../art/types";
 
 /** Stage px per viewBox unit, per painted figure. */
@@ -27,6 +28,14 @@ export function figureBox(figure: string, scale = FIG_SCALE[figure] ?? 1.2) {
 export const Fig = memo(function Fig({ figure, pose = "idle", scale, className }: { figure: string; pose?: Pose; scale?: number; className?: string }) {
   const F = figureFor(figure).default;
   const b = figureBox(figure, scale);
+  const painted = paintedFigure(figure);
+  if (painted)
+    // A painted cut-out is cropped to its silhouette: stand it on the same feet, as tall as the drawn figure.
+    return (
+      <div className={className} style={{ position: "absolute", left: -b.w / 2, top: -b.feetY, width: b.w, height: b.feetY }}>
+        <img src={painted} className="fig-img" alt="" draggable={false} />
+      </div>
+    );
   return (
     <div className={className} style={{ position: "absolute", left: -b.feetX, top: -b.feetY, width: b.w, height: b.h }}>
       <F pose={pose} className="fig-svg" />
@@ -39,6 +48,13 @@ export const Head = memo(function Head({ figure, size }: { figure: string; size:
   const mod = figureFor(figure);
   const [x, y, s] = mod.meta.head;
   const F = mod.default;
+  const painted = paintedFigure(figure);
+  if (painted)
+    return (
+      <div className="head" style={{ width: size, height: size }}>
+        <img src={painted} className="head-img" alt="" draggable={false} />
+      </div>
+    );
   return (
     <div className="head" style={{ width: size, height: size }}>
       <F viewBox={`${x} ${y} ${s} ${s}`} className="fig-svg" />

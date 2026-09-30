@@ -1,5 +1,6 @@
 import { PARTY, ROOTS, type RootId } from "@ender/battle";
 import { backdropFor } from "../../art/registry";
+import { SceneBackdrop } from "../../art/SceneBackdrop";
 import { finishExpedition, nodeById, reachable, stepTo } from "../../game/flow";
 import { setState, toast, useStore, type MapNode } from "../../state/store";
 import { Head } from "../battle/Figure";
@@ -46,7 +47,9 @@ export function MapScreen() {
   const here = ex.at ? nodeById(ex.at) : null;
   return (
     <div className="map-screen" data-testid="map">
-      <div className="backdrop dimmed">{Back && <Back className="backdrop-svg" />}</div>
+      <div className="backdrop dimmed">
+        <SceneBackdrop id={ex.plan.realmId} Drawn={Back} />
+      </div>
       <header className="map-head">
         <div>
           <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
