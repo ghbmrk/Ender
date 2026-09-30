@@ -12,6 +12,9 @@ class AEnderCharacterBase;
  * first impact (42 ms) stops world time. Global hitstop dilates world time only:
  * UMG and audio keep running because neither reads world time dilation.
  * Overlapping hitstops take the longest remaining, never stack.
+ *
+ * On top of §32, every connecting hit freezes attacker and victim together for a
+ * damage-scaled hitlag (Rules/ControllerFeelRules.h), platform-fighter style.
  */
 UCLASS()
 class ENDER_API UEnderHitFeelSubsystem : public UTickableWorldSubsystem
@@ -20,7 +23,7 @@ class ENDER_API UEnderHitFeelSubsystem : public UTickableWorldSubsystem
 
 public:
 	/** Called by the Binder's damage-dealt path for every successful hit. */
-	void PlayHit(AEnderCharacterBase* Victim, EEnderHitWeight Weight, bool bCrit, bool bFirstUltimateImpact, const FVector& HitDirection);
+	void PlayHit(AEnderCharacterBase* Attacker, AEnderCharacterBase* Victim, float Damage, EEnderHitWeight Weight, bool bCrit, bool bFirstUltimateImpact, const FVector& HitDirection);
 
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(UEnderHitFeelSubsystem, STATGROUP_Tickables); }
