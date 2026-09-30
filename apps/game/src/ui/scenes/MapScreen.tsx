@@ -1,0 +1,121 @@
+import { PARTY, ROOTS, type RootId } from "@ender/battle";
+import { backdropFor } from "../../art/registry";
+import { finishExpedition, nodeById, reachable, stepTo } from "../../game/flow";
+import { setState, toast, useStore, type MapNode } from "../../state/store";
+import { Head } from "../battle/Figure";
+
+const KIND: Record<string, { glyph: string; name: string }> = {
+  combat: { glyph: "⚔", name: "Fight" },
+  elite: { glyph: "☠", name: "Elite" },
+  shrine: { glyph: "✧", name: "Shrine" },
+  attunement: { glyph: "◬", name: "Attunement" },
+  bazaar: { glyph: "⚖", name: "Bazaar" },
+  contract: { glyph: "✉", name: "Contract" },
+  mystery: { glyph: "?", name: "Mystery" },
+  boss: { glyph: "♚", name: "Boss" },
+};
+const REALM_NAME: Record<string, string> = { "ashen-vault": "The Ashen Vault", "glass-fen": "The Glass Fen", "hollow-keep": "The Hollow Keep" };
+
+const TOP = 300;
+const BOTTOM = 1640;
+
+/** The branching Expedition route (§76–77), climbing from the bottom of the screen to the Boss at the top. */
+export function MapScreen() {
+  const ex = useStore((s) => s.expedition);
+  useStore((s) => s.panel);
+  if (!ex) return null;
+  const layers = ex.plan.map.layers;
+  const pos = (n: MapNode): [number, number] => {
+    const layer = layers[n.layer]!;
+    const i = layer.findIndex((x) => x.id === n.id);
+    const y = BOTTOM - ((BOTTOM - TOP) * n.layer) / Math.max(1, layers.length - 1);
+    const x = layer.length === 1 ? 540 : 200 + (680 * i) / (layer.length - 1);
+    // A little hand-drawn wobble, deterministic per node.
+    const w = ((n.id.charCodeAt(n.id.length - 1) * 37) % 60) - 30;
+    return [x + w, y];
+  };
+  const next = new Set(reachable().map((n) => n.id));
+  const Back = backdropFor(ex.plan.realmId, false)?.default;
+  const go = (n: MapNode) => {
+    if (!next.has(n.id)) return;
+    stepTo(n).catch((e) => toast((e as Error).message, "loss"));
+  };
+  const here = ex.at ? nodeById(ex.at) : null;
+  return (
+    <div className="map-screen" data-testid="map">
+      <div className="backdrop dimmed">{Back && <Back className="backdrop-svg" />}</div>
+      <header className="map-head">
+        <div>
+          <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
+          <div className="map-sub">Choose your path. The Loom is locked until a Shrine.</div>
+        </div>
+        <div className="row">
+          <button onClick={() => setState({ screen: "loom" })} data-testid="map-loom">
+            Loom
+          </button>
+          <button onClick={() => setState({ panel: "inventory" })}>Forms</button>
+          <button
+            className="ghost"
+            onClick={() => {
+              if (confirm("Withdraw from this Expedition? You keep what you found.")) finishExpedition("abandon").catch((e) => toast(e.message, "loss"));
+            }}
+          >
+            Withdraw
+          </button>
+        </div>
+      </header>
+      <svg className="map-svg" viewBox="0 0 1080 1920">
+        {layers.flat().flatMap((n) =>
+          n.links.map((l) => {
+            const m = nodeById(l);
+            if (!m) return null;
+            const [x1, y1] = pos(n);
+            const [x2, y2] = pos(m);
+            const walked = ex.visited.includes(n.id) && ex.visited.includes(l);
+            return <path key={`${n.id}-${l}`} d={`M${x1} ${y1} Q${(x1 + x2) / 2 + (y1 % 40) - 20} ${(y1 + y2) / 2} ${x2} ${y2}`} className={`map-link ${walked ? "walked" : ""}`} />;
+          }),
+        )}
+      </svg>
+      {layers.flat().map((n) => {
+        const [x, y] = pos(n);
+        const k = KIND[n.kind] ?? { glyph: "•", name: n.kind };
+        const visited = ex.visited.includes(n.id);
+        return (
+          <button
+            key={n.id}
+            className={`map-node k-${n.kind} ${next.has(n.id) ? "next" : ""} ${visited ? "visited" : ""} ${ex.at === n.id ? "here" : ""}`}
+            style={{ left: x, top: y }}
+            onClick={() => go(n)}
+            disabled={!next.has(n.id)}
+            data-testid={`map-node-${n.id}`}
+            data-kind={n.kind}
+          >
+            <span className="mn-glyph">{k.glyph}</span>
+            <span className="mn-name">{n.label ?? k.name}</span>
+          </button>
+        );
+      })}
+      {here && (
+        <div className="map-marker" style={{ left: pos(here)[0], top: pos(here)[1] }}>
+          <Head figure="warden" size={70} />
+        </div>
+      )}
+      <div className="map-party">
+        {PARTY.map((r: RootId) => {
+          const hp = ex.partyHp[r] ?? ROOTS[r].hp;
+          return (
+            <div key={r} className="mp-hero">
+              <Head figure={ROOTS[r].hero} size={72} />
+              <div className="gbar hp hero">
+                <div style={{ width: `${(hp / ROOTS[r].hp) * 100}%` }} />
+              </div>
+              <span>
+                {hp}/{ROOTS[r].hp}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

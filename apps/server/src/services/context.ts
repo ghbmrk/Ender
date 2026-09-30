@@ -2,7 +2,7 @@ import { percentile, type WorldSnapshot } from "@ender/shared";
 import { basePrices, buildSnapshots, productionCost, type BuiltWorld, type MarketSeed } from "@ender/economy";
 import type { PubChemRealityAdapter } from "@ender/reality";
 import { FixtureInferenceProvider, RuleInferenceProvider, type FixtureStore, type InferenceProvider } from "@ender/inference";
-import type { Db } from "../db";
+import { migrate, type Db } from "../db";
 import type { ServerConfig } from "../config";
 
 export type Ctx = {
@@ -36,6 +36,7 @@ export type ContextParts = { db: Db; reality: PubChemRealityAdapter; marketSeed:
 /** Assemble a context from its parts; Node (node-context.ts) and the browser build supply them differently. */
 export function createContext(config: ServerConfig, parts: ContextParts): Ctx {
   const { db, reality, fixtures } = parts;
+  migrate(db);
   const world = buildSnapshots(parts.marketSeed);
   const costs = reality
     .all()

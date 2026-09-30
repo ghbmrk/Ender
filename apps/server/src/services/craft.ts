@@ -8,10 +8,8 @@ import type { Ctx } from "./context";
 import {
   HttpError,
   addItem,
-  charRow,
   getMastery,
   itemQty,
-  passivesFor,
   policyFor,
   recordMasteryEvent,
   spendFocus,
@@ -32,6 +30,7 @@ import {
   type Readings,
 } from "./artifacts";
 import { logInference } from "./inferenceLog";
+import { carryInscription } from "./loom";
 import { currentSnapshot, marketContext } from "./world";
 
 const latestRunId = (ctx: Ctx, charId: string) =>
@@ -62,6 +61,10 @@ function requireTier(a: ArtifactRow, allowed: ArtifactRow["evidence_tier"][], ac
   if (a.status !== "held" && a.status !== "equipped") throw new HttpError(400, `Form is ${a.status}`);
 }
 
+// Lifecycle (§48): VEILED → ATTUNED → INSCRIBED → TRIALED → WITNESSED. Inscription is a Loom role
+// (artifacts.inscribed_role, see loom.ts) layered on the evidence tier; Trial is also allowed straight from
+// Attuned so existing flows keep working (Ender default).
+
 /** Record a mastery opportunity at most once per key. */
 function masteryOnce(ctx: Ctx, charId: string, domain: Parameters<typeof recordMasteryEvent>[2], success: number, reason: string): MasteryChange | null {
   if (get(ctx.db, "SELECT 1 FROM mastery_events WHERE character_id = ? AND reason = ?", charId, reason)) return null;
@@ -73,13 +76,9 @@ function masteryOnce(ctx: Ctx, charId: string, domain: Parameters<typeof recordM
 export async function attune(ctx: Ctx, charId: string, artifactId: string) {
   const a = getArtifact(ctx, artifactId, charId);
   requireTier(a, ["veiled"], "attune");
-  const passives = passivesFor(ctx, charId);
-  const c = charRow(ctx, charId);
-  const free = c.free_attunes_used < (passives.freeAttunes ?? 0);
-  if (free) run(ctx.db, "UPDATE characters SET free_attunes_used = free_attunes_used + 1 WHERE id = ?", charId);
-  else spendFocus(ctx, charId, FOCUS_COST.attune);
+  spendFocus(ctx, charId, FOCUS_COST.attune);
 
-  const readings = makeReadings(ctx, a, passives.readingNoise);
+  const readings = makeReadings(ctx, a, 1);
   const withReadings = { ...a, readings: JSON.stringify(readings), evidence_tier: "attuned" as const };
   const q = knownQualities(ctx, withReadings);
   const ms = marketSummary(ctx, q);
@@ -116,7 +115,7 @@ export async function attune(ctx: Ctx, charId: string, artifactId: string) {
     }
     return logInference(ctx, { charId, artifactId: a.id, revision: a.revision, kind: "attune", action: "attune", env, runId: latestRunId(ctx, charId) });
   });
-  return { artifact: artifactView(ctx, getArtifact(ctx, a.id)), familiar: env.result, inference: log, mastery, focusSpent: free ? 0 : FOCUS_COST.attune };
+  return { artifact: artifactView(ctx, getArtifact(ctx, a.id)), familiar: env.result, inference: log, mastery, focusSpent: FOCUS_COST.attune };
 }
 
 // ───────────────────────────── Temper ─────────────────────────────
@@ -135,14 +134,13 @@ export type TemperOption = {
 };
 
 function buildTransformRequest(ctx: Ctx, charId: string, a: ArtifactRow, wild: boolean) {
-  const passives = passivesFor(ctx, charId);
   const me = charMasteryEffects(ctx, charId);
   const m = marketContext(ctx);
   const objective = objectiveOf(a);
   const trueQ = trueQualities(ctx, a);
-  const neighbors = ctx.reality.neighborsSync(a.reality_id, { depth: passives.deepNeighborhood ? 2 : 1, limit: 12 + me.craftNeighborhood });
+  const neighbors = ctx.reality.neighborsSync(a.reality_id, { depth: 1, limit: 12 + me.craftNeighborhood });
   const candidates = neighbors.map((n) => {
-    const reading = readQualities(n.qualities, `${charId}:${n.id}`, passives.readingNoise);
+    const reading = readQualities(n.qualities, `${charId}:${n.id}`, 1);
     const recipe = productionRecipe(reading);
     const cost = productionCost(recipe, m.prices);
     const pred = technicalScore(reading, objective);
@@ -171,7 +169,7 @@ function buildTransformRequest(ctx: Ctx, charId: string, a: ArtifactRow, wild: b
     candidates: candidates.map((x) => x.c),
     marketContext: { productionCost: ms.productionCost, currentDemand: ms.currentDemand, essenceScarcity: ms.essenceScarcity },
     buildPolicy: policy,
-    costWeight: passives.costWeight ?? 0,
+    costWeight: 0,
     count: 3,
   };
   return { req, candidates };
@@ -182,12 +180,11 @@ const charMasteryEffects = (ctx: Ctx, charId: string) => masteryEffects(getMaste
 export async function temperOptions(ctx: Ctx, charId: string, artifactId: string, opts: { wildSigil?: boolean } = {}) {
   const a = getArtifact(ctx, artifactId, charId);
   requireTier(a, ["attuned", "trialed", "witnessed"], "temper");
-  if (a.status === "equipped") throw new HttpError(400, "unequip the Form before tempering it");
   const pending = get<{ options: string }>(ctx.db, "SELECT options FROM pending_tempers WHERE artifact_id = ?", a.id);
   if (pending) return { options: JSON.parse(pending.options) as TemperOption[], familiar: null, inference: null, focusSpent: 0, pending: true };
 
   const wild = !!opts.wildSigil && itemQty(ctx, charId, "currency", "wild-sigil") >= 1;
-  const cost = Math.max(0, FOCUS_COST.temper - (passivesFor(ctx, charId).temperDiscount ?? 0));
+  const cost = FOCUS_COST.temper;
   spendFocus(ctx, charId, cost);
   const { req, candidates } = buildTransformRequest(ctx, charId, a, wild);
   const env = await ctx.inference.transform(req);
@@ -248,11 +245,12 @@ export function temperChoose(ctx: Ctx, charId: string, artifactId: string, candi
 
   return tx(ctx.db, () => {
     const child = createArtifact(ctx, charId, { realityId: choice.realityId, realmId: a.objective_id, origin: "temper", parentId: a.id, tier: "attuned", acquisitionCost: 0 });
-    const passives = passivesFor(ctx, charId);
-    const readings = makeReadings(ctx, child, passives.readingNoise);
+    const readings = makeReadings(ctx, child, 1);
     const named = ruleFantasyName(choice.candidateId, readings.qualities);
     run(ctx.db, "UPDATE artifacts SET readings = ?, fantasy_name = ?, epithet = ?, revealed = '[]', run_id = ? WHERE id = ?", JSON.stringify(readings), named.fantasyName, named.epithet, a.run_id, child.id);
     run(ctx.db, "UPDATE artifacts SET status = 'tempered' WHERE id = ?", a.id);
+    // §52: the same Loom slot stays occupied, now by the child, with the same inscribed role.
+    carryInscription(ctx, a, child.id);
     run(ctx.db, "DELETE FROM pending_tempers WHERE artifact_id = ?", a.id);
 
     // Objective outcomes (hidden truth) drive Mastery; inference never awards it.
@@ -262,7 +260,7 @@ export function temperChoose(ctx: Ctx, charId: string, artifactId: string, candi
     const dEff = round(after.efficiencyScore - before.efficiencyScore, 1);
     const dMargin = round(after.marginPotential - before.marginPotential);
     const mastery: MasteryChange[] = [];
-    const craftOk = dScore >= 5 || (!!passives.valueSmith && dEff >= 5);
+    const craftOk = dScore >= 5;
     mastery.push(recordMasteryEvent(ctx, charId, "craft", craftOk ? 1 : 0, `temper:${a.id}`));
 
     // Discovery: chosen candidate in top 25% of the opportunity set (technical or economic).
@@ -299,9 +297,8 @@ export function temperChoose(ctx: Ctx, charId: string, artifactId: string, candi
 // ───────────────────────────── Critique (Fracture) ─────────────────────────────
 
 function critiqueRequest(ctx: Ctx, charId: string, a: ArtifactRow, mode: CritiqueRequest["mode"], trial?: CritiqueRequest["trial"]): CritiqueRequest {
-  const passives = passivesFor(ctx, charId);
   const exact = a.evidence_tier === "trialed" || a.evidence_tier === "witnessed";
-  const view = exact ? trueQualities(ctx, a) : readQualities(trueQualities(ctx, a), `${charId}:${a.reality_id}:critique`, passives.critiqueNoise);
+  const view = exact ? trueQualities(ctx, a) : readQualities(trueQualities(ctx, a), `${charId}:${a.reality_id}:critique`, 1);
   const ms = marketSummary(ctx, view);
   return {
     mode,
@@ -310,7 +307,7 @@ function critiqueRequest(ctx: Ctx, charId: string, a: ArtifactRow, mode: Critiqu
     marketContext: ms,
     buildPolicy: policyFor(ctx, charId),
     trial,
-    wantSecond: mode === "deep" || !!passives.secondWeakness,
+    wantSecond: mode === "deep",
   };
 }
 
@@ -400,11 +397,11 @@ export function trial(ctx: Ctx, charId: string, artifactId: string) {
   });
 }
 
-function mirrorCheck(ctx: Ctx, charId: string, a: ArtifactRow, extraTolerance: number) {
+function mirrorCheck(ctx: Ctx, a: ArtifactRow, extraTolerance: number) {
   const q = trueQualities(ctx, a);
   const base = technicalScore(q, objectiveOf(a));
   const mirrorScores = mirrorObjectives(objectiveOf(a)).map((o) => technicalScore(q, o));
-  const tolerance = 6 + (passivesFor(ctx, charId).mirrorTolerance ?? 0) + extraTolerance;
+  const tolerance = 6 + extraTolerance;
   const maxDeviation = round(Math.max(...mirrorScores.map((s) => Math.abs(s - base))), 1);
   return { technicalScore: base, mirrorScores, tolerance, maxDeviation, consistent: maxDeviation <= tolerance };
 }
@@ -412,20 +409,23 @@ function mirrorCheck(ctx: Ctx, charId: string, a: ArtifactRow, extraTolerance: n
 export async function mirror(ctx: Ctx, charId: string, artifactId: string) {
   const a = getArtifact(ctx, artifactId, charId);
   requireTier(a, ["trialed", "witnessed"], "mirror");
-  const seal = itemQty(ctx, charId, "currency", "broken-seal") >= 1;
-  const cost = FOCUS_COST.mirror - (seal ? 1 : 0);
+  // §55: a Mirror charge (boss loot) pays for the Mirror; without one it costs Focus as before (Ender default).
+  const charge = itemQty(ctx, charId, "charge", "mirror") >= 1;
+  const seal = !charge && itemQty(ctx, charId, "currency", "broken-seal") >= 1;
+  const cost = charge ? 0 : FOCUS_COST.mirror - (seal ? 1 : 0);
   spendFocus(ctx, charId, cost);
-  const check = mirrorCheck(ctx, charId, a, 0);
+  const check = mirrorCheck(ctx, a, 0);
   const req = critiqueRequest(ctx, charId, a, "mirror", { technicalScore: check.technicalScore, mirrorScores: check.mirrorScores, tolerance: check.tolerance });
   const env = await ctx.inference.critique(req);
   return tx(ctx.db, () => {
+    if (charge) addItem(ctx, charId, "charge", "mirror", -1);
     if (seal) addItem(ctx, charId, "currency", "broken-seal", -1);
     if (check.consistent && a.evidence_tier === "trialed") setTier(ctx, a, "witnessed", "witnessed by Mirror");
     recordEvaluation(ctx, a, "mirror", check);
     const fam = a.familiar ? JSON.parse(a.familiar) : {};
     run(ctx.db, "UPDATE artifacts SET familiar = ? WHERE id = ?", JSON.stringify({ ...fam, mirror: env.result }), a.id);
     const log = logInference(ctx, { charId, artifactId: a.id, revision: a.revision, kind: "critique", action: "mirror", env, runId: latestRunId(ctx, charId) });
-    return { artifact: artifactView(ctx, getArtifact(ctx, a.id)), mirror: check, familiar: env.result, inference: log, focusSpent: cost };
+    return { artifact: artifactView(ctx, getArtifact(ctx, a.id)), mirror: check, familiar: env.result, inference: log, focusSpent: cost, mirrorChargeSpent: charge };
   });
 }
 
@@ -437,7 +437,7 @@ export async function deepTrial(ctx: Ctx, charId: string, artifactId: string) {
     trial(ctx, charId, a.id);
     a = getArtifact(ctx, a.id);
   }
-  const check = mirrorCheck(ctx, charId, a, 3);
+  const check = mirrorCheck(ctx, a, 3);
   const req = critiqueRequest(ctx, charId, a, "deep", { technicalScore: check.technicalScore, mirrorScores: check.mirrorScores, tolerance: check.tolerance });
   const env = await ctx.inference.critique(req);
   // Alternative comparison: the best neighbouring Form, by the same deterministic evaluator.

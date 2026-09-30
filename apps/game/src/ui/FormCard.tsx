@@ -74,7 +74,7 @@ export function FormCard({ a, children, compact, selected, onClick }: { a: any; 
         </div>
         <div className="fc-badges">
           <span className={`tier tier-${a.tier}`}>{TIER_LABEL[a.tier]}</span>
-          {a.equippedSlot && <span className="slot-badge">{a.equippedSlot}</span>}
+          {a.inscribedRole && <span className="slot-badge">{a.inscribedRole}</span>}
         </div>
       </div>
       <div className="fc-realm dim">Shaped by {a.realmName}</div>

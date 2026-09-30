@@ -1,4 +1,4 @@
-import { ESSENCE_IDS, rng, round, type EssenceId, type GearSlot } from "@ender/shared";
+import { ESSENCE_IDS, rng, round, type EssenceId } from "@ender/shared";
 import { ESSENCES, REALMS, realmById } from "@ender/content";
 import { brierQuality, masteryEffects, revealedQualityKeys, tierRank, technicalScore } from "@ender/domain";
 import { essenceFreeDemand, essencePrices, essenceQty, marketValue, meetsContract, productionRecipe, salvageValue, PRESSURE_PER_UNIT } from "@ender/economy";
@@ -9,16 +9,14 @@ import {
   addItem,
   adjustCrowns,
   charRow,
-  combatStatsFor,
   essences,
-  getCharacter,
   getMastery,
   itemQty,
-  passivesFor,
   recordMasteryEvent,
   type MasteryChange,
 } from "./character";
 import { artifactView, createArtifact, getArtifact, newId, trueEvaluation, trueQualities, type ArtifactRow } from "./artifacts";
+import { unplace } from "./loom";
 import { activeContracts, addPressure, currentPrices, currentSnapshot, getState, marketContext, nextSnapshot, priceHistory, setState } from "./world";
 
 const spreadFor = (ctx: Ctx, charId: string) => masteryEffects(getMastery(ctx, charId)).spread;
@@ -69,19 +67,10 @@ function ensureOffers(ctx: Ctx) {
   }
 }
 
-function offersView(ctx: Ctx, charId: string) {
+function offersView(ctx: Ctx) {
   ensureOffers(ctx);
   const s = currentSnapshot(ctx);
   const rows = all<{ id: string; reality_id: string; realm_id: string; price: number; status: string }>(ctx.db, "SELECT * FROM bazaar_offers WHERE snapshot_id = ? ORDER BY id", s.id);
-  const m = marketContext(ctx);
-  const reveal = passivesFor(ctx, charId).arbitrageReveal;
-  const ratio = (o: (typeof rows)[number]) => {
-    const c = ctx.reality.candidateSync(o.reality_id);
-    const v = marketValue(technicalScore(c.qualities, realmById(o.realm_id).objective), c.recipe, "trialed", m).total;
-    return o.price / Math.max(1, v);
-  };
-  const open = rows.filter((o) => o.status === "open");
-  const best = reveal && open.length ? open.reduce((a, b) => (ratio(a) <= ratio(b) ? a : b)) : null;
   return rows.map((o) => {
     const q = ctx.reality.candidateSync(o.reality_id).qualities;
     const keys = revealedQualityKeys(o.id, 2);
@@ -92,7 +81,6 @@ function offersView(ctx: Ctx, charId: string) {
       price: o.price,
       status: o.status,
       revealed: Object.fromEntries(keys.map((k) => [k, q[k]])),
-      mispriced: best?.id === o.id ? "The Scholars have badly underpriced this one." : null,
     };
   });
 }
@@ -177,32 +165,6 @@ export function productionQuote(ctx: Ctx, charId: string, a: ArtifactRow) {
   return { recipe: recipe.essenceCosts, crownsIfBought: round(crowns, 2), alreadyBound: !!a.bound };
 }
 
-// ───────────────────────────── Equipment ─────────────────────────────
-
-export function equip(ctx: Ctx, charId: string, slot: GearSlot, artifactId: string | null) {
-  if (!["blade", "ward", "sigil", "charm"].includes(slot)) throw new HttpError(400, "unknown slot");
-  return tx(ctx.db, () => {
-    const before = combatStatsFor(ctx, charId);
-    const c = getCharacter(ctx, charId);
-    const eq = { ...c.equipped };
-    const prev = eq[slot];
-    if (prev) run(ctx.db, "UPDATE artifacts SET status = 'held', equipped_slot = NULL WHERE id = ?", prev);
-    let binding = null;
-    if (artifactId) {
-      const a = getArtifact(ctx, artifactId, charId);
-      if (tierRank(a.evidence_tier) < 1) throw new HttpError(400, "Attune a Form before binding it");
-      if (a.status !== "held" && a.status !== "equipped") throw new HttpError(400, `Form is ${a.status}`);
-      if (a.equipped_slot && a.equipped_slot !== slot) delete eq[a.equipped_slot];
-      // Binding manifests the Form: its production recipe must be paid once.
-      if (!a.bound) binding = payProduction(ctx, charId, a);
-      run(ctx.db, "UPDATE artifacts SET status = 'equipped', equipped_slot = ? WHERE id = ?", slot, a.id);
-      eq[slot] = a.id;
-    } else delete eq[slot];
-    run(ctx.db, "UPDATE characters SET equipped = ? WHERE id = ?", JSON.stringify(eq), charId);
-    return { equipped: eq, binding, statsBefore: before, stats: combatStatsFor(ctx, charId) };
-  });
-}
-
 // ───────────────────────────── Selling Forms ─────────────────────────────
 
 export function sellArtifact(ctx: Ctx, charId: string, artifactId: string, mode: "produce" | "salvage" = "produce") {
@@ -212,32 +174,23 @@ export function sellArtifact(ctx: Ctx, charId: string, artifactId: string, mode:
     const spread = spreadFor(ctx, charId);
     const crownsBefore = charRow(ctx, charId).crowns;
     const mastery: MasteryChange[] = [];
-    if (a.equipped_slot) {
-      const eq = { ...getCharacter(ctx, charId).equipped };
-      delete eq[a.equipped_slot];
-      run(ctx.db, "UPDATE characters SET equipped = ? WHERE id = ?", JSON.stringify(eq), charId);
-    }
+    unplace(ctx, a.id);
     let payout: number;
     let production = { crownsSpent: 0, productionCost: 0 } as ReturnType<typeof payProduction> | { crownsSpent: number; productionCost: number };
-    let bonus = 0;
+    const bonus = 0;
     const ev = trueEvaluation(ctx, a);
     if (mode === "salvage") {
       payout = round(salvageValue(ev.technicalScore) * (1 - spread));
     } else {
       if (tierRank(a.evidence_tier) < 1) throw new HttpError(400, "Veiled Forms can only be salvaged");
       if (!a.bound) production = payProduction(ctx, charId, a);
-      const passives = passivesFor(ctx, charId);
-      const s = currentSnapshot(ctx);
-      const scarcest = [...ESSENCE_IDS].sort((x, y) => s.essenceScarcity[y] - s.essenceScarcity[x]).slice(0, 2);
-      if ((passives.contrarianBonus ?? 0) > 0 && ev.technicalScore >= 50 && scarcest.every((e) => essenceQty(ev.recipe, e) === 0)) bonus += passives.contrarianBonus!;
-      if ((passives.patronBonus ?? 0) > 0 && a.origin === "bazaar" && a.acquisition_value && ev.estimatedMarketValue >= 1.2 * a.acquisition_value) bonus += passives.patronBonus!;
       payout = round(ev.estimatedMarketValue * (1 - spread) * (1 + bonus));
       // Buyers absorb supply: Smiths' appetite for this recipe's Essences eases slightly.
       for (const e of ESSENCE_IDS) if (essenceQty(ev.recipe, e)) addPressure(ctx, e, -0.004 * essenceQty(ev.recipe, e));
     }
     adjustCrowns(ctx, charId, payout);
     const profit = round(payout - production.productionCost - a.acquisition_cost);
-    run(ctx.db, "UPDATE artifacts SET status = 'sold', equipped_slot = NULL WHERE id = ?", a.id);
+    run(ctx.db, "UPDATE artifacts SET status = 'sold' WHERE id = ?", a.id);
     logTx(ctx, charId, "artifact", a.id, "sell", 1, payout, { mode, productionCost: production.productionCost, profit, bonus });
     if (mode === "produce" || a.origin === "bazaar") mastery.push(recordMasteryEvent(ctx, charId, "commerce", profit > 0 ? 1 : 0, `sell:${a.id}`));
     const crownsAfter = charRow(ctx, charId).crowns;
@@ -273,13 +226,9 @@ export function fulfillContract(ctx: Ctx, charId: string, contractId: string, ar
   if (!check.ok) throw new HttpError(400, `Form does not meet the contract: ${check.failures.join("; ")}`);
   return tx(ctx.db, () => {
     const production = a.bound ? { crownsSpent: 0, productionCost: 0 } : payProduction(ctx, charId, a);
-    if (a.equipped_slot) {
-      const eq = { ...getCharacter(ctx, charId).equipped };
-      delete eq[a.equipped_slot];
-      run(ctx.db, "UPDATE characters SET equipped = ? WHERE id = ?", JSON.stringify(eq), charId);
-    }
+    unplace(ctx, a.id);
     adjustCrowns(ctx, charId, c.reward);
-    run(ctx.db, "UPDATE artifacts SET status = 'delivered', equipped_slot = NULL WHERE id = ?", a.id);
+    run(ctx.db, "UPDATE artifacts SET status = 'delivered' WHERE id = ?", a.id);
     run(ctx.db, "UPDATE contracts SET status = 'fulfilled', fulfilled_by = ?, fulfilled_artifact_id = ? WHERE id = ?", charId, a.id, c.id);
     logTx(ctx, charId, "artifact", a.id, "sell", 1, c.reward, { contract: c.id, productionCost: production.productionCost });
     const profit = round(c.reward - production.productionCost - a.acquisition_cost);
@@ -430,7 +379,6 @@ export function bazaarView(ctx: Ctx, charId: string) {
   const s = currentSnapshot(ctx);
   const hist = priceHistory(ctx, 10);
   const spread = spreadFor(ctx, charId);
-  const passives = passivesFor(ctx, charId);
   const me = masteryEffects(getMastery(ctx, charId));
   const inv = essences(ctx, charId);
   const bandWindow = ctx.world.snapshots.slice(Math.max(0, s.index - 52), s.index + 1).map((snap) => essencePrices(snap));
@@ -457,7 +405,7 @@ export function bazaarView(ctx: Ctx, charId: string) {
       change5: trend.change,
       status: ratio > 1.8 ? "dear" : ratio > 1.25 ? "rising" : ratio < 0.7 ? "cheap" : "steady",
       priceRatio: round(ratio, 2),
-      band: passives.priceBand ? { low: round(lo, 2), high: round(hi, 2) } : null,
+      band: { low: round(lo, 2), high: round(hi, 2) },
       nextUncertainty,
     };
   });
@@ -467,7 +415,7 @@ export function bazaarView(ctx: Ctx, charId: string) {
     headline: `${dearest.name} is ${dearest.status === "dear" ? "dear" : "the costliest Essence"} this turning (×${dearest.priceRatio}).`,
     spread,
     essences: essencesOut,
-    offers: offersView(ctx, charId),
+    offers: offersView(ctx),
     contracts: contractsView(ctx, charId),
     prophecies: prophecyView(ctx, charId),
     rumors: rumors(ctx, charId),
@@ -488,7 +436,8 @@ export function realmGateView(ctx: Ctx) {
         return { essence: e, name: ESSENCES[e].name, share: round((w * (glut ? 1.6 : 1)) / totalW, 2), price: prices[e], glut };
       })
       .sort((a, b) => b.share - a.share);
-    const expectedUnits = 5 * 4.5 + 8 + 12;
+    // Two or three normal fights (70%+5% of them drop ~4 Essences), an elite (~6) and the boss (~12).
+    const expectedUnits = 3 * 0.75 * 4 + 6 + 12;
     const haulValue = round(expected.reduce((sum, x) => sum + x.share * expectedUnits * x.price, 0));
     // Which contract demand this Realm's typical Forms can serve.
     const ranked = ctx.reality

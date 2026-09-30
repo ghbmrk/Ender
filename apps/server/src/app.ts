@@ -11,6 +11,7 @@ import { registerRunRoutes } from "./routes/runs";
 import { registerArtifactRoutes } from "./routes/artifacts";
 import { registerBazaarRoutes } from "./routes/bazaar";
 import { registerDevRoutes } from "./routes/dev";
+import { registerLoomRoutes } from "./routes/loom";
 
 export async function buildApp(overrides: Partial<ServerConfig> = {}): Promise<{ app: FastifyInstance; ctx: Ctx }> {
   const config = configFromEnv(overrides);
@@ -31,6 +32,7 @@ export async function buildApp(overrides: Partial<ServerConfig> = {}): Promise<{
   registerRunRoutes(app, ctx);
   registerArtifactRoutes(app, ctx);
   registerBazaarRoutes(app, ctx);
+  registerLoomRoutes(app, ctx);
   if (config.devRoutes) registerDevRoutes(app, ctx);
   app.addHook("onClose", async () => ctx.db.close());
   return { app, ctx };

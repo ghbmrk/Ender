@@ -1,6 +1,7 @@
 import type { CraftAction } from "@ender/shared";
 
-export const LEVEL_CAP = 30;
+/** Loom Rank (the character level) caps at 20 (§56). */
+export const LEVEL_CAP = 20;
 
 /** Focus refreshes to this at the start of each Realm. */
 export const BASE_FOCUS = 12;

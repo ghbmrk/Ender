@@ -1,30 +1,28 @@
 import { returnToCrossing } from "../game/flow";
 import { useStore } from "../state/store";
 import { Panel } from "./Panel";
-import { crowns, essenceName, fmt } from "../economy/format";
+import { essenceName } from "../economy/format";
 
 export function RunSummary() {
   const s = useStore((st) => st.runSummary);
   if (!s) return null;
-  const kills = Object.values(s.combat.kills as Record<string, number>).reduce((a, b) => a + b, 0);
+  const title = s.outcome === "victory" ? "Expedition complete" : s.outcome === "death" ? "The party was driven back" : "You withdrew";
   return (
-    <Panel title={s.status === "victory" ? "The King is unbound" : s.status === "death" ? "Your thread was cut" : "You withdrew"} onClose={returnToCrossing} testId="run-summary">
+    <Panel title={title} onClose={returnToCrossing} testId="run-summary">
       <div className="summary">
-        <div>
-          Time <b>{fmt(s.combat.durationMs / 1000)}s</b> · Foes felled <b>{kills}</b> · Ward breaks <b>{s.combat.wardBreaks}</b>
-        </div>
-        <div>
-          Gathered this run: <b>{crowns(s.loot.crowns)}</b>
-          {Object.entries(s.loot.essences).map(([e, q]) => (
-            <span key={e}>
-              {" "}
-              · {q as number} {essenceName(e)}
-            </span>
-          ))}
-        </div>
-        <div>
-          Forms from this run: <b>{s.runArtifacts.length}</b> ({s.runArtifacts.filter((a: any) => a.tier === "veiled").length} still veiled)
-        </div>
+        {s.outcome === "death" && <p className="dim">What you gathered before the fall is kept. The party recovers at the Crossing.</p>}
+        {s.totals && (
+          <div>
+            Gathered: <b>{s.totals.crowns ?? 0} Crowns</b>
+            {Object.entries(s.totals.essences ?? {}).map(([e, q]) => (
+              <span key={e}>
+                {" "}
+                · {q as number} {essenceName(e)}
+              </span>
+            ))}
+            {s.totals.forms != null && <span> · {s.totals.forms} Forms</span>}
+          </div>
+        )}
         {s.worldTurned && (
           <div className="event">
             A turning passes while you travel: {s.worldTurned.from} → {s.worldTurned.to}. Prices have moved.
@@ -32,7 +30,7 @@ export function RunSummary() {
         )}
         {s.worldTurned?.settledProphecies?.map((p: any) => (
           <div key={p.id} className="event">
-            Prophecy on {essenceName(p.essence)} settled: {p.outcome ? "it rose" : "it did not rise"} · calibration {Math.round(p.quality * 100)}%
+            Prophecy on {essenceName(p.essence)} settled: {p.outcome ? "it rose" : "it did not rise"}
           </div>
         ))}
       </div>

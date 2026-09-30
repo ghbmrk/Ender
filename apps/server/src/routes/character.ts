@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Ctx } from "../services/context";
 import { activeCharacterId, characterView, createCharacter } from "../services/character";
-import { allocatePassive, passivesView } from "../services/passives";
 import { activateSnapshot, setState, snapshotForDate } from "../services/world";
 
 export function registerCharacterRoutes(app: FastifyInstance, ctx: Ctx) {
@@ -24,7 +23,4 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Ctx) {
     const c = createCharacter(ctx, { name: body.name, preset: body.preset });
     return characterView(ctx, c.id);
   });
-
-  app.get("/api/passives", async () => passivesView(ctx, activeCharacterId(ctx)));
-  app.post<{ Params: { id: string } }>("/api/passives/:id/allocate", async (req) => allocatePassive(ctx, activeCharacterId(ctx), req.params.id));
 }

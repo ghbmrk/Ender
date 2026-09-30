@@ -16,7 +16,6 @@ export function Inventory() {
     load().catch((e) => toast(e.message, "loss"));
   }, []);
   if (!inv || !c) return <Panel title="Inventory">…</Panel>;
-  const equipped = (slot: string) => inv.artifacts.find((a: any) => a.id === inv.equipped[slot]);
   const use = async (id: string) => {
     try {
       const out = await api.useItem(id);
@@ -27,34 +26,8 @@ export function Inventory() {
       toast((e as Error).message, "loss");
     }
   };
-  const unequip = async (slot: string) => {
-    await api.equip(slot, null);
-    await refreshCharacter();
-    await load();
-  };
   return (
-    <Panel title="Inventory" subtitle={`Damage ${fmt(c.stats.attackDamage, 1)} · Health ${fmt(c.stats.maxHealth)} · Cooldowns ×${fmt(c.stats.cooldownRate, 2)} · Loot +${fmt(c.stats.lootPercentileBonus, 1)} pct`} wide testId="inventory">
-      <div className="slots">
-        {["blade", "ward", "sigil", "charm"].map((s) => {
-          const a = equipped(s);
-          return (
-            <div key={s} className="slot" data-testid={`slot-${s}`}>
-              <div className="slot-name">{s}</div>
-              {a ? (
-                <>
-                  <div>{a.name}</div>
-                  <div className="dim small">power {fmt(a.evaluation?.power, 1)}</div>
-                  <button className="ghost small" onClick={() => unequip(s)}>
-                    unbind
-                  </button>
-                </>
-              ) : (
-                <div className="dim small">empty</div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+    <Panel title="Forms & Essences" subtitle={`Loom Rank ${c.rank ?? c.level} · ${c.crowns} Crowns · Focus ${c.focus}`} wide testId="inventory">
       <div className="essence-row">
         {Object.entries(inv.essences).map(([e, q]) => (
           <span key={e} className="ess-chip" style={{ color: essenceColor(e), borderColor: essenceColor(e) }}>
@@ -81,7 +54,7 @@ export function Inventory() {
       )}
       <div className="inv-grid">
         {inv.artifacts.map((a: any) => (
-          <FormCard key={a.id} a={a} compact onClick={() => screen === "crossing" && setState({ panel: "crucible", crucibleMode: "craft" })} />
+          <FormCard key={a.id} a={a} compact onClick={() => screen === "crossing" && setState({ panel: "crucible", crucibleMode: "craft", crucibleFocus: a.id })} />
         ))}
         {Array.from({ length: Math.max(0, 12 - inv.artifacts.length) }).map((_, i) => (
           <div key={`e${i}`} className="inv-empty" />

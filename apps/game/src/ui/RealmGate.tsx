@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { enterRealm, refreshWorld } from "../game/flow";
+import { startExpedition, refreshWorld } from "../game/flow";
 import { toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
 import { crowns, essenceColor, essenceGlyph } from "../economy/format";
@@ -14,7 +14,7 @@ export function RealmGate() {
   const go = async (id: string) => {
     setBusy(true);
     try {
-      await enterRealm(id);
+      await startExpedition(id);
     } catch (e) {
       toast((e as Error).message, "loss");
       setBusy(false);
@@ -66,7 +66,7 @@ export function RealmGate() {
               </div>
             ))}
             <button className="primary" disabled={busy} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
-              Enter {r.name}
+              Set out for {r.name}
             </button>
           </div>
         ))}

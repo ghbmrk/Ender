@@ -11,6 +11,7 @@
     "build:web": "vite build --mode web --outDir dist-web --base ./"
   },
   "dependencies": {
+    "@ender/battle": "workspace:*",
     "@ender/content": "workspace:*",
     "@ender/domain": "workspace:*",
     "@ender/economy": "workspace:*",
@@ -18,7 +19,6 @@
     "@ender/reality": "workspace:*",
     "@ender/server": "workspace:*",
     "@ender/shared": "workspace:*",
-    "phaser": "^4.2.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "sql.js": "^1.14.2"

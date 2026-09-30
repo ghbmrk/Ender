@@ -8,6 +8,7 @@
     "start": "tsx src/main.ts"
   },
   "dependencies": {
+    "@ender/battle": "workspace:*",
     "@ender/content": "workspace:*",
     "@ender/domain": "workspace:*",
     "@ender/economy": "workspace:*",

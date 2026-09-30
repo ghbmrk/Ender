@@ -101,11 +101,20 @@ describe("no paid inference: runtime", () => {
     };
     await call("POST", "/api/character/reset", {});
     const run = await call("POST", "/api/runs", { realmId: "glass-fen" });
-    const cp = await call("POST", `/api/runs/${run.plan.runId}/checkpoint`, { roomsCleared: [0, 1, 2, 3, 4] });
-    const id = cp.artifacts[0].id;
+    // Walk the expedition map to the boss, winning every fight, until a Veiled Form drops.
+    const byId = new Map(run.plan.map.layers.flat().map((n: any) => [n.id, n]));
+    let options: any[] = run.plan.map.layers[0];
+    const forms: any[] = [];
+    while (options.length) {
+      const n = options.find((x) => x.encounter) ?? options[0];
+      const res = await call("POST", `/api/runs/${run.plan.runId}/node`, { nodeId: n.id, outcome: n.encounter ? "victory" : "skip" });
+      forms.push(...res.rewards.forms);
+      options = n.links.map((id: string) => byId.get(id));
+    }
+    const id = forms[0].id;
     const at = await call("POST", `/api/artifacts/${id}/attune`);
     expect(["fixture", "rule"]).toContain(at.inference.provider);
-    await call("POST", `/api/runs/${run.plan.runId}/complete`, { outcome: "victory", roomsCleared: [0, 1, 2, 3, 4, 5, 6, 7], durationMs: 1 });
+    await call("POST", `/api/runs/${run.plan.runId}/complete`, { outcome: "victory", durationMs: 1 });
     const t = await call("POST", `/api/artifacts/${id}/temper`, {});
     const ch = await call("POST", `/api/artifacts/${id}/temper`, { choice: t.options[0].candidateId });
     await call("POST", `/api/artifacts/${ch.artifact.id}/trial`);
