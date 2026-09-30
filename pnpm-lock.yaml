@@ -125,6 +125,15 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
+  packages/battle:
+    dependencies:
+      '@ender/content':
+        specifier: workspace:*
+        version: link:../content
+      '@ender/shared':
+        specifier: workspace:*
+        version: link:../shared
+
   packages/content:
     dependencies:
       '@ender/shared':
