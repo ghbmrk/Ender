@@ -3,6 +3,8 @@
 // Pipeline: colour pass → view normals pass → class-ID pass → post shader that
 // draws ink outlines per class width and applies the watercolour treatment.
 import * as THREE from '../vendor/three.module.min.js';
+import { GLTFLoader } from '../vendor/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from '../vendor/addons/utils/SkeletonUtils.js';
 
 const q = new URLSearchParams(location.search);
 const SHOT = q.get('shot') || 'room';
@@ -19,6 +21,11 @@ const P = {
   weave: 0x6676b8, health: 0xb84f49, danger: 0xe16a54, hazard: 0x9a8d42, interact: 0x5b9486,
   rare: 0x597da2, exceptional: 0x8667a3, highValue: 0xc09a50, parchment: 0xb9a988,
 };
+// mj: the same roles in jewel tones (Mark, 2026-09-30: Midjourney-flavoured colours, spec rendering).
+if (MJ) Object.assign(P, {
+  warmStone: 0x9a8570, coldStone: 0x5f6680, umber: 0x5e3b3a, moss: 0x2f6f63, deepWash: 0x2e2448, elite: 0x7a1f2e,
+  weave: 0x4f6fe0, danger: 0xe8583c, hazard: 0xb89a2e, interact: 0x2fa89a, rare: 0x3f7fd0, exceptional: 0x9b59d0, highValue: 0xd4a64a, parchment: 0xc8b48c,
+});
 // Outline classes = custom stencil values (section 80).
 const CLS = { env: 0, player: 1, enemy: 2, elite: 3, boss: 4, interact: 5, loot: 6 };
 
@@ -35,8 +42,8 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(MJ ? 0x0c0a16 : 0x1c1a21);
 const camera = new THREE.PerspectiveCamera(38, W / H, 1, 60);
-const YAW = THREE.MathUtils.degToRad(45), PITCH = THREE.MathUtils.degToRad(52);
-const ARM = SHOT === 'lineup' ? 7.5 : 15.5; // lineup is a closer reference view, not the game camera
+const YAW = THREE.MathUtils.degToRad(45), PITCH = THREE.MathUtils.degToRad(SHOT === 'lineup' ? 20 : 52);
+const ARM = SHOT === 'lineup' ? 9.5 : 15.5; // lineup is a low, closer reference view (a model sheet), not the game camera
 function frame(target) {
   const t = new THREE.Vector3(target.x, 0.9, target.z);
   camera.position.set(
@@ -85,7 +92,7 @@ function place(group, pos, yaw = 0, s = 1) { group.position.copy(pos); group.rot
 function floorTexture(kind) {
   const c = document.createElement('canvas'); c.width = c.height = 2048;
   const g = c.getContext('2d');
-  const base = kind === 'boss' ? '#5a5664' : '#7a6e62';
+  const base = MJ ? (kind === 'boss' ? '#4a4660' : '#6e6470') : kind === 'boss' ? '#5a5664' : '#7a6e62';
   g.fillStyle = base; g.fillRect(0, 0, 2048, 2048);
   const rnd = (() => { let s = kind === 'boss' ? 99 : 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
   // large washes
@@ -104,7 +111,7 @@ function floorTexture(kind) {
     const pts = [[x + o + j(), y + j()], [x + o + cell + j(), y + j()], [x + o + cell + j(), y + cell + j()], [x + o + j(), y + cell + j()]];
     g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.closePath();
     const t = rnd();
-    g.fillStyle = kind === 'boss' ? `rgba(${t > 0.5 ? '119,123,128' : '57,54,65'},${0.12 + rnd() * 0.2})` : `rgba(${t > 0.6 ? '168,154,131' : t > 0.3 ? '119,96,84' : '119,123,128'},${0.12 + rnd() * 0.22})`;
+    g.fillStyle = kind === 'boss' ? `rgba(${t > 0.5 ? '119,123,128' : '57,54,65'},${0.12 + rnd() * 0.2})` : MJ ? `rgba(${t > 0.6 ? '154,133,112' : t > 0.3 ? '94,59,58' : '80,96,140'},${0.14 + rnd() * 0.24})` : `rgba(${t > 0.6 ? '168,154,131' : t > 0.3 ? '119,96,84' : '119,123,128'},${0.12 + rnd() * 0.22})`;
     g.fill();
     g.strokeStyle = `rgba(36,33,42,${0.16 + rnd() * 0.16})`; g.lineWidth = 1.5 + rnd() * 1.5; g.stroke();
     if (rnd() > 0.82) { // crack
@@ -128,247 +135,155 @@ function floorTexture(kind) {
   return tex;
 }
 
-// ---------- figure toolkit: limbs, lathed robes, hoods ----------
-const soft = (color, o = {}) => mat(color, { flatShading: false, ...o });
-const V = (a) => (a.isVector3 ? a : new THREE.Vector3(...a));
-const Y_AXIS = new THREE.Vector3(0, 1, 0);
-// Capsule limb between two points.
-function limb(g, a, b, r, material, cls) {
-  const A = V(a), B = V(b), d = B.clone().sub(A), len = d.length();
-  const m = mesh(new THREE.CapsuleGeometry(r, Math.max(0.001, len), 4, 10), material, cls);
-  m.position.copy(A).add(B).multiplyScalar(0.5);
-  m.quaternion.setFromUnitVectors(Y_AXIS, d.normalize());
-  g.add(m); return m;
-}
-// Tapered segment (r0 at a, r1 at b), e.g. flared sleeves, claws, horns.
-function taper(g, a, b, r0, r1, material, cls, seg = 10) {
-  const A = V(a), B = V(b), d = B.clone().sub(A), len = d.length();
-  const m = mesh(new THREE.CylinderGeometry(r1, r0, len, seg, 1, r1 < 0.001), material, cls);
-  m.position.copy(A).add(B).multiplyScalar(0.5);
-  m.quaternion.setFromUnitVectors(Y_AXIS, d.normalize());
-  g.add(m); return m;
-}
-// Lathed cloth: profile is [[radius, y], ...] bottom to top. The hem ring is torn.
-function cloth(g, profile, material, cls, { phiStart = 0, phiLength = Math.PI * 2, seg = 18, tear = 0.06, seed = 1, pos = [0, 0, 0], rot = [0, 0, 0], scl = [1, 1, 1] } = {}) {
-  const geo = new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), seg, phiStart, phiLength);
-  const p = geo.attributes.position, rows = profile.length, y0 = profile[0][1];
-  for (let i = 0; i < p.count; i++) {
-    const row = i % rows;
-    if (row === 0) { // hem: ragged length and slight flare
-      const k = hash3(Math.floor(i / rows), seed, 7);
-      p.setY(i, y0 + (k - 0.3) * tear * 2.2);
-      p.setX(i, p.getX(i) * (1 + (k - 0.5) * tear));
-      p.setZ(i, p.getZ(i) * (1 + (k - 0.5) * tear));
+// ---------- figures: CC0 KayKit characters (and the Khronos Fox), posed from their clips and recoloured ----------
+// They stand in for Ender's archetypes: proportion, silhouette and colour blocking, not final models.
+const loader = new GLTFLoader();
+const MODELS = Object.fromEntries(await Promise.all(
+  ['hooded', 'minion', 'rogue', 'skel_mage', 'warrior', 'fox', 'staff', 'mage_staff', 'shield', 'axe'].map(async (n) => [n, await loader.loadAsync(`models/${n}.glb`)]),
+));
+// KayKit textures are 8×4 atlases of 128 px gradient swatches. Recolour a swatch by keeping its
+// light-to-dark gradient and swapping the hue: { 'row,col': 0xrrggbb }.
+const recolorCache = new Map();
+const srgb = (hex) => ({ r: ((hex >> 16) & 255) / 255, g: ((hex >> 8) & 255) / 255, b: (hex & 255) / 255 }); // canvas bytes are sRGB
+function recolor(tex, map, key) {
+  if (recolorCache.has(key)) return recolorCache.get(key);
+  const img = tex.image, c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  const cw = img.width / 8, ch = img.height / 4;
+  for (const [rc, hex] of Object.entries(map)) {
+    const [r, col] = rc.split(',').map(Number);
+    const d = g.getImageData(col * cw, r * ch, cw, ch), px = d.data;
+    let mean = 0; for (let i = 0; i < px.length; i += 4) mean += 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2];
+    mean /= px.length / 4;
+    const t = srgb(hex);
+    for (let i = 0; i < px.length; i += 4) {
+      const k = (0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / Math.max(mean, 1);
+      const f = 0.55 + 0.45 * k; // keep the gradient, but gentler than the source
+      px[i] = Math.min(255, t.r * 255 * f); px[i + 1] = Math.min(255, t.g * 255 * f); px[i + 2] = Math.min(255, t.b * 255 * f);
     }
+    g.putImageData(d, col * cw, r * ch);
   }
-  geo.computeVertexNormals();
-  if (!material.side || material.side === THREE.FrontSide) material.side = THREE.DoubleSide;
-  return g.add(mesh(geo, material, cls, pos, rot, scl)), g.children[g.children.length - 1];
+  const out = new THREE.CanvasTexture(c);
+  Object.assign(out, { flipY: tex.flipY, colorSpace: THREE.SRGBColorSpace, magFilter: THREE.NearestFilter, minFilter: THREE.LinearFilter });
+  recolorCache.set(key, out); return out;
 }
-// Cracked porcelain/parchment mask (the Hushed's faces).
-function mask(r, color = P.paper, cls = CLS.enemy) {
-  const g = new THREE.Group();
-  g.add(mesh(new THREE.SphereGeometry(r, 16, 12), soft(color), cls, [0, 0, 0], [0, 0, 0], [0.9, 1.15, 0.8]));
-  for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(r * 0.2, 8, 6), mat(P.ink), cls, [s * r * 0.36, r * 0.1, r * 0.7], [0, 0, s * -0.35], [1.5, 0.32, 0.5]));
-  g.add(mesh(new THREE.BoxGeometry(r * 0.06, r * 1.1, r * 0.08), mat(P.ink), cls, [r * 0.1, -r * 0.2, r * 0.74], [0.2, 0, 0.35]));
+// Whole-texture tint (for the Fox, whose texture is not an atlas).
+function tintTexture(tex, hex, key) {
+  if (recolorCache.has(key)) return recolorCache.get(key);
+  const img = tex.image, c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height), px = d.data, t = srgb(hex);
+  for (let i = 0; i < px.length; i += 4) {
+    const l = (0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / 255, f = 0.35 + 1.1 * l;
+    px[i] = Math.min(255, t.r * 255 * f); px[i + 1] = Math.min(255, t.g * 255 * f); px[i + 2] = Math.min(255, t.b * 255 * f);
+  }
+  g.putImageData(d, 0, 0);
+  const out = new THREE.CanvasTexture(c); Object.assign(out, { flipY: tex.flipY, colorSpace: THREE.SRGBColorSpace });
+  recolorCache.set(key, out); return out;
+}
+// Build a posed, recoloured copy of a model.
+// clip/at: animation and the fraction of it to freeze on. head: head-bone scale (KayKit heads are chibi-sized).
+function actor(name, { clip, at: tf = 0.5, cls, colors = {}, tint, hide = [], props = [], glowEyes, head = 0.55, height }) {
+  const src = MODELS[name], root = SkeletonUtils.clone(src.scene);
+  const key = `${name}:${JSON.stringify(colors)}:${tint}`;
+  root.traverse((o) => {
+    if (hide.some((h) => o.name.includes(h))) o.visible = false;
+    if (!o.isMesh) return;
+    o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
+    const m = o.material.clone(); o.material = m;
+    m.roughness = 0.8; m.metalness = 0; m.side = THREE.FrontSide;
+    if (m.map && tint !== undefined) m.map = tintTexture(m.map, tint, key);
+    else if (m.map && Object.keys(colors).length) m.map = recolor(m.map, colors, key);
+    if (glowEyes && o.name.endsWith('_Eyes')) { m.map = null; m.color.set(glowEyes); m.emissive = new THREE.Color(glowEyes); m.emissiveIntensity = 1.4; }
+  });
+  if (clip) {
+    const c = src.animations.find((a) => a.name === clip);
+    const mixer = new THREE.AnimationMixer(root); mixer.clipAction(c).play(); mixer.update(c.duration * tf);
+  }
+  // A smaller head so the KayKit figures read less chibi.
+  const hb = root.getObjectByName('head'); if (hb) hb.scale.multiplyScalar(head);
+  for (const [prop, bone, o = {}] of props) {
+    const p = MODELS[prop].scene.clone(true);
+    p.traverse((x) => { if (x.isMesh) { x.castShadow = true; x.material = x.material.clone(); if (o.colors) x.material.map = recolor(x.material.map, o.colors, `${prop}:${JSON.stringify(o.colors)}`); } });
+    if (o.rot) p.rotation.set(...o.rot); if (o.scale) p.scale.setScalar(o.scale);
+    root.getObjectByName(bone).add(p);
+  }
+  const g = new THREE.Group(); g.add(root); g.userData.cls = cls;
+  if (height) { // normalise to a standing height in metres
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(root, true);
+    root.scale.multiplyScalar(height / (box.max.y - box.min.y));
+  }
   return g;
 }
-const joint = (pos, r = 0.06, cls = CLS.enemy) => mesh(new THREE.SphereGeometry(r, 8, 6), soft(P.ink), cls, pos);
-function hand(g, at, r, color, cls, claws = 0, dir = [0, -1, 0.3]) {
-  g.add(mesh(new THREE.SphereGeometry(r, 8, 6), soft(color), cls, at, [0, 0, 0], [1, 1.2, 0.8]));
-  const D = V(dir).normalize();
-  for (let i = 0; i < claws; i++) {
-    const off = new THREE.Vector3((i - (claws - 1) / 2) * r * 0.7, 0, 0);
-    const a = V(at).add(off), b = a.clone().add(D.clone().multiplyScalar(r * 3.2));
-    taper(g, a, b, r * 0.28, 0.001, soft(P.paper), cls, 5);
-  }
-}
 
-// ---------- the Binder: hooded thread-mage with a staff ----------
+// Ender colours in the Midjourney vein: jewel tones for cloth, bone and parchment for the Hushed, gold trim.
+const J = MJ
+  ? { sapphire: 0x2c4ea8, navy: 0x1b2352, gold: 0xc79a3e, oxblood: 0x6e2030, verdigris: 0x2f6f63, violet: 0x4a2a7a, ember: 0xff7a3c, ghost: 0x8fb8c0, iron: 0x5d6272, ash: 0x4a4250 }
+  : { sapphire: P.weave, navy: P.playerEdge, gold: P.highValue, oxblood: P.elite, verdigris: P.moss, violet: P.deepWash, ember: P.danger, ghost: 0xcfc3a8, iron: P.coldStone, ash: P.umber };
+
+// The Binder: a hooded thread-mage with a staff, mid-cast.
 function binder() {
-  const g = new THREE.Group(), cls = CLS.player;
-  const robeC = soft(0x3e3b4c), under = soft(P.weave), mantleC = soft(0x55609a), skin = soft(0xc8b8a0), dark = soft(0x1d1b24);
-  cloth(g, [[0.36, 0.02], [0.33, 0.2], [0.27, 0.55], [0.22, 0.9], [0.2, 1.02]], robeC, cls, { tear: 0.05, seed: 3 });
-  cloth(g, [[0.37, 0.03], [0.34, 0.2], [0.28, 0.55], [0.23, 0.9]], under, cls, { phiStart: -0.32, phiLength: 0.64, tear: 0.03, seed: 4, scl: [1.02, 1, 1.02] });
-  cloth(g, [[0.2, 1.0], [0.25, 1.15], [0.25, 1.32], [0.18, 1.44], [0.08, 1.5]], robeC, cls, { tear: 0 });
-  g.add(mesh(new THREE.TorusGeometry(0.215, 0.035, 6, 20), soft(P.paper), cls, [0, 1.02, 0], [Math.PI / 2, 0, 0]));
-  // mantle: open at the front, draped from the shoulders
-  cloth(g, [[0.36, 0.3], [0.34, 0.7], [0.3, 1.1], [0.28, 1.36], [0.2, 1.46]], mantleC, cls, { phiStart: Math.PI * 0.62, phiLength: Math.PI * 0.76, tear: 0.1, seed: 9, scl: [1.08, 1, 1.08] });
-  // hood + shadowed face
-  const hood = new THREE.Group(); hood.position.set(0, 1.62, 0.02);
-  hood.add(mesh(new THREE.SphereGeometry(0.17, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.8), mantleC, cls, [0, 0, -0.01], [-0.35, 0, 0], [1, 1.12, 1.1]));
-  hood.add(mesh(new THREE.ConeGeometry(0.1, 0.24, 10), mantleC, cls, [0, 0.1, -0.16], [-1.15, 0, 0]));
-  hood.add(mesh(new THREE.SphereGeometry(0.13, 12, 10), dark, cls, [0, -0.03, 0.05]));
-  for (const s of [-1, 1]) hood.add(mesh(new THREE.SphereGeometry(0.018, 6, 4), new THREE.MeshBasicMaterial({ color: 0xaeb8e6 }), cls, [s * 0.045, -0.01, 0.17]));
-  g.add(hood);
-  // arms: left holds the staff, right casts forward
-  for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(0.1, 10, 8), mantleC, cls, [s * 0.25, 1.4, 0]));
-  limb(g, [-0.26, 1.38, 0], [-0.33, 1.12, 0.1], 0.06, robeC, cls);
-  taper(g, [-0.33, 1.12, 0.1], [-0.35, 0.92, 0.22], 0.06, 0.1, robeC, cls);
-  hand(g, [-0.35, 0.9, 0.24], 0.045, 0xc8b8a0, cls);
-  limb(g, [0.26, 1.38, 0], [0.36, 1.3, 0.28], 0.06, robeC, cls);
-  taper(g, [0.36, 1.3, 0.28], [0.4, 1.32, 0.56], 0.06, 0.1, robeC, cls);
-  hand(g, [0.41, 1.33, 0.62], 0.045, 0xc8b8a0, cls);
-  g.add(mesh(new THREE.TorusGeometry(0.09, 0.025, 6, 14), soft(P.weave, { emissive: P.weave, emissiveIntensity: 0.8 }), cls, [0.42, 1.34, 0.72]));
-  // staff: gnarled shaft with a spindle head
-  const st = [-0.36, 0, 0.26];
-  taper(g, [st[0], 0.02, st[2]], [st[0] + 0.02, 2.0, st[2] + 0.02], 0.028, 0.02, soft(P.umber), cls, 6);
-  g.add(mesh(new THREE.TorusGeometry(0.1, 0.02, 6, 16), soft(P.highValue, { metalness: 0.6 }), cls, [st[0] + 0.02, 2.08, st[2]], [0, 0.4, 0]));
-  g.add(mesh(new THREE.OctahedronGeometry(0.05, 0), soft(P.weave, { emissive: P.weave, emissiveIntensity: 0.8 }), cls, [st[0] + 0.02, 2.08, st[2]]));
-  // ground ring (P1 player position readability)
+  const g = actor('hooded', {
+    clip: 'Spellcast_Shoot', at: 0.35, cls: CLS.player, height: 1.85,
+    hide: ['Knife', 'Crossbow', 'Throwable'],
+    colors: { '1,0': J.navy, '1,1': J.sapphire, '2,1': J.sapphire, '1,7': J.gold, '0,6': J.gold },
+    props: [['mage_staff', 'handslotl']],
+  });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.58, 0.64, 48), new THREE.MeshBasicMaterial({ color: P.weave, transparent: true, opacity: 0.5, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; g.add(fx(ring));
   return g;
 }
-
-// ---------- the Hushed (section 34): folded parchment, stained cloth, ink joints, cracked masks ----------
-// Husk: a hunched ghoul of folded parchment with long clawed arms.
-function husk(cls = CLS.enemy, tint = P.parchment) {
-  const g = new THREE.Group(), skin = soft(tint), rag = soft(P.umber);
-  for (const s of [-1, 1]) {
-    limb(g, [s * 0.12, 0.82, -0.02], [s * 0.17, 0.44, 0.12], 0.065, skin, cls);
-    limb(g, [s * 0.17, 0.44, 0.12], [s * 0.14, 0.06, -0.02], 0.055, skin, cls);
-    g.add(joint([s * 0.17, 0.44, 0.13], 0.06, cls));
-    g.add(mesh(new THREE.BoxGeometry(0.1, 0.05, 0.2), skin, cls, [s * 0.14, 0.03, 0.04]));
-  }
-  cloth(g, [[0.25, 0.46], [0.22, 0.65], [0.18, 0.85]], rag, cls, { tear: 0.12, seed: 11 });
-  // hunched torso: a lathed ribcage tipped forward
-  const torso = new THREE.Group(); torso.position.set(0, 0.84, -0.02); torso.rotation.x = 0.62; g.add(torso);
-  cloth(torso, [[0.14, 0], [0.2, 0.18], [0.24, 0.38], [0.2, 0.55], [0.1, 0.64]], skin, cls, { tear: 0 });
-  for (let i = 0; i < 3; i++) torso.add(mesh(new THREE.ConeGeometry(0.05, 0.14, 4), skin, cls, [0, 0.15 + i * 0.16, -0.21 + i * 0.01], [-1.2, 0, 0]));
-  cloth(torso, [[0.27, 0.12], [0.25, 0.3], [0.22, 0.42]], rag, cls, { phiStart: Math.PI * 0.5, phiLength: Math.PI, tear: 0.1, seed: 12 });
-  const m = mask(0.12, P.paper, cls); m.position.set(0, 1.34, 0.42); m.rotation.x = -0.1; g.add(m);
-  limb(g, [0, 1.26, 0.28], [0, 1.34, 0.38], 0.06, skin, cls);
-  for (const s of [-1, 1]) {
-    g.add(joint([s * 0.24, 1.26, 0.22], 0.065, cls));
-    limb(g, [s * 0.24, 1.26, 0.22], [s * 0.34, 0.94, 0.44], 0.05, skin, cls);
-    g.add(joint([s * 0.34, 0.94, 0.44], 0.05, cls));
-    limb(g, [s * 0.34, 0.94, 0.44], [s * 0.3, 0.62, 0.58], 0.045, skin, cls);
-    hand(g, [s * 0.3, 0.58, 0.6], 0.05, tint, cls, 3, [0, -1, 0.5]);
-  }
-  return g;
+// The Hushed (section 34): risen bone and parchment under stained cloth.
+const HUSK_POSES = [['Unarmed_Melee_Attack_Punch_A', 0.35], ['Idle_Combat', 0.3], ['1H_Melee_Attack_Chop', 0.3], ['Idle_Combat', 0.7]];
+let huskN = 0;
+function husk() {
+  const [clip, at] = HUSK_POSES[huskN++ % HUSK_POSES.length];
+  return actor('minion', { clip, at, cls: CLS.enemy, height: 1.55, glowEyes: J.ember, colors: { '1,7': J.oxblood, '2,2': J.oxblood, '0,1': J.ash } });
 }
-// Hound: a lean parchment wolf, low head, long snout.
 function hound() {
-  const g = new THREE.Group(), cls = CLS.enemy, skin = soft(P.warmStone);
-  limb(g, [0, 0.64, -0.34], [0, 0.72, 0.22], 0.19, skin, cls);
-  g.add(mesh(new THREE.SphereGeometry(0.27, 14, 10), skin, cls, [0, 0.76, 0.28], [0, 0, 0], [1, 1.1, 1.05]));
-  limb(g, [0, 0.8, 0.42], [0, 0.78, 0.66], 0.1, skin, cls);
-  const head = new THREE.Group(); head.position.set(0, 0.78, 0.72); g.add(head);
-  head.add(mesh(new THREE.SphereGeometry(0.12, 12, 10), soft(P.paper), cls, [0, 0, 0], [0, 0, 0], [1, 0.9, 1.1]));
-  taper(head, [0, -0.02, 0.06], [0, -0.06, 0.26], 0.09, 0.045, soft(P.paper), cls, 8);
-  head.add(mesh(new THREE.SphereGeometry(0.03, 6, 4), soft(P.ink), cls, [0, -0.05, 0.28]));
-  for (const s of [-1, 1]) {
-    head.add(mesh(new THREE.ConeGeometry(0.045, 0.18, 4), skin, cls, [s * 0.07, 0.13, -0.02], [-0.5, 0, s * 0.25]));
-    head.add(mesh(new THREE.SphereGeometry(0.02, 6, 4), new THREE.MeshBasicMaterial({ color: P.danger }), cls, [s * 0.06, 0.03, 0.1]));
-  }
-  for (const [x, z, f] of [[0.12, 0.3, 1], [-0.12, 0.3, 1], [0.12, -0.3, -1], [-0.12, -0.3, -1]]) {
-    const hip = [x, 0.62, z], knee = [x * 1.1, 0.36, z + f * -0.08], paw = [x, 0.04, z + f * 0.06];
-    limb(g, hip, knee, 0.055, skin, cls);
-    limb(g, knee, paw, 0.04, soft(P.umber), cls);
-    g.add(joint(knee, 0.05, cls));
-  }
-  taper(g, [0, 0.7, -0.5], [0, 0.62, -0.82], 0.09, 0.03, skin, cls, 7);
-  cloth(g, [[0.2, 0.5], [0.2, 0.62]], soft(P.umber), cls, { tear: 0.12, seed: 21, pos: [0, 0.2, 0.05], rot: [Math.PI / 2, 0, 0], scl: [1, 1, 1] });
+  const g = actor('fox', { clip: 'Run', at: 0.25, cls: CLS.enemy, tint: J.ash, height: 1.0, head: 1 });
   return g;
 }
-// Wisp: a floating wraith, hooded shroud trailing to a tail.
+// Wisp: a hooded wraith, legs gone to vapour, hovering.
 function wisp() {
-  const outer = new THREE.Group(); const g = new THREE.Group(); g.rotation.x = 0.35; g.position.set(0, 0.25, -0.2); outer.add(g);
-  const cls = CLS.enemy, shroud = soft(0xcfc3a8, { transparent: true, opacity: 0.92 });
-  cloth(g, [[0.02, 0.3], [0.1, 0.7], [0.18, 1.1], [0.17, 1.4], [0.11, 1.6], [0.01, 1.84]], shroud, cls, { tear: 0.15, seed: 31 });
-  const m = mask(0.12, P.paper, cls); m.position.set(0, 1.48, 0.13); g.add(m);
-  g.add(mesh(new THREE.SphereGeometry(0.03, 6, 4), new THREE.MeshBasicMaterial({ color: P.danger }), cls, [0.04, 1.5, 0.24]));
-  for (const s of [-1, 1]) {
-    taper(g, [s * 0.15, 1.38, 0.02], [s * 0.36, 1.1, 0.46], 0.04, 0.11, shroud, cls, 8);
-    limb(g, [s * 0.36, 1.1, 0.46], [s * 0.4, 1.04, 0.6], 0.02, soft(P.paper), cls);
-    hand(g, [s * 0.41, 1.02, 0.64], 0.035, P.paper, cls, 3, [0, -0.4, 1]);
-  }
-  for (let i = 0; i < 3; i++) taper(g, [(i - 1) * 0.08, 0.5, -0.05], [(i - 1) * 0.16, 0.12 - i * 0.04, -0.2], 0.03, 0.002, shroud, cls, 5);
-  return outer;
+  const g = actor('rogue', { clip: '1H_Ranged_Aiming', at: 0.5, cls: CLS.enemy, height: 1.5, hide: ['LegLeft', 'LegRight'], glowEyes: 0x9ff0ff, colors: { '1,7': J.ghost, '2,2': J.ghost, '2,1': J.ghost } });
+  g.children[0].position.y = 0.45;
+  return g;
 }
-// Seer: a robed oracle under a tall hood, lantern staff raised.
 function seer() {
-  const g = new THREE.Group(), cls = CLS.enemy, robe = soft(P.moss), trim = soft(P.umber);
-  cloth(g, [[0.4, 0.02], [0.34, 0.3], [0.25, 0.8], [0.2, 1.2], [0.18, 1.45]], robe, cls, { tear: 0.08, seed: 41 });
-  cloth(g, [[0.41, 0.03], [0.38, 0.14]], trim, cls, { tear: 0.08, seed: 41 });
-  cloth(g, [[0.26, 1.2], [0.28, 1.36], [0.22, 1.5], [0.1, 1.58]], robe, cls, { phiStart: Math.PI * 0.3, phiLength: Math.PI * 1.4, tear: 0.05, seed: 42 });
-  const hood = new THREE.Group(); hood.position.set(0, 1.66, 0); g.add(hood);
-  hood.add(mesh(new THREE.ConeGeometry(0.2, 0.62, 12, 1, true), robe, cls, [0, 0.18, -0.06], [-0.28, 0, 0]));
-  const m = mask(0.12, P.paper, cls); m.position.set(0, -0.02, 0.06); hood.add(m);
-  // lantern staff raised in the right hand
-  limb(g, [0.2, 1.42, 0], [0.34, 1.62, 0.16], 0.05, robe, cls);
-  hand(g, [0.36, 1.68, 0.18], 0.04, P.paper, cls);
-  taper(g, [0.36, 0.3, 0.18], [0.37, 2.3, 0.2], 0.025, 0.02, trim, cls, 6);
-  g.add(mesh(new THREE.OctahedronGeometry(0.1, 0), soft(P.hazard, { emissive: P.hazard, emissiveIntensity: 0.7 }), cls, [0.37, 2.38, 0.2]));
-  g.add(mesh(new THREE.TorusGeometry(0.12, 0.012, 4, 12), metal(P.coldStone), cls, [0.37, 2.38, 0.2], [Math.PI / 2, 0, 0]));
-  limb(g, [-0.2, 1.42, 0], [-0.3, 1.12, 0.16], 0.05, robe, cls);
-  hand(g, [-0.31, 1.08, 0.2], 0.04, P.paper, cls, 3, [0, -1, 0.4]);
-  return g;
+  return actor('skel_mage', {
+    clip: 'Spellcasting', at: 0.4, cls: CLS.enemy, height: 1.85, glowEyes: 0xd8f070,
+    colors: { '1,7': J.verdigris, '2,2': J.verdigris, '2,1': J.gold },
+    props: [['staff', 'handslotr']],
+  });
 }
-// Keeper (elite): an armoured warden, tower shield and a raised maul.
+// Keeper (elite): an armoured warden with a tower shield, axe raised for the heavy.
 function keeper() {
-  const g = new THREE.Group(), cls = CLS.elite, plate = soft(0x8c7e6a), iron = metal(P.coldStone), tabard = soft(P.elite);
-  for (const s of [-1, 1]) {
-    limb(g, [s * 0.2, 0.95, 0], [s * 0.24, 0.5, 0.06], 0.13, plate, cls);
-    limb(g, [s * 0.24, 0.5, 0.06], [s * 0.24, 0.1, 0], 0.11, iron, cls);
-    g.add(mesh(new THREE.BoxGeometry(0.22, 0.12, 0.34), iron, cls, [s * 0.24, 0.06, 0.06]));
-  }
-  cloth(g, [[0.42, 0.55], [0.38, 0.8], [0.34, 1.0]], iron, cls, { tear: 0.03, seed: 51 });
-  cloth(g, [[0.34, 0.95], [0.46, 1.25], [0.5, 1.5], [0.42, 1.72], [0.2, 1.84]], plate, cls, { tear: 0 });
-  g.add(mesh(new THREE.PlaneGeometry(0.34, 0.9, 1, 3), tabard, cls, [0, 0.95, 0.43], [0.08, 0, 0]));
-  for (const s of [-1, 1]) {
-    g.add(mesh(new THREE.SphereGeometry(0.26, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), iron, cls, [s * 0.5, 1.68, 0], [0, 0, s * -0.3]));
-    g.add(mesh(new THREE.SphereGeometry(0.1, 8, 6), iron, cls, [s * 0.52, 1.95, 0]));
-  }
-  // great helm with a cracked mask behind the visor slit
-  g.add(mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.4, 14), iron, cls, [0, 2.06, 0.02]));
-  g.add(mesh(new THREE.SphereGeometry(0.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), iron, cls, [0, 2.26, 0.02]));
-  g.add(mesh(new THREE.BoxGeometry(0.28, 0.04, 0.05), soft(P.ink), cls, [0, 2.1, 0.22]));
-  g.add(mesh(new THREE.BoxGeometry(0.04, 0.2, 0.05), soft(P.ink), cls, [0, 2.0, 0.22]));
-  // curved tower shield on the left arm
-  limb(g, [-0.5, 1.6, 0], [-0.62, 1.2, 0.3], 0.1, plate, cls);
-  const sh = mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.5, 16, 2, true, -0.38, 0.76), iron, cls, [-0.7, 1.0, -0.45], [0, 0.5, 0]);
-  sh.material = metal(P.coldStone); sh.material.side = THREE.DoubleSide; g.add(sh);
-  // right arm: maul raised overhead for the heavy
-  limb(g, [0.5, 1.62, 0], [0.62, 2.0, 0.08], 0.1, plate, cls);
-  limb(g, [0.62, 2.0, 0.08], [0.46, 2.4, 0.12], 0.09, plate, cls);
-  taper(g, [0.46, 2.4, 0.12], [0.1, 3.0, -0.2], 0.04, 0.04, soft(P.umber), cls, 6);
-  g.add(mesh(new THREE.BoxGeometry(0.46, 0.3, 0.3), iron, cls, [0.06, 3.08, -0.24], [0.3, 0, 0.6]));
-  cloth(g, [[0.3, 0.9], [0.3, 1.2]], soft(P.health, { transparent: true, opacity: 0.5 }), cls, { tear: 0.2, seed: 55, phiStart: 0.6, phiLength: 0.9 });
-  return g;
+  return actor('warrior', {
+    clip: '2H_Melee_Attack_Chop', at: 0.28, cls: CLS.elite, height: 2.2, glowEyes: J.ember,
+    colors: { '1,7': J.oxblood, '2,2': J.oxblood },
+    props: [['axe', 'handslotr', { scale: 1.3 }], ['shield', 'handslotl', { scale: 1.3 }]],
+  });
 }
-// The Bound King: a lich-king in a vast flaring robe, crowned, chains trailing from gaunt raised arms.
+// The Bound King: a crowned lich, arms raised, pages of the manuscript orbiting him.
 function boundKing() {
-  const g = new THREE.Group(), cls = CLS.boss;
-  const robe = soft(P.deepWash), vest = soft(P.parchment), bone = soft(0xd8cdb4), gold = metal(P.highValue), iron = metal(P.coldStone);
-  cloth(g, [[1.35, 0.02], [1.15, 0.4], [0.8, 1.2], [0.5, 2.0], [0.42, 2.4]], robe, cls, { tear: 0.1, seed: 61, seg: 26 });
-  cloth(g, [[0.52, 1.8], [0.48, 2.2], [0.52, 2.6], [0.42, 2.9]], vest, cls, { tear: 0.05, seed: 62 });
-  // high collar
-  cloth(g, [[0.4, 2.8], [0.62, 3.1], [0.78, 3.45]], robe, cls, { phiStart: Math.PI * 0.45, phiLength: Math.PI * 1.1, tear: 0.1, seed: 63 });
-  // cloak behind
-  cloth(g, [[1.5, 0.05], [1.2, 0.8], [0.8, 2.0], [0.6, 2.85]], soft(0x2c2a36), cls, { phiStart: Math.PI * 0.6, phiLength: Math.PI * 0.8, tear: 0.16, seed: 64, seg: 20 });
-  const m = mask(0.3, P.paper, cls); m.position.set(0, 3.2, 0.1); g.add(m);
-  // crown
-  g.add(mesh(new THREE.CylinderGeometry(0.28, 0.3, 0.16, 16, 1, true), gold, cls, [0, 3.52, 0.08]));
-  for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; g.add(mesh(new THREE.ConeGeometry(0.045, 0.3, 5), gold, cls, [Math.sin(a) * 0.29, 3.72, 0.08 + Math.cos(a) * 0.29])); }
-  // gaunt arms: left raised casting, right reaching forward
-  for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(0.2, 12, 8), robe, cls, [s * 0.55, 2.92, 0]));
-  const armL = [[-0.6, 2.9, 0], [-1.0, 3.3, 0.3], [-1.05, 3.9, 0.45]], armR = [[0.6, 2.9, 0], [0.95, 2.55, 0.5], [1.15, 2.5, 1.05]];
-  for (const arm of [armL, armR]) {
-    taper(g, arm[0], arm[1], 0.14, 0.1, robe, cls);
-    limb(g, arm[1], arm[2], 0.05, bone, cls);
-    taper(g, arm[1], arm[1].map((v, i) => v + (arm[2][i] - arm[1][i]) * 0.45), 0.1, 0.2, robe, cls);
-    hand(g, arm[2], 0.07, 0xd8cdb4, cls, 4, arm === armL ? [0, 1, 0.2] : [0, -0.3, 1]);
-    // chain shackle and trailing links
-    g.add(mesh(new THREE.TorusGeometry(0.09, 0.03, 6, 12), iron, cls, arm[1].map((v, i) => v + (arm[2][i] - arm[1][i]) * 0.7), [Math.PI / 2, 0, 0]));
-    const top = V(arm[1]).lerp(V(arm[2]), 0.7);
-    for (let k = 1; k < 9; k++) g.add(mesh(new THREE.TorusGeometry(0.06, 0.018, 4, 8), iron, cls, [top.x + k * 0.03, top.y - k * 0.13, top.z - k * 0.02], [k % 2 ? Math.PI / 2 : 0, 0.4, 0]));
-  }
-  // floating manuscript pages
+  const cls = CLS.boss;
+  const g = actor('skel_mage', {
+    clip: 'Spellcast_Raise', at: 0.55, cls, height: 4.2, hide: ['Hat'], glowEyes: 0xc9a0ff,
+    colors: { '1,7': J.violet, '2,2': J.violet, '2,1': J.gold, '1,1': J.navy },
+    props: [['staff', 'handslotr', { scale: 1.2 }]],
+  });
+  g.updateMatrixWorld(true);
+  const head = g.getObjectByName('head'), hp = head.getWorldPosition(new THREE.Vector3());
+  const gold = new THREE.MeshStandardMaterial({ color: J.gold, metalness: 0.6, roughness: 0.4 });
+  const crown = new THREE.Group(); crown.position.copy(hp).add(new THREE.Vector3(0, 0.55, 0));
+  crown.add(mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.16, 16, 1, true), gold, cls));
+  for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; crown.add(mesh(new THREE.ConeGeometry(0.05, 0.32, 5), gold, cls, [Math.sin(a) * 0.35, 0.22, Math.cos(a) * 0.35])); }
+  g.add(crown);
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * Math.PI * 2;
-    g.add(mesh(new THREE.PlaneGeometry(0.34, 0.46), soft(P.paper, { side: THREE.DoubleSide }), cls, [Math.sin(a) * 1.8, 2.2 + (i % 3) * 0.55, Math.cos(a) * 1.8], [0.3 * i, a, 0.2 * i]));
+    g.add(mesh(new THREE.PlaneGeometry(0.34, 0.46), mat(P.paper, { side: THREE.DoubleSide, flatShading: false }), cls, [Math.sin(a) * 1.8, 2.0 + (i % 3) * 0.55, Math.cos(a) * 1.8], [0.3 * i, a, 0.2 * i]));
   }
   return g;
 }
@@ -537,17 +452,16 @@ function projectile(from, to, t) {
 }
 
 // ---------- lighting ----------
-// spec: continuous and restrained. mj: low warm key, cool teal fill, strong rim, pools of light.
-scene.add(MJ ? new THREE.HemisphereLight(0x4050a0, 0x0a0812, SHOT === 'boss' ? 0.3 : 0.36)
+// spec: continuous and restrained. mj: the same structure in jewel colours: warm gold key, sapphire fill, violet rim.
+scene.add(MJ ? new THREE.HemisphereLight(0x7080d8, 0x2a1c30, SHOT === 'boss' ? 0.7 : 0.8)
              : new THREE.HemisphereLight(0xd8cdb8, 0x393641, SHOT === 'boss' ? 0.9 : 1.05));
-// mj key is cool moonlight; the warmth comes from fire, the light shaft and magic, for strong chiaroscuro
-const key = MJ ? new THREE.DirectionalLight(0x9aa8ff, SHOT === 'boss' ? 0.9 : 1.1) : new THREE.DirectionalLight(0xf0e2c8, SHOT === 'boss' ? 1.4 : 1.9);
-key.position.set(MJ ? -10 : -6, MJ ? 9 : 14, MJ ? 6 : 4); key.castShadow = true;
+const key = MJ ? new THREE.DirectionalLight(0xffd29a, SHOT === 'boss' ? 1.4 : 1.8) : new THREE.DirectionalLight(0xf0e2c8, SHOT === 'boss' ? 1.4 : 1.9);
+key.position.set(MJ ? -8 : -6, MJ ? 12 : 14, MJ ? 5 : 4); key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
 Object.assign(key.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 40 });
 key.shadow.bias = -0.0008; key.shadow.radius = 5;
 scene.add(key);
-const rim = new THREE.DirectionalLight(MJ ? 0xb088ff : 0x8a94c8, MJ ? 2.4 : 0.5); rim.position.set(6, 5, -8); scene.add(rim);
+const rim = new THREE.DirectionalLight(MJ ? 0xa27cff : 0x8a94c8, MJ ? 1.2 : 0.5); rim.position.set(6, 5, -8); scene.add(rim);
 // round, soft-edged motes instead of square points
 function moteTex() {
   const c = document.createElement('canvas'); c.width = c.height = 32;
@@ -557,18 +471,18 @@ function moteTex() {
   return new THREE.CanvasTexture(c);
 }
 if (MJ) {
-  // a golden shaft of light over the fight
-  const pool = new THREE.SpotLight(0xffc070, SHOT === 'boss' ? 90 : 75, 30, 0.27, 0.8, 1.2);
+  // a soft warm pool over the fight
+  const pool = new THREE.SpotLight(0xffc070, SHOT === 'boss' ? 30 : 24, 30, 0.3, 0.9, 1.2);
   pool.position.set(-3, 16, 3); pool.target.position.set(0, 0, 0); pool.castShadow = true;
   pool.shadow.mapSize.set(1024, 1024); scene.add(pool, pool.target);
-  // drifting embers (warm) and weave motes (blue-violet), additive so they bloom
-  const n = 900, pos = new Float32Array(n * 3), cols = new Float32Array(n * 3);
+  // a few embers and weave motes
+  const n = 320, pos = new Float32Array(n * 3), cols = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
-    const near = i < 260; // motes gather around the Binder
+    const near = i < 90; // motes gather around the Binder
     const r = near ? 0.5 + hash3(i, 9, 1) * 3.2 : 0, a = hash3(i, 2, 9) * 6.283;
     pos.set(near ? [Math.cos(a) * r, 0.3 + hash3(i, 3, 4) * 2.6, Math.sin(a) * r]
                  : [(hash3(i, 1, 2) - 0.5) * 26, 0.2 + hash3(i, 3, 4) * 6, (hash3(i, 5, 6) - 0.5) * 26], i * 3);
-    const k = 1.5 + hash3(i, 7, 7) * 2.5;
+    const k = 0.8 + hash3(i, 7, 7) * 1.2;
     cols.set(near ? [0.55 * k, 0.6 * k, 1.6 * k] : hash3(i, 7, 8) > 0.3 ? [1.6 * k, 0.8 * k, 0.28 * k] : [0.4 * k, 1.0 * k, 1.3 * k], i * 3);
   }
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(cols, 3));
@@ -808,35 +722,16 @@ const post = new THREE.ShaderMaterial({
       col = mix(col, ink, inkA);
       vec2 q = vUv - .5;
       if(mj > .5){
-        // bloom: soft glow from bright pigment and light sources
+        // colour only: a soft glow on light sources and richer, jewel-toned pigment; same wash and ink
         vec3 glow = vec3(0.);
-        for(int k=0; k<24; k++){
-          float a = float(k)*2.39996, r = 4. + float(k)*1.6;
+        for(int k=0; k<16; k++){
+          float a = float(k)*2.39996, r = 3. + float(k)*1.4;
           vec3 c = toSRGB(texture2D(tColor, vUv + vec2(cos(a), sin(a))*r*px).rgb);
-          float l = dot(c, vec3(.3,.59,.11));
-          glow += c * smoothstep(.55, .95, l) * (1. - float(k)/28.);
+          glow += c * smoothstep(.8, 1.2, dot(c, vec3(.3,.59,.11)));
         }
-        col = min(col + glow/24. * vec3(1.15, .95, .75) * 1.3, vec3(1.25));
-        // atmospheric haze: far = warmer, dustier, lighter
-        float depthK = smoothstep(13., 21., d0);
-        col = mix(col, vec3(.36,.36,.42), depthK*.3);
-        // god rays falling from the upper left
-        vec2 rd = normalize(vec2(.55, -1.));
-        float band = fbm(vec2(dot(sp, vec2(-rd.y, rd.x))/38., dot(sp, rd)/900.));
-        float shaft = smoothstep(.5, .78, band) * smoothstep(.95, .1, vUv.y*.2 + (1.-vUv.x)*.0 + (1. - vUv.y)*.9) ;
-        col += vec3(1., .78, .5) * shaft * .16;
-        // split-tone grade: teal shadows, amber highlights, gentle S-curve, richer colour
-        float L = dot(col, vec3(.3,.59,.11));
-        col = mix(col, col*vec3(.78,.98,1.12), (1.-smoothstep(.0,.45,L))*.55);
-        col = mix(col, col*vec3(1.12,1.0,.82), smoothstep(.45,1.,L)*.5);
-        col = clamp(sat(col, 1.18), 0., 1.);
-        col = mix(col, col*col*(3.-2.*col), .45);
-        // painterly brush texture: short strokes along a diagonal
-        vec2 bd = vec2(.8,.6);
-        float br = noise(vec2(dot(sp,bd)/14., dot(sp, vec2(-bd.y,bd.x))/3.2));
-        col *= 1. + (br - .5)*.07;
-        // cinematic vignette
-        col *= 1. - .75*dot(q*vec2(1.1,1.), q*vec2(1.1,1.));
+        col += glow/16. * .5;
+        col = clamp(sat(col, 1.22), 0., 1.);
+        col *= 1. - .45*dot(q*vec2(1.2,1.), q*vec2(1.2,1.));
       } else {
         // restrained vignette
         col *= 1. - .35*dot(q*vec2(1.2,1.), q*vec2(1.2,1.));
@@ -845,125 +740,6 @@ const post = new THREE.ShaderMaterial({
     }`,
 });
 
-// ---------- mj: oil paint → depth of field, glow, atmosphere and a jewel-tone grade ----------
-// Classic Midjourney fantasy reads as a dark, jewel-toned oil painting: no ink line, soft brush blocks,
-// luminous light sources against deep indigo shadow, heavy atmosphere and a shallow focus plane.
-const GLSL_COMMON = /* glsl */ `
-  uniform sampler2D tColor, tDepth, tId, tPaint; uniform vec2 res; uniform float near, far;
-  varying vec2 vUv;
-  float lin(float d){ float z = d*2.-1.; return (2.*near*far)/(far+near - z*(far-near)); }
-  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
-  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
-    return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x), u.y); }
-  float fbm(vec2 p){ float v=0., a=.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.03+17.1; a*=.5; } return v; }
-  vec3 toSRGB(vec3 c){ return pow(max(c, 0.), vec3(1./2.2)); }
-  float luma(vec3 c){ return dot(c, vec3(.299,.587,.114)); }
-  vec3 sat(vec3 c, float s){ float l = luma(c); return mix(vec3(l), c, s); }
-`;
-const rtPaint = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
-const mjUniforms = {
-  tColor: { value: rtColor.texture }, tDepth: { value: rtNormal.depthTexture }, tId: { value: rtId.texture }, tPaint: { value: rtPaint.texture },
-  res: { value: new THREE.Vector2(W, H) }, near: { value: camera.near }, far: { value: camera.far },
-};
-const vsQuad = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }';
-// Pass 1: oriented Kuwahara. Four sectors along a noise-driven stroke direction; the calmest sector wins,
-// which flattens detail into brush blocks while keeping edges.
-const paint = new THREE.ShaderMaterial({
-  uniforms: mjUniforms, vertexShader: vsQuad,
-  fragmentShader: GLSL_COMMON + /* glsl */ `
-    void main(){
-      vec2 px = 1./res, sp = vUv*res;
-      float ang = fbm(sp/260.)*6.283 + .6;
-      mat2 R = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
-      vec3 m[4]; vec3 s2[4];
-      for(int k=0;k<4;k++){ m[k]=vec3(0.); s2[k]=vec3(0.); }
-      for(int j=0;j<=4;j++) for(int i=0;i<=4;i++){
-        vec2 o = vec2(float(i), float(j)) * vec2(1.9, 1.1); // elongated: strokes, not squares
-        vec3 a = toSRGB(texture2D(tColor, vUv + R*vec2( o.x,  o.y)*px).rgb);
-        vec3 b = toSRGB(texture2D(tColor, vUv + R*vec2(-o.x,  o.y)*px).rgb);
-        vec3 c = toSRGB(texture2D(tColor, vUv + R*vec2( o.x, -o.y)*px).rgb);
-        vec3 d = toSRGB(texture2D(tColor, vUv + R*vec2(-o.x, -o.y)*px).rgb);
-        m[0]+=a; s2[0]+=a*a; m[1]+=b; s2[1]+=b*b; m[2]+=c; s2[2]+=c*c; m[3]+=d; s2[3]+=d*d;
-      }
-      vec3 col = vec3(0.); float best = 1e9;
-      for(int k=0;k<4;k++){
-        vec3 mu = m[k]/25.; vec3 v = s2[k]/25. - mu*mu;
-        float e = v.r+v.g+v.b;
-        if(e < best){ best = e; col = mu; }
-      }
-      // keep figures crisper than the backdrop so they still read in play
-      int id = int(floor(texture2D(tId, vUv).r*10.+.5));
-      vec3 raw = toSRGB(texture2D(tColor, vUv).rgb);
-      if(id > 0) col = mix(col, raw, .35);
-      // soft painted contour on figures only: a darker, hue-matched edge, not an ink line
-      float edge = 0.;
-      for(int k=0;k<8;k++){
-        float a = float(k)*.785398;
-        vec2 uv = vUv + vec2(cos(a), sin(a))*2.2*px;
-        int i1 = int(floor(texture2D(tId, uv).r*10.+.5));
-        if(i1 != id && max(i1,id) > 0) edge += .125;
-      }
-      col = mix(col, col*vec3(.35,.3,.5), clamp(edge*1.6, 0., 1.)*.55);
-      gl_FragColor = vec4(col, 1.);
-    }`,
-});
-// Pass 2: focus falloff, glow, atmosphere, grade, canvas.
-const finish = new THREE.ShaderMaterial({
-  uniforms: mjUniforms, vertexShader: vsQuad,
-  fragmentShader: GLSL_COMMON + /* glsl */ `
-    void main(){
-      vec2 px = 1./res, sp = vUv*res;
-      float d0 = lin(texture2D(tDepth, vUv).r);
-      float focus = lin(texture2D(tDepth, vec2(.5,.47)).r);
-      // shallow focus: the fight is sharp, the far wall and the near floor go soft (tilt-shift miniature)
-      float coc = clamp((abs(d0 - focus) - 1.2)/5.5, 0., 1.) * 7.;
-      vec3 col = texture2D(tPaint, vUv).rgb; float wsum = 1.;
-      for(int k=0;k<28;k++){
-        float a = float(k)*2.39996, r = sqrt(float(k)+.5)/sqrt(28.) * coc;
-        vec2 uv = vUv + vec2(cos(a), sin(a))*r*px;
-        col += texture2D(tPaint, uv).rgb; wsum += 1.;
-      }
-      col /= wsum;
-      // luminous glow: two radii, bright pigment only, warm-biased
-      vec3 g1 = vec3(0.), g2 = vec3(0.);
-      for(int k=0;k<32;k++){
-        float a = float(k)*2.39996, f = sqrt(float(k)+.5)/sqrt(32.);
-        vec3 c1 = texture2D(tPaint, vUv + vec2(cos(a), sin(a))*f*22.*px).rgb;
-        vec3 c2 = texture2D(tPaint, vUv + vec2(cos(a+1.), sin(a+1.))*f*90.*px).rgb;
-        g1 += c1 * smoothstep(.5, 1.1, luma(c1));
-        g2 += c2 * smoothstep(.42, 1.0, luma(c2));
-      }
-      col += g1/32. * .9 + g2/32. * vec3(1.05,.85,.95) * 1.1;
-      // atmosphere: violet-blue haze deepens with distance, lit gold where the shaft falls
-      float haze = smoothstep(focus + 1.5, focus + 9., d0);
-      col = mix(col, vec3(.13,.11,.27), haze*.6);
-      vec2 rd = normalize(vec2(.5, -1.));
-      float band = fbm(vec2(dot(sp, vec2(-rd.y, rd.x))/55., dot(sp, rd)/1100.));
-      float shaft = smoothstep(.48, .8, band) * smoothstep(.0, .7, vUv.y) * (1. - smoothstep(.55, 1.05, vUv.x));
-      col += vec3(1., .74, .38) * shaft * .13;
-      // jewel-tone grade: indigo/violet shadows, teal mids, gold highlights
-      float L = luma(col);
-      vec3 shadow = vec3(.10,.07,.24), mid = vec3(.20,.42,.50), high = vec3(1.,.82,.52);
-      vec3 tint = mix(mix(shadow, mid, smoothstep(.0,.45,L)), high, smoothstep(.45,1.,L));
-      col = mix(col, tint * (L*1.5 + .08), .16);
-      col = sat(col, 1.32);
-      // chiaroscuro: push the darks down so the lights glow
-      col *= smoothstep(-.02, .5, L)*.55 + .45;
-      col = max(col, 0.);
-      col = col / (1. + col*.35) * 1.3; // soft shoulder
-      col = mix(col, smoothstep(0., 1., clamp(col,0.,1.)), .4);
-      // oil on canvas: fine weave plus directional impasto ridges
-      float weave = (noise(vec2(sp.x/1.6, sp.y/5.)) + noise(vec2(sp.x/5., sp.y/1.6)) - 1.)*.035;
-      vec2 bd = vec2(cos(fbm(sp/240.)*6.28), sin(fbm(sp/240.)*6.28));
-      float ridge = noise(vec2(dot(sp,bd)/18., dot(sp, vec2(-bd.y,bd.x))/2.6)) - .5;
-      col *= 1. + weave + ridge*.09*(.4 + L);
-      // deep violet vignette frames the lit centre
-      vec2 q = vUv - vec2(.5,.52);
-      float v = smoothstep(.25, .95, length(q*vec2(1.25,1.)) * 1.35);
-      col = mix(col, col*vec3(.18,.12,.3), v*.85);
-      gl_FragColor = vec4(clamp(col,0.,1.), 1.);
-    }`,
-});
 const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post);
 const postScene = new THREE.Scene(); postScene.add(quad);
 const postCam = new THREE.Camera();
@@ -979,8 +755,5 @@ withHidden(() => {
   renderId();
 });
 renderer.setRenderTarget(null);
-if (MJ) {
-  quad.material = paint; renderer.setRenderTarget(rtPaint); renderer.render(postScene, postCam);
-  quad.material = finish; renderer.setRenderTarget(null); renderer.render(postScene, postCam);
-} else renderer.render(postScene, postCam);
+renderer.render(postScene, postCam);
 window.__ready = true;
