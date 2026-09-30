@@ -1,0 +1,44 @@
+{
+  "about": "Ender's painted art set. Every entry is one image. scripts/art-generate.py renders them with a free open-weight model on this machine; images made elsewhere (for example Midjourney, using the same prompts) go in art/raw/<id>.png and scripts/art-ingest.py fits them to the game either way. Style evokes epic fantasy trading-card painting; no card game's frames, symbols, names or artists are referenced.",
+  "style": {
+    "base": "epic fantasy trading card illustration, painterly digital oil painting, dramatic chiaroscuro, strong rim light, rich saturated jewel tones, deep shadows, visible confident brushwork, highly detailed materials, masterful composition",
+    "figure": "full body, single character, whole figure in frame with feet visible, standing on nothing, centered, isolated on a plain flat light grey background, no floor, no scenery, no cast shadow",
+    "backdrop": "vertical 9:16 environment painting, no people, no creatures, wide open empty ground across the lower half, deep atmospheric perspective, volumetric light shafts, cinematic depth",
+    "cardart": "square card art window, emblematic still life, one strong central subject, dark vignette, glowing focal light",
+    "texture": "seamless tileable texture, flat even lighting, top-down, no perspective, no objects",
+    "negative": "text, letters, words, watermark, signature, logo, card frame, border, ui, blurry, lowres, jpeg artifacts, deformed hands, extra fingers, extra limbs, cropped feet, cut off head, duplicate, multiple characters, photo, 3d render, cartoon, anime, chibi"
+  },
+  "assets": [
+    { "id": "warden", "kind": "figure", "facing": "right", "prompt": "a stalwart knight in polished steel plate armour and an oxblood-red tabard bearing a golden tower emblem, great helm with a narrow visor slit and a tall oxblood plume, a heater shield held forward, a longsword lowered and ready, three-quarter view facing right" },
+    { "id": "binder", "kind": "figure", "facing": "right", "prompt": "a hooded thread-mage in a flowing sapphire-blue robe with gold trim and a violet mantle, face hidden in the hood's shadow, holding a tall hooked staff from which hangs a glowing knot of pale-blue light, threads of light curling from the knot, three-quarter view facing right" },
+    { "id": "ranger", "kind": "figure", "facing": "right", "prompt": "a young hooded archer in a verdigris-green cloak over a leather jerkin, rust-red scarf, leather bracers, a quiver of fletched arrows, longbow held low with an arrow nocked, auburn hair escaping the hood, face in three-quarter profile, three-quarter view facing right" },
+
+    { "id": "husk", "kind": "figure", "facing": "left", "prompt": "a gaunt hunched ghoul with ashen grey-violet dead skin, a cracked bone mask, wrapped in tattered oxblood rags, long arms ending in raking hooked bone claws, menacing crouch, three-quarter view facing left" },
+    { "id": "wisp", "kind": "figure", "facing": "left", "prompt": "a hooded wraith of layered tattered spirit veils in cold blue and violet, two pale glowing eyes in a dark hood, long grasping spectral hands, trailing wisps of mist instead of legs, floating, three-quarter view facing left" },
+    { "id": "hound", "kind": "figure", "facing": "left", "prompt": "a lean ash-grey wolf beast with a bone face plate, a ridge of bone spikes along its spine, its coat cracked with smouldering orange embers, snarling, low stalking pose, side view facing left" },
+    { "id": "keeper", "kind": "figure", "facing": "left", "prompt": "a hulking armoured warden-construct in verdigris-bitten iron plate, glowing slit in its helm, a great tower shield with a keyhole emblem, a massive war maul, immovable stance, three-quarter view facing left" },
+    { "id": "seer", "kind": "figure", "facing": "left", "prompt": "a tall masked oracle in layered verdigris-green robes with gold embroidery, an expressionless golden mask, holding a staff hung with a glowing golden lantern, hexing sigils in the air, three-quarter view facing left" },
+    { "id": "swarm", "kind": "figure", "facing": "left", "prompt": "a glittering swarm of gilded golden moths with ember-orange eye-spots on their wings, circling a faint vortex of warm light, dozens of moths forming a loose floating mass" },
+    { "id": "king", "kind": "figure", "facing": "left", "prompt": "the Bound King, a towering crowned lich in violet and oxblood royal robes, skeletal face under an iron crown, wound in heavy chains, torn pages of law orbiting him in the air, commanding pose, three-quarter view facing left" },
+    { "id": "wyrm", "kind": "figure", "facing": "left", "prompt": "a sea-glass serpent dragon rearing up, translucent teal and violet crystal scales, throat glowing from within, jaws set with crystal teeth, coiled body, no background water, three-quarter view facing left" },
+
+    { "id": "bg-ashen-vault", "kind": "backdrop", "prompt": "Ashen Vault: a collapsed underground reliquary under a broken stone arch, crumbling tombs and reliquaries along the walls, iron braziers burning, ember-lit cracks in the flagstones, drifting cinders, warm umber and orange light" },
+    { "id": "bg-glass-fen", "kind": "backdrop", "prompt": "the Glass Fen: a drowned marsh under a pale moon at night, still black water mirroring glassy crystal spires and reeds, a raised mossy bank in the foreground, teal and silver moonlight, mist over the water" },
+    { "id": "bg-hollow-keep", "kind": "backdrop", "prompt": "the Hollow Keep: a vast gothic hall of cold slate built around an absence, violet light pouring through a broken rose window, tattered crimson and purple banners, long flagstone floor, dust in the light" },
+    { "id": "bg-fen-lair", "kind": "backdrop", "prompt": "the Fen Lair: a flooded crystal cavern, teal water, clusters of violet crystal rising from the ground, stalactites overhead, a glittering hoard on a rocky shelf, violet and gold light" },
+    { "id": "bg-throne", "kind": "backdrop", "prompt": "the Bound King's throne room: a vast dark hall, a broken stone throne held down by great chains, violet and gold light from high windows, torn pages drifting in the air, long stair and open floor" },
+    { "id": "bg-crossing", "kind": "backdrop", "prompt": "the Crossing: a fantasy town square at dusk seen from above at a gentle angle, a stone gate glowing with violet light at the far end, market stalls with striped awnings, a forge, a tall mirror, a bookshelf shrine, a great loom-tree of glowing threads, a round fountain in the middle, warm windows, purple and orange sky" },
+    { "id": "bg-title", "kind": "backdrop", "prompt": "key art: three adventurers seen from behind on a cliff edge at dawn, a knight, a hooded mage with a glowing staff and a hooded archer, looking over a vast realm of ruined spires and glowing threads of light woven across the sky, epic scale, gold and violet light, space at the top for a title" },
+
+    { "id": "card-burden", "kind": "cardart", "prompt": "a massive iron anvil wrapped in molten orange cracks, sparks and ember light, weight and force" },
+    { "id": "card-veil", "kind": "cardart", "prompt": "a porcelain mask half dissolved into violet shadow smoke, a single glinting knife beneath it" },
+    { "id": "card-reach", "kind": "cardart", "prompt": "a single arrow of blue light streaking across a starry sapphire night toward a distant glowing target" },
+    { "id": "card-knots", "kind": "cardart", "prompt": "intricate golden cords tied into an endless interlaced knot, glowing runes along the cords" },
+    { "id": "card-flex", "kind": "cardart", "prompt": "three verdigris-green blades whirling in a storm of wind and lightning, motion and speed" },
+    { "id": "card-bond", "kind": "cardart", "prompt": "two gauntleted hands clasped around a warm glowing ember, crimson thread binding the wrists, hearth light" },
+
+    { "id": "tex-parchment", "kind": "texture", "prompt": "aged warm parchment paper with subtle fibres and faint stains" },
+    { "id": "tex-bronze", "kind": "texture", "prompt": "hammered aged bronze metal with verdigris in the recesses" },
+    { "id": "tex-slate", "kind": "texture", "prompt": "dark carved slate stone with fine scratches" }
+  ]
+}
