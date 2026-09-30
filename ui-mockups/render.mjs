@@ -20,6 +20,7 @@ const SHOTS = {
   'scene-shrine': 'scenes/scene.html?shot=shrine',
   'scene-room-colorblind': 'scenes/scene.html?shot=room&cb=1',
   'hud-on-scene': 'hud.html?bg=scene',
+  'scene-lineup': 'scenes/scene.html?shot=lineup',
 };
 
 const server = createServer(async (req, res) => {

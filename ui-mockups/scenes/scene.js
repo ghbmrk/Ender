@@ -32,7 +32,8 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1c1a21);
 const camera = new THREE.PerspectiveCamera(38, W / H, 1, 60);
-const YAW = THREE.MathUtils.degToRad(45), PITCH = THREE.MathUtils.degToRad(52), ARM = 15.5;
+const YAW = THREE.MathUtils.degToRad(45), PITCH = THREE.MathUtils.degToRad(52);
+const ARM = SHOT === 'lineup' ? 7.5 : 15.5; // lineup is a closer reference view, not the game camera
 function frame(target) {
   const t = new THREE.Vector3(target.x, 0.9, target.z);
   camera.position.set(
@@ -123,131 +124,248 @@ function floorTexture(kind) {
   return tex;
 }
 
-// ---------- the Hushed (section 34): folded parchment, stained cloth, ink joints, cracked masks ----------
-function mask(r, color = P.paper, crackCls = CLS.enemy) {
-  const g = new THREE.Group();
-  g.add(mesh(jitter(new THREE.SphereGeometry(r, 7, 5), r * 0.12), mat(color), crackCls, [0, 0, 0], [0, 0, 0], [1, 1.18, 0.72]));
-  g.add(mesh(new THREE.BoxGeometry(r * 0.1, r * 1.3, r * 0.1), mat(P.ink), crackCls, [r * 0.12, 0, r * 0.66], [0, 0, 0.35]));
-  g.add(mesh(new THREE.BoxGeometry(r * 0.5, r * 0.09, r * 0.1), mat(P.ink), crackCls, [-r * 0.32, r * 0.12, r * 0.64]));
-  g.add(mesh(new THREE.BoxGeometry(r * 0.4, r * 0.09, r * 0.1), mat(P.ink), crackCls, [r * 0.38, r * 0.12, r * 0.64]));
-  return g;
+// ---------- figure toolkit: limbs, lathed robes, hoods ----------
+const soft = (color, o = {}) => mat(color, { flatShading: false, ...o });
+const V = (a) => (a.isVector3 ? a : new THREE.Vector3(...a));
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+// Capsule limb between two points.
+function limb(g, a, b, r, material, cls) {
+  const A = V(a), B = V(b), d = B.clone().sub(A), len = d.length();
+  const m = mesh(new THREE.CapsuleGeometry(r, Math.max(0.001, len), 4, 10), material, cls);
+  m.position.copy(A).add(B).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(Y_AXIS, d.normalize());
+  g.add(m); return m;
 }
-const joint = (pos, r = 0.07, cls = CLS.enemy) => mesh(new THREE.SphereGeometry(r, 6, 4), mat(P.ink), cls, pos);
-
-function husk(cls = CLS.enemy, tint = P.parchment) {
-  const g = new THREE.Group();
-  const body = mesh(jitter(new THREE.CylinderGeometry(0.24, 0.38, 1.1, 5, 2), 0.08), mat(tint), cls, [0, 0.58, 0], [0.18, 0, 0]);
-  g.add(body);
-  g.add(mesh(jitter(new THREE.CylinderGeometry(0.33, 0.4, 0.38, 6, 1, true), 0.05), mat(P.umber, { side: THREE.DoubleSide }), cls, [0, 0.72, 0.02], [0.18, 0, 0]));
-  g.add(mesh(jitter(new THREE.ConeGeometry(0.2, 0.35, 4), 0.04), mat(tint), cls, [0, 1.23, 0.1], [0.3, 0.6, 0]));
-  const m = mask(0.2, P.paper, cls); m.position.set(0, 1.42, 0.2); m.rotation.x = 0.25; g.add(m);
-  for (const s of [-1, 1]) {
-    g.add(joint([s * 0.3, 1.1, 0.12], 0.07, cls));
-    g.add(mesh(jitter(new THREE.BoxGeometry(0.1, 0.5, 0.12), 0.03), mat(tint), cls, [s * 0.36, 0.84, 0.28], [0.9, 0, s * 0.2]));
-    g.add(joint([s * 0.38, 0.66, 0.46], 0.06, cls));
-    g.add(mesh(new THREE.ConeGeometry(0.06, 0.34, 3), mat(P.paper), cls, [s * 0.38, 0.6, 0.66], [1.7, 0, 0]));
-  }
-  return g;
+// Tapered segment (r0 at a, r1 at b), e.g. flared sleeves, claws, horns.
+function taper(g, a, b, r0, r1, material, cls, seg = 10) {
+  const A = V(a), B = V(b), d = B.clone().sub(A), len = d.length();
+  const m = mesh(new THREE.CylinderGeometry(r1, r0, len, seg, 1, r1 < 0.001), material, cls);
+  m.position.copy(A).add(B).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(Y_AXIS, d.normalize());
+  g.add(m); return m;
 }
-function hound() {
-  const g = new THREE.Group(), cls = CLS.enemy, c = P.warmStone;
-  g.add(mesh(jitter(new THREE.BoxGeometry(0.34, 0.32, 1.0, 1, 1, 3), 0.07), mat(c), cls, [0, 0.62, 0], [-0.12, 0, 0]));
-  g.add(mesh(jitter(new THREE.ConeGeometry(0.17, 0.5, 4), 0.03), mat(P.paper), cls, [0, 0.82, 0.68], [1.75, 0, 0]));
-  g.add(mesh(new THREE.ConeGeometry(0.06, 0.22, 3), mat(c), cls, [0.09, 1.0, 0.5], [-0.3, 0, 0.2]));
-  g.add(mesh(new THREE.ConeGeometry(0.06, 0.22, 3), mat(c), cls, [-0.09, 1.0, 0.5], [-0.3, 0, -0.2]));
-  for (const [x, z, r] of [[0.14, 0.36, 0.3], [-0.14, 0.36, -0.2], [0.14, -0.36, -0.35], [-0.14, -0.36, 0.25]]) {
-    g.add(joint([x, 0.48, z], 0.06));
-    g.add(mesh(new THREE.BoxGeometry(0.07, 0.48, 0.07), mat(P.umber), cls, [x, 0.24, z + r * 0.2], [r, 0, 0]));
-  }
-  g.add(mesh(new THREE.ConeGeometry(0.05, 0.6, 3), mat(c), cls, [0, 0.8, -0.72], [-1.1, 0, 0]));
-  return g;
-}
-function wisp() {
-  const g = new THREE.Group(), cls = CLS.enemy;
-  const pts = []; for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push(new THREE.Vector2(Math.sin(t * Math.PI) * 0.26 * (1 - t * 0.6), t * 1.0)); }
-  g.add(mesh(jitter(new THREE.LatheGeometry(pts, 7), 0.03), mat(0xcfc3a8), cls, [0, 1.0, 0], [Math.PI, 0, 0]));
-  const m = mask(0.16, P.paper, cls); m.position.set(0, 1.12, 0.12); g.add(m);
-  g.add(mesh(new THREE.SphereGeometry(0.045, 6, 4), new THREE.MeshBasicMaterial({ color: P.danger }), cls, [0.04, 1.14, 0.25]));
-  for (const s of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.02, 0.6, 0.12), mat(P.parchment, { side: THREE.DoubleSide }), cls, [s * 0.14, 0.4, -0.05], [0.2, 0, s * 0.3]));
-  return g;
-}
-function seer() {
-  const g = new THREE.Group(), cls = CLS.enemy;
-  g.add(mesh(jitter(new THREE.ConeGeometry(0.42, 1.6, 6, 2), 0.07), mat(P.moss), cls, [0, 0.8, 0]));
-  g.add(mesh(jitter(new THREE.CylinderGeometry(0.36, 0.44, 0.3, 6, 1, true), 0.04), mat(P.umber, { side: THREE.DoubleSide }), cls, [0, 0.35, 0]));
-  const m = mask(0.2, P.paper, cls); m.position.set(0, 1.72, 0.08); g.add(m);
-  g.add(mesh(new THREE.SphereGeometry(0.06, 6, 4), mat(P.ink), cls, [0, 1.72, 0.25]));
-  g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.0, 5), mat(P.umber), cls, [0.45, 1.0, 0.15], [0, 0, -0.08]));
-  g.add(mesh(jitter(new THREE.IcosahedronGeometry(0.1, 0), 0.02), mat(P.hazard, { emissive: P.hazard, emissiveIntensity: 0.5 }), cls, [0.53, 2.04, 0.15]));
-  return g;
-}
-function keeper() {
-  const g = new THREE.Group(), cls = CLS.elite;
-  g.add(mesh(jitter(new THREE.BoxGeometry(0.9, 1.1, 0.6, 2, 2, 2), 0.1), mat(0x8c7e6a), cls, [0, 0.95, 0]));
-  g.add(mesh(jitter(new THREE.BoxGeometry(1.2, 0.4, 0.7, 2, 1, 1), 0.08), mat(0x8c7e6a), cls, [0, 1.62, 0]));
-  g.add(mesh(jitter(new THREE.CylinderGeometry(0.42, 0.5, 0.5, 6, 1, true), 0.05), mat(P.elite, { side: THREE.DoubleSide }), cls, [0, 0.42, 0]));
-  for (const s of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.28, 0.45, 0.3), mat(P.umber), cls, [s * 0.24, 0.2, 0]));
-  const m = mask(0.26, P.paper, cls); m.position.set(0, 2.05, 0.1); g.add(m);
-  // shield
-  const sh = mesh(jitter(new THREE.BoxGeometry(0.12, 1.4, 0.9, 1, 3, 2), 0.05), metal(P.coldStone), cls, [-0.72, 1.0, 0.35], [0, 0.35, 0]);
-  g.add(sh);
-  g.add(mesh(new THREE.BoxGeometry(0.14, 0.12, 0.92), mat(P.ink), cls, [-0.73, 1.3, 0.35], [0, 0.35, 0]));
-  // maul raised for the heavy
-  g.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 5), mat(P.umber), cls, [0.72, 2.0, 0.1], [0.3, 0, -0.5]));
-  g.add(mesh(jitter(new THREE.BoxGeometry(0.5, 0.35, 0.35), 0.05), metal(P.coldStone), cls, [1.06, 2.66, 0.32], [0.3, 0, -0.5]));
-  g.add(joint([0.6, 1.62, 0], 0.1, cls)); g.add(joint([-0.6, 1.62, 0], 0.1, cls));
-  return g;
-}
-function boundKing() {
-  const g = new THREE.Group(), cls = CLS.boss;
-  g.add(mesh(jitter(new THREE.ConeGeometry(1.2, 2.6, 8, 3), 0.14), mat(P.deepWash), cls, [0, 1.3, 0]));
-  g.add(mesh(jitter(new THREE.CylinderGeometry(0.7, 1.0, 1.0, 8, 1, true), 0.08), mat(P.parchment, { side: THREE.DoubleSide }), cls, [0, 2.0, 0]));
-  g.add(mesh(jitter(new THREE.BoxGeometry(1.8, 0.5, 0.9, 2, 1, 1), 0.1), mat(P.umber), cls, [0, 2.7, 0]));
-  const m = mask(0.42, P.paper, cls); m.position.set(0, 3.25, 0.15); g.add(m);
-  // crown
-  g.add(mesh(new THREE.CylinderGeometry(0.36, 0.4, 0.22, 8, 1, true), metal(P.highValue), cls, [0, 3.72, 0.05]));
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2;
-    g.add(mesh(new THREE.ConeGeometry(0.06, 0.34, 4), metal(P.highValue), cls, [Math.sin(a) * 0.38, 3.95, 0.05 + Math.cos(a) * 0.38]));
-  }
-  // binding chains
-  for (const [y, r, tilt] of [[2.3, 0.9, -0.25]]) {
-    for (let i = 0; i < 16; i++) {
-      const a = (i / 16) * Math.PI * 2;
-      const l = mesh(new THREE.TorusGeometry(0.1, 0.03, 4, 8), metal(P.coldStone), cls, [Math.sin(a) * r, y + Math.sin(a) * tilt, Math.cos(a) * r], [i % 2 ? Math.PI / 2 : 0, a, 0]);
-      g.add(l);
+// Lathed cloth: profile is [[radius, y], ...] bottom to top. The hem ring is torn.
+function cloth(g, profile, material, cls, { phiStart = 0, phiLength = Math.PI * 2, seg = 18, tear = 0.06, seed = 1, pos = [0, 0, 0], rot = [0, 0, 0], scl = [1, 1, 1] } = {}) {
+  const geo = new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), seg, phiStart, phiLength);
+  const p = geo.attributes.position, rows = profile.length, y0 = profile[0][1];
+  for (let i = 0; i < p.count; i++) {
+    const row = i % rows;
+    if (row === 0) { // hem: ragged length and slight flare
+      const k = hash3(Math.floor(i / rows), seed, 7);
+      p.setY(i, y0 + (k - 0.3) * tear * 2.2);
+      p.setX(i, p.getX(i) * (1 + (k - 0.5) * tear));
+      p.setZ(i, p.getZ(i) * (1 + (k - 0.5) * tear));
     }
   }
-  // arms: one raised, casting
+  geo.computeVertexNormals();
+  if (!material.side || material.side === THREE.FrontSide) material.side = THREE.DoubleSide;
+  return g.add(mesh(geo, material, cls, pos, rot, scl)), g.children[g.children.length - 1];
+}
+// Cracked porcelain/parchment mask (the Hushed's faces).
+function mask(r, color = P.paper, cls = CLS.enemy) {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.SphereGeometry(r, 16, 12), soft(color), cls, [0, 0, 0], [0, 0, 0], [0.9, 1.15, 0.8]));
+  for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(r * 0.2, 8, 6), mat(P.ink), cls, [s * r * 0.36, r * 0.1, r * 0.7], [0, 0, s * -0.35], [1.5, 0.32, 0.5]));
+  g.add(mesh(new THREE.BoxGeometry(r * 0.06, r * 1.1, r * 0.08), mat(P.ink), cls, [r * 0.1, -r * 0.2, r * 0.74], [0.2, 0, 0.35]));
+  return g;
+}
+const joint = (pos, r = 0.06, cls = CLS.enemy) => mesh(new THREE.SphereGeometry(r, 8, 6), soft(P.ink), cls, pos);
+function hand(g, at, r, color, cls, claws = 0, dir = [0, -1, 0.3]) {
+  g.add(mesh(new THREE.SphereGeometry(r, 8, 6), soft(color), cls, at, [0, 0, 0], [1, 1.2, 0.8]));
+  const D = V(dir).normalize();
+  for (let i = 0; i < claws; i++) {
+    const off = new THREE.Vector3((i - (claws - 1) / 2) * r * 0.7, 0, 0);
+    const a = V(at).add(off), b = a.clone().add(D.clone().multiplyScalar(r * 3.2));
+    taper(g, a, b, r * 0.28, 0.001, soft(P.paper), cls, 5);
+  }
+}
+
+// ---------- the Binder: hooded thread-mage with a staff ----------
+function binder() {
+  const g = new THREE.Group(), cls = CLS.player;
+  const robeC = soft(0x3e3b4c), under = soft(P.weave), mantleC = soft(0x55609a), skin = soft(0xc8b8a0), dark = soft(0x1d1b24);
+  cloth(g, [[0.36, 0.02], [0.33, 0.2], [0.27, 0.55], [0.22, 0.9], [0.2, 1.02]], robeC, cls, { tear: 0.05, seed: 3 });
+  cloth(g, [[0.37, 0.03], [0.34, 0.2], [0.28, 0.55], [0.23, 0.9]], under, cls, { phiStart: -0.32, phiLength: 0.64, tear: 0.03, seed: 4, scl: [1.02, 1, 1.02] });
+  cloth(g, [[0.2, 1.0], [0.25, 1.15], [0.25, 1.32], [0.18, 1.44], [0.08, 1.5]], robeC, cls, { tear: 0 });
+  g.add(mesh(new THREE.TorusGeometry(0.215, 0.035, 6, 20), soft(P.paper), cls, [0, 1.02, 0], [Math.PI / 2, 0, 0]));
+  // mantle: open at the front, draped from the shoulders
+  cloth(g, [[0.36, 0.3], [0.34, 0.7], [0.3, 1.1], [0.28, 1.36], [0.2, 1.46]], mantleC, cls, { phiStart: Math.PI * 0.62, phiLength: Math.PI * 0.76, tear: 0.1, seed: 9, scl: [1.08, 1, 1.08] });
+  // hood + shadowed face
+  const hood = new THREE.Group(); hood.position.set(0, 1.62, 0.02);
+  hood.add(mesh(new THREE.SphereGeometry(0.17, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.8), mantleC, cls, [0, 0, -0.01], [-0.35, 0, 0], [1, 1.12, 1.1]));
+  hood.add(mesh(new THREE.ConeGeometry(0.1, 0.24, 10), mantleC, cls, [0, 0.1, -0.16], [-1.15, 0, 0]));
+  hood.add(mesh(new THREE.SphereGeometry(0.13, 12, 10), dark, cls, [0, -0.03, 0.05]));
+  for (const s of [-1, 1]) hood.add(mesh(new THREE.SphereGeometry(0.018, 6, 4), new THREE.MeshBasicMaterial({ color: 0xaeb8e6 }), cls, [s * 0.045, -0.01, 0.17]));
+  g.add(hood);
+  // arms: left holds the staff, right casts forward
+  for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(0.1, 10, 8), mantleC, cls, [s * 0.25, 1.4, 0]));
+  limb(g, [-0.26, 1.38, 0], [-0.33, 1.12, 0.1], 0.06, robeC, cls);
+  taper(g, [-0.33, 1.12, 0.1], [-0.35, 0.92, 0.22], 0.06, 0.1, robeC, cls);
+  hand(g, [-0.35, 0.9, 0.24], 0.045, 0xc8b8a0, cls);
+  limb(g, [0.26, 1.38, 0], [0.36, 1.3, 0.28], 0.06, robeC, cls);
+  taper(g, [0.36, 1.3, 0.28], [0.4, 1.32, 0.56], 0.06, 0.1, robeC, cls);
+  hand(g, [0.41, 1.33, 0.62], 0.045, 0xc8b8a0, cls);
+  g.add(mesh(new THREE.TorusGeometry(0.09, 0.025, 6, 14), soft(P.weave, { emissive: P.weave, emissiveIntensity: 0.8 }), cls, [0.42, 1.34, 0.72]));
+  // staff: gnarled shaft with a spindle head
+  const st = [-0.36, 0, 0.26];
+  taper(g, [st[0], 0.02, st[2]], [st[0] + 0.02, 2.0, st[2] + 0.02], 0.028, 0.02, soft(P.umber), cls, 6);
+  g.add(mesh(new THREE.TorusGeometry(0.1, 0.02, 6, 16), soft(P.highValue, { metalness: 0.6 }), cls, [st[0] + 0.02, 2.08, st[2]], [0, 0.4, 0]));
+  g.add(mesh(new THREE.OctahedronGeometry(0.05, 0), soft(P.weave, { emissive: P.weave, emissiveIntensity: 0.8 }), cls, [st[0] + 0.02, 2.08, st[2]]));
+  // ground ring (P1 player position readability)
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.58, 0.64, 48), new THREE.MeshBasicMaterial({ color: P.weave, transparent: true, opacity: 0.5, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; g.add(fx(ring));
+  return g;
+}
+
+// ---------- the Hushed (section 34): folded parchment, stained cloth, ink joints, cracked masks ----------
+// Husk: a hunched ghoul of folded parchment with long clawed arms.
+function husk(cls = CLS.enemy, tint = P.parchment) {
+  const g = new THREE.Group(), skin = soft(tint), rag = soft(P.umber);
   for (const s of [-1, 1]) {
-    g.add(joint([s * 0.95, 2.7, 0], 0.14, cls));
-    g.add(mesh(jitter(new THREE.BoxGeometry(0.22, 1.2, 0.22), 0.04), mat(P.parchment), cls, [s * 1.25, s > 0 ? 3.2 : 2.2, 0.2], [s > 0 ? 0.3 : 0.6, 0, s * (s > 0 ? -0.6 : 0.3)]));
+    limb(g, [s * 0.12, 0.82, -0.02], [s * 0.17, 0.44, 0.12], 0.065, skin, cls);
+    limb(g, [s * 0.17, 0.44, 0.12], [s * 0.14, 0.06, -0.02], 0.055, skin, cls);
+    g.add(joint([s * 0.17, 0.44, 0.13], 0.06, cls));
+    g.add(mesh(new THREE.BoxGeometry(0.1, 0.05, 0.2), skin, cls, [s * 0.14, 0.03, 0.04]));
+  }
+  cloth(g, [[0.25, 0.46], [0.22, 0.65], [0.18, 0.85]], rag, cls, { tear: 0.12, seed: 11 });
+  // hunched torso: a lathed ribcage tipped forward
+  const torso = new THREE.Group(); torso.position.set(0, 0.84, -0.02); torso.rotation.x = 0.62; g.add(torso);
+  cloth(torso, [[0.14, 0], [0.2, 0.18], [0.24, 0.38], [0.2, 0.55], [0.1, 0.64]], skin, cls, { tear: 0 });
+  for (let i = 0; i < 3; i++) torso.add(mesh(new THREE.ConeGeometry(0.05, 0.14, 4), skin, cls, [0, 0.15 + i * 0.16, -0.21 + i * 0.01], [-1.2, 0, 0]));
+  cloth(torso, [[0.27, 0.12], [0.25, 0.3], [0.22, 0.42]], rag, cls, { phiStart: Math.PI * 0.5, phiLength: Math.PI, tear: 0.1, seed: 12 });
+  const m = mask(0.12, P.paper, cls); m.position.set(0, 1.34, 0.42); m.rotation.x = -0.1; g.add(m);
+  limb(g, [0, 1.26, 0.28], [0, 1.34, 0.38], 0.06, skin, cls);
+  for (const s of [-1, 1]) {
+    g.add(joint([s * 0.24, 1.26, 0.22], 0.065, cls));
+    limb(g, [s * 0.24, 1.26, 0.22], [s * 0.34, 0.94, 0.44], 0.05, skin, cls);
+    g.add(joint([s * 0.34, 0.94, 0.44], 0.05, cls));
+    limb(g, [s * 0.34, 0.94, 0.44], [s * 0.3, 0.62, 0.58], 0.045, skin, cls);
+    hand(g, [s * 0.3, 0.58, 0.6], 0.05, tint, cls, 3, [0, -1, 0.5]);
+  }
+  return g;
+}
+// Hound: a lean parchment wolf, low head, long snout.
+function hound() {
+  const g = new THREE.Group(), cls = CLS.enemy, skin = soft(P.warmStone);
+  limb(g, [0, 0.64, -0.34], [0, 0.72, 0.22], 0.19, skin, cls);
+  g.add(mesh(new THREE.SphereGeometry(0.27, 14, 10), skin, cls, [0, 0.76, 0.28], [0, 0, 0], [1, 1.1, 1.05]));
+  limb(g, [0, 0.8, 0.42], [0, 0.78, 0.66], 0.1, skin, cls);
+  const head = new THREE.Group(); head.position.set(0, 0.78, 0.72); g.add(head);
+  head.add(mesh(new THREE.SphereGeometry(0.12, 12, 10), soft(P.paper), cls, [0, 0, 0], [0, 0, 0], [1, 0.9, 1.1]));
+  taper(head, [0, -0.02, 0.06], [0, -0.06, 0.26], 0.09, 0.045, soft(P.paper), cls, 8);
+  head.add(mesh(new THREE.SphereGeometry(0.03, 6, 4), soft(P.ink), cls, [0, -0.05, 0.28]));
+  for (const s of [-1, 1]) {
+    head.add(mesh(new THREE.ConeGeometry(0.045, 0.18, 4), skin, cls, [s * 0.07, 0.13, -0.02], [-0.5, 0, s * 0.25]));
+    head.add(mesh(new THREE.SphereGeometry(0.02, 6, 4), new THREE.MeshBasicMaterial({ color: P.danger }), cls, [s * 0.06, 0.03, 0.1]));
+  }
+  for (const [x, z, f] of [[0.12, 0.3, 1], [-0.12, 0.3, 1], [0.12, -0.3, -1], [-0.12, -0.3, -1]]) {
+    const hip = [x, 0.62, z], knee = [x * 1.1, 0.36, z + f * -0.08], paw = [x, 0.04, z + f * 0.06];
+    limb(g, hip, knee, 0.055, skin, cls);
+    limb(g, knee, paw, 0.04, soft(P.umber), cls);
+    g.add(joint(knee, 0.05, cls));
+  }
+  taper(g, [0, 0.7, -0.5], [0, 0.62, -0.82], 0.09, 0.03, skin, cls, 7);
+  cloth(g, [[0.2, 0.5], [0.2, 0.62]], soft(P.umber), cls, { tear: 0.12, seed: 21, pos: [0, 0.2, 0.05], rot: [Math.PI / 2, 0, 0], scl: [1, 1, 1] });
+  return g;
+}
+// Wisp: a floating wraith, hooded shroud trailing to a tail.
+function wisp() {
+  const outer = new THREE.Group(); const g = new THREE.Group(); g.rotation.x = 0.35; g.position.set(0, 0.25, -0.2); outer.add(g);
+  const cls = CLS.enemy, shroud = soft(0xcfc3a8, { transparent: true, opacity: 0.92 });
+  cloth(g, [[0.02, 0.3], [0.1, 0.7], [0.18, 1.1], [0.17, 1.4], [0.11, 1.6], [0.01, 1.84]], shroud, cls, { tear: 0.15, seed: 31 });
+  const m = mask(0.12, P.paper, cls); m.position.set(0, 1.48, 0.13); g.add(m);
+  g.add(mesh(new THREE.SphereGeometry(0.03, 6, 4), new THREE.MeshBasicMaterial({ color: P.danger }), cls, [0.04, 1.5, 0.24]));
+  for (const s of [-1, 1]) {
+    taper(g, [s * 0.15, 1.38, 0.02], [s * 0.36, 1.1, 0.46], 0.04, 0.11, shroud, cls, 8);
+    limb(g, [s * 0.36, 1.1, 0.46], [s * 0.4, 1.04, 0.6], 0.02, soft(P.paper), cls);
+    hand(g, [s * 0.41, 1.02, 0.64], 0.035, P.paper, cls, 3, [0, -0.4, 1]);
+  }
+  for (let i = 0; i < 3; i++) taper(g, [(i - 1) * 0.08, 0.5, -0.05], [(i - 1) * 0.16, 0.12 - i * 0.04, -0.2], 0.03, 0.002, shroud, cls, 5);
+  return outer;
+}
+// Seer: a robed oracle under a tall hood, lantern staff raised.
+function seer() {
+  const g = new THREE.Group(), cls = CLS.enemy, robe = soft(P.moss), trim = soft(P.umber);
+  cloth(g, [[0.4, 0.02], [0.34, 0.3], [0.25, 0.8], [0.2, 1.2], [0.18, 1.45]], robe, cls, { tear: 0.08, seed: 41 });
+  cloth(g, [[0.41, 0.03], [0.38, 0.14]], trim, cls, { tear: 0.08, seed: 41 });
+  cloth(g, [[0.26, 1.2], [0.28, 1.36], [0.22, 1.5], [0.1, 1.58]], robe, cls, { phiStart: Math.PI * 0.3, phiLength: Math.PI * 1.4, tear: 0.05, seed: 42 });
+  const hood = new THREE.Group(); hood.position.set(0, 1.66, 0); g.add(hood);
+  hood.add(mesh(new THREE.ConeGeometry(0.2, 0.62, 12, 1, true), robe, cls, [0, 0.18, -0.06], [-0.28, 0, 0]));
+  const m = mask(0.12, P.paper, cls); m.position.set(0, -0.02, 0.06); hood.add(m);
+  // lantern staff raised in the right hand
+  limb(g, [0.2, 1.42, 0], [0.34, 1.62, 0.16], 0.05, robe, cls);
+  hand(g, [0.36, 1.68, 0.18], 0.04, P.paper, cls);
+  taper(g, [0.36, 0.3, 0.18], [0.37, 2.3, 0.2], 0.025, 0.02, trim, cls, 6);
+  g.add(mesh(new THREE.OctahedronGeometry(0.1, 0), soft(P.hazard, { emissive: P.hazard, emissiveIntensity: 0.7 }), cls, [0.37, 2.38, 0.2]));
+  g.add(mesh(new THREE.TorusGeometry(0.12, 0.012, 4, 12), metal(P.coldStone), cls, [0.37, 2.38, 0.2], [Math.PI / 2, 0, 0]));
+  limb(g, [-0.2, 1.42, 0], [-0.3, 1.12, 0.16], 0.05, robe, cls);
+  hand(g, [-0.31, 1.08, 0.2], 0.04, P.paper, cls, 3, [0, -1, 0.4]);
+  return g;
+}
+// Keeper (elite): an armoured warden, tower shield and a raised maul.
+function keeper() {
+  const g = new THREE.Group(), cls = CLS.elite, plate = soft(0x8c7e6a), iron = metal(P.coldStone), tabard = soft(P.elite);
+  for (const s of [-1, 1]) {
+    limb(g, [s * 0.2, 0.95, 0], [s * 0.24, 0.5, 0.06], 0.13, plate, cls);
+    limb(g, [s * 0.24, 0.5, 0.06], [s * 0.24, 0.1, 0], 0.11, iron, cls);
+    g.add(mesh(new THREE.BoxGeometry(0.22, 0.12, 0.34), iron, cls, [s * 0.24, 0.06, 0.06]));
+  }
+  cloth(g, [[0.42, 0.55], [0.38, 0.8], [0.34, 1.0]], iron, cls, { tear: 0.03, seed: 51 });
+  cloth(g, [[0.34, 0.95], [0.46, 1.25], [0.5, 1.5], [0.42, 1.72], [0.2, 1.84]], plate, cls, { tear: 0 });
+  g.add(mesh(new THREE.PlaneGeometry(0.34, 0.9, 1, 3), tabard, cls, [0, 0.95, 0.43], [0.08, 0, 0]));
+  for (const s of [-1, 1]) {
+    g.add(mesh(new THREE.SphereGeometry(0.26, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), iron, cls, [s * 0.5, 1.68, 0], [0, 0, s * -0.3]));
+    g.add(mesh(new THREE.SphereGeometry(0.1, 8, 6), iron, cls, [s * 0.52, 1.95, 0]));
+  }
+  // great helm with a cracked mask behind the visor slit
+  g.add(mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.4, 14), iron, cls, [0, 2.06, 0.02]));
+  g.add(mesh(new THREE.SphereGeometry(0.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), iron, cls, [0, 2.26, 0.02]));
+  g.add(mesh(new THREE.BoxGeometry(0.28, 0.04, 0.05), soft(P.ink), cls, [0, 2.1, 0.22]));
+  g.add(mesh(new THREE.BoxGeometry(0.04, 0.2, 0.05), soft(P.ink), cls, [0, 2.0, 0.22]));
+  // curved tower shield on the left arm
+  limb(g, [-0.5, 1.6, 0], [-0.62, 1.2, 0.3], 0.1, plate, cls);
+  const sh = mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.5, 16, 2, true, -0.38, 0.76), iron, cls, [-0.7, 1.0, -0.45], [0, 0.5, 0]);
+  sh.material = metal(P.coldStone); sh.material.side = THREE.DoubleSide; g.add(sh);
+  // right arm: maul raised overhead for the heavy
+  limb(g, [0.5, 1.62, 0], [0.62, 2.0, 0.08], 0.1, plate, cls);
+  limb(g, [0.62, 2.0, 0.08], [0.46, 2.4, 0.12], 0.09, plate, cls);
+  taper(g, [0.46, 2.4, 0.12], [0.1, 3.0, -0.2], 0.04, 0.04, soft(P.umber), cls, 6);
+  g.add(mesh(new THREE.BoxGeometry(0.46, 0.3, 0.3), iron, cls, [0.06, 3.08, -0.24], [0.3, 0, 0.6]));
+  cloth(g, [[0.3, 0.9], [0.3, 1.2]], soft(P.health, { transparent: true, opacity: 0.5 }), cls, { tear: 0.2, seed: 55, phiStart: 0.6, phiLength: 0.9 });
+  return g;
+}
+// The Bound King: a lich-king in a vast flaring robe, crowned, chains trailing from gaunt raised arms.
+function boundKing() {
+  const g = new THREE.Group(), cls = CLS.boss;
+  const robe = soft(P.deepWash), vest = soft(P.parchment), bone = soft(0xd8cdb4), gold = metal(P.highValue), iron = metal(P.coldStone);
+  cloth(g, [[1.35, 0.02], [1.15, 0.4], [0.8, 1.2], [0.5, 2.0], [0.42, 2.4]], robe, cls, { tear: 0.1, seed: 61, seg: 26 });
+  cloth(g, [[0.52, 1.8], [0.48, 2.2], [0.52, 2.6], [0.42, 2.9]], vest, cls, { tear: 0.05, seed: 62 });
+  // high collar
+  cloth(g, [[0.4, 2.8], [0.62, 3.1], [0.78, 3.45]], robe, cls, { phiStart: Math.PI * 0.45, phiLength: Math.PI * 1.1, tear: 0.1, seed: 63 });
+  // cloak behind
+  cloth(g, [[1.5, 0.05], [1.2, 0.8], [0.8, 2.0], [0.6, 2.85]], soft(0x2c2a36), cls, { phiStart: Math.PI * 0.6, phiLength: Math.PI * 0.8, tear: 0.16, seed: 64, seg: 20 });
+  const m = mask(0.3, P.paper, cls); m.position.set(0, 3.2, 0.1); g.add(m);
+  // crown
+  g.add(mesh(new THREE.CylinderGeometry(0.28, 0.3, 0.16, 16, 1, true), gold, cls, [0, 3.52, 0.08]));
+  for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; g.add(mesh(new THREE.ConeGeometry(0.045, 0.3, 5), gold, cls, [Math.sin(a) * 0.29, 3.72, 0.08 + Math.cos(a) * 0.29])); }
+  // gaunt arms: left raised casting, right reaching forward
+  for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(0.2, 12, 8), robe, cls, [s * 0.55, 2.92, 0]));
+  const armL = [[-0.6, 2.9, 0], [-1.0, 3.3, 0.3], [-1.05, 3.9, 0.45]], armR = [[0.6, 2.9, 0], [0.95, 2.55, 0.5], [1.15, 2.5, 1.05]];
+  for (const arm of [armL, armR]) {
+    taper(g, arm[0], arm[1], 0.14, 0.1, robe, cls);
+    limb(g, arm[1], arm[2], 0.05, bone, cls);
+    taper(g, arm[1], arm[1].map((v, i) => v + (arm[2][i] - arm[1][i]) * 0.45), 0.1, 0.2, robe, cls);
+    hand(g, arm[2], 0.07, 0xd8cdb4, cls, 4, arm === armL ? [0, 1, 0.2] : [0, -0.3, 1]);
+    // chain shackle and trailing links
+    g.add(mesh(new THREE.TorusGeometry(0.09, 0.03, 6, 12), iron, cls, arm[1].map((v, i) => v + (arm[2][i] - arm[1][i]) * 0.7), [Math.PI / 2, 0, 0]));
+    const top = V(arm[1]).lerp(V(arm[2]), 0.7);
+    for (let k = 1; k < 9; k++) g.add(mesh(new THREE.TorusGeometry(0.06, 0.018, 4, 8), iron, cls, [top.x + k * 0.03, top.y - k * 0.13, top.z - k * 0.02], [k % 2 ? Math.PI / 2 : 0, 0.4, 0]));
   }
   // floating manuscript pages
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * Math.PI * 2;
-    g.add(mesh(new THREE.PlaneGeometry(0.34, 0.46), mat(P.paper, { side: THREE.DoubleSide }), cls, [Math.sin(a) * 1.7, 2.4 + (i % 3) * 0.5, Math.cos(a) * 1.7], [0.3 * i, a, 0.2 * i]));
+    g.add(mesh(new THREE.PlaneGeometry(0.34, 0.46), soft(P.paper, { side: THREE.DoubleSide }), cls, [Math.sin(a) * 1.8, 2.2 + (i % 3) * 0.55, Math.cos(a) * 1.8], [0.3 * i, a, 0.2 * i]));
   }
-  return g;
-}
-function binder() {
-  const g = new THREE.Group(), cls = CLS.player;
-  g.add(mesh(jitter(new THREE.ConeGeometry(0.42, 1.35, 7, 2), 0.05), mat(0x3e3b4c), cls, [0, 0.68, 0]));
-  g.add(mesh(new THREE.ConeGeometry(0.3, 0.95, 7, 1, true, -0.9, 1.8), mat(P.weave, { side: THREE.DoubleSide }), cls, [0, 0.62, 0.05]));
-  // mantle: weave-blue cape over the shoulders, trailing
-  g.add(mesh(jitter(new THREE.BoxGeometry(0.7, 1.05, 0.08, 2, 3, 1), 0.06), mat(0x55609a), cls, [0, 0.82, -0.26], [-0.18, 0, 0]));
-  g.add(mesh(jitter(new THREE.BoxGeometry(0.64, 0.36, 0.38), 0.04), mat(0x4a4660), cls, [0, 1.3, 0]));
-  g.add(mesh(new THREE.TorusGeometry(0.3, 0.05, 4, 10), mat(P.paper), cls, [0, 1.0, 0], [Math.PI / 2, 0, 0], [1.1, 0.85, 1]));
-  g.add(mesh(jitter(new THREE.ConeGeometry(0.25, 0.5, 7), 0.03), mat(0x4a4660), cls, [0, 1.72, -0.04], [-0.2, 0, 0]));
-  g.add(mesh(new THREE.SphereGeometry(0.15, 7, 5), mat(0x1d1b24), cls, [0, 1.55, 0.08]));
-  g.add(mesh(new THREE.SphereGeometry(0.035, 5, 4), new THREE.MeshBasicMaterial({ color: 0xaeb8e6 }), cls, [0.06, 1.57, 0.21]));
-  g.add(mesh(new THREE.SphereGeometry(0.035, 5, 4), new THREE.MeshBasicMaterial({ color: 0xaeb8e6 }), cls, [-0.06, 1.57, 0.21]));
-  // casting arm extended forward, thread spool
-  g.add(mesh(new THREE.BoxGeometry(0.12, 0.12, 0.62), mat(0x4a4660), cls, [0.32, 1.25, 0.34], [-0.2, 0.2, 0]));
-  g.add(mesh(new THREE.TorusGeometry(0.1, 0.035, 5, 10), mat(P.weave, { emissive: P.weave, emissiveIntensity: 0.7 }), cls, [0.4, 1.3, 0.68]));
-  // ground ring (P1 player position readability)
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.62, 48), new THREE.MeshBasicMaterial({ color: P.weave, transparent: true, opacity: 0.55, depthWrite: false }));
-  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; g.add(fx(ring));
   return g;
 }
 
@@ -430,6 +548,7 @@ floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.userData.cls 
 const player = new THREE.Vector3(0, 0, 0);
 if (SHOT === 'room') buildRoom();
 else if (SHOT === 'boss') buildBoss();
+else if (SHOT === 'lineup') buildLineup();
 else buildShrine();
 
 function arenaDressing(kind) {
@@ -509,6 +628,13 @@ function buildBoss() {
   const d = at(-4.2, -1.8); splat(d, 1.1, P.parchment, 0.5, 50); droplets(d, 22, 0.9, 0xb9a988, 0.07, 51);
   lootBeam(at(6.5, -3.2), P.highValue);
   frame(at(0.2, 2.2));
+}
+
+function buildLineup() {
+  const row = [[binder, 0, 1], [husk, 0, 1], [hound, 0, 1], [wisp, 0, 1], [seer, 0, 1], [keeper, 0, 1.12]];
+  row.forEach(([f, , s], i) => { const p = at(-3.4 + i * 1.25, 1.3 - (i % 2) * 0.3); place(f(), p, facing(p, at(-3.4 + i * 1.35, -8)) , s); });
+  const kp = at(0.3, 3.9); place(boundKing(), kp, facing(kp, at(0.3, -8)), 0.6);
+  frame(at(0, 1.9));
 }
 
 function buildShrine() {

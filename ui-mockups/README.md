@@ -19,7 +19,7 @@ Rendered PNGs are in `shots/`.
 - Ink outlines (section 80): a class-ID pass stands in for custom stencil (1 player, 2 enemy, 3 elite, 4 boss, 5 interactable, 6 loot). The post shader draws edges from depth, normal and class discontinuities at 2.0 / 1.5 / 2.0 / 2.5 / 0.8 px, in #24212A, #30365A for the player and #543131 for elites.
 - Watercolour (sections 77–79): continuous Lambert-style lighting with roughness 0.82 and no cel bands, then a post pass with ~2 px wet-pigment drift off the ink line, soft bleed, edge pooling capped at 8%, two-octave pigment variation (±5% brightness, ±7% saturation), granulation, and paper fibres at 0.035 / 0.020 amplitude. The paper is screen-space here; in Unreal it must be world-anchored.
 - Telegraphs (section 83): a 25% danger wash with a 2 px ink rim, stepping to 55% with a cream rim when active. Colourblind mode adds a diagonal hatch and a thicker rim.
-- The Hushed, the Binder, the Bound King and the arena are built from primitives. They are placeholders for silhouettes and scale, not models.
+- Figures are articulated placeholders built from capsules and lathed cloth, shaped to fantasy archetypes: the Binder is a hooded mage with a staff, the Husk a hunched ghoul, the Hound a lean wolf, the Wisp a wraith, the Seer a hooded oracle with a lantern staff, the Keeper an armoured warden with a tower shield and maul, and the Bound King a crowned lich in chains. `?shot=lineup` shows them all from a closer camera. They are for silhouette and scale, not final models.
 
 `vendor/three.module.min.js` is three.js r170 (MIT, `vendor/THREE_LICENSE`). It is used only by these mockups.
 
