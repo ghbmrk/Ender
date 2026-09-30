@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ender Bazaar mockup</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .bg { position: absolute; inset: 0; }
+  header { position: absolute; left: 56px; right: 56px; top: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
+  h1 { font-family: var(--display); font-weight: 500; font-size: 46px; line-height: 1; }
+  .sub { color: var(--paper-dim); font-size: 16px; margin-top: 6px; }
+  .sub b { color: #eba395; }
+  .purse { display: flex; gap: 24px; }
+  .purse .k { font-size: 12px; color: var(--paper-dim); letter-spacing: .1em; }
+  .purse .v { font-family: var(--display); font-size: 26px; }
+  .tabs { position: absolute; left: 56px; top: 130px; display: flex; gap: 4px; }
+  .tab { font-family: var(--display); font-size: 18px; padding: 8px 20px; border-radius: 3px 3px 0 0; color: var(--paper-dim); background: rgba(36,33,42,.6); }
+  .tab.on { color: var(--paper); background: rgba(57,54,65,.95); box-shadow: inset 0 2px 0 var(--high-value); }
+
+  .col { position: absolute; top: 176px; bottom: 44px; }
+  .c1 { left: 56px; width: 760px; padding: 18px 20px; }
+  .c2 { left: 836px; width: 500px; padding: 18px 20px; }
+  .c3 { left: 1356px; right: 56px; padding: 18px 20px; }
+  .h { font-family: var(--display); font-size: 15px; letter-spacing: .1em; color: var(--paper-dim); margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .h span:last-child { font-family: var(--body); letter-spacing: 0; font-size: 13px; }
+
+  .erow { display: grid; grid-template-columns: 34px 110px 1fr 70px 132px; gap: 12px; align-items: center; padding: 10px 10px; border-radius: 3px; margin-bottom: 4px; }
+  .erow:nth-child(odd) { background: rgba(231,221,198,.03); }
+  .erow.dear { background: rgba(84,49,49,.45); box-shadow: inset 0 0 0 1px rgba(225,106,84,.45); }
+  .erow .nm { font-family: var(--display); font-size: 20px; line-height: 1.05; }
+  .erow .st { font-size: 12px; color: var(--paper-dim); }
+  .erow.dear .st { color: #eba395; font-weight: 700; }
+  .erow .held { text-align: center; font-size: 13px; color: var(--paper-dim); }
+  .erow .held b { display: block; font-size: 18px; color: var(--paper); }
+  .erow .trend { font-size: 12px; color: var(--paper-dim); margin-top: 2px; }
+  .trade { display: flex; gap: 6px; }
+  .trade .b { flex: 1; text-align: center; padding: 4px 0 5px; border-radius: 3px; background: rgba(231,221,198,.06); box-shadow: inset 0 0 0 1px rgba(231,221,198,.2); }
+  .trade .b .k { font-size: 11px; color: var(--paper-dim); letter-spacing: .08em; }
+  .trade .b .v { font-family: var(--display); font-size: 20px; line-height: 1; }
+  .trade .b.sell .v { color: var(--high-value); }
+  .eye { margin-top: 12px; padding: 10px 12px; font-size: 14px; color: var(--paper-dim); border-radius: 3px; box-shadow: inset 0 0 0 1px dashed rgba(231,221,198,.2); background: rgba(231,221,198,.03); display: flex; gap: 10px; align-items: center; }
+  .eye .lock { font-family: var(--display); color: var(--paper); }
+
+  .offer { display: grid; grid-template-columns: 46px 1fr 74px; gap: 12px; align-items: center; padding: 11px 12px; border-radius: 3px; margin-bottom: 8px; background: rgba(231,221,198,.04); box-shadow: inset 0 0 0 1px rgba(231,221,198,.14); }
+  .offer .n { font-family: var(--display); font-size: 18px; }
+  .offer .r { font-size: 13px; color: var(--paper-dim); }
+  .offer .q { display: flex; gap: 6px; margin-top: 5px; }
+  .offer .q span { font-size: 12px; padding: 1px 7px; border-radius: 10px; background: rgba(231,221,198,.08); }
+  .offer .q span.hi { box-shadow: inset 0 0 0 1px var(--interact); color: #9cc0b6; }
+  .offer .q span.lo { color: var(--paper-dim); }
+  .offer .p { text-align: right; font-family: var(--display); font-size: 22px; color: var(--paper); }
+  .offer .p small { display: block; font-family: var(--body); font-size: 11px; color: var(--paper-dim); }
+  .sellrow { display: grid; grid-template-columns: 1fr 70px 88px; gap: 10px; align-items: center; padding: 9px 12px; border-radius: 3px; margin-bottom: 6px; background: rgba(231,221,198,.03); }
+  .sellrow .n { font-family: var(--display); font-size: 17px; }
+  .sellrow .m { font-size: 12px; color: var(--paper-dim); }
+  .sellrow .v { font-family: var(--display); font-size: 20px; color: var(--high-value); text-align: right; }
+  .sellrow .btn { font-family: var(--display); font-size: 15px; text-align: center; padding: 5px 0; border-radius: 3px; background: rgba(192,154,80,.12); box-shadow: inset 0 0 0 1px rgba(192,154,80,.5); }
+
+  .contract { padding: 12px 14px 12px 56px; border-radius: 3px; margin-bottom: 10px; position: relative; background: rgba(231,221,198,.04); box-shadow: inset 0 0 0 1px rgba(231,221,198,.14); }
+  .contract.royal { background: rgba(192,154,80,.08); box-shadow: inset 0 0 0 1.5px var(--high-value); }
+  .contract .seal { position: absolute; left: 12px; top: 13px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--ink);
+    background: radial-gradient(circle at 40% 35%, #a89a83, #776054); box-shadow: inset 0 0 0 1.5px rgba(36,33,42,.7); }
+  .contract.royal .seal { background: radial-gradient(circle at 40% 35%, #d8b56e, #8a6c34); }
+  .contract .t { font-family: var(--display); font-size: 19px; line-height: 1.15; }
+  .contract .d { font-size: 14px; margin-top: 4px; }
+  .contract .why { font-size: 13px; font-style: italic; color: var(--paper-dim); margin-top: 4px; }
+  .contract .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 13px; color: var(--paper-dim); }
+  .contract .rew { font-family: var(--display); font-size: 20px; color: var(--high-value); }
+  .contract .acc { font-family: var(--display); font-size: 15px; padding: 3px 14px; border-radius: 3px; background: var(--interactable); color: var(--paper); box-shadow: inset 0 0 0 1px rgba(231,221,198,.4); }
+  .contract .acc.ghost { background: transparent; }
+
+  .proph { margin-top: 14px; padding: 14px; border-radius: 3px; background: rgba(102,118,184,.1); box-shadow: inset 0 0 0 1px rgba(102,118,184,.45); }
+  .proph .q { font-family: var(--display); font-size: 19px; display: flex; align-items: center; gap: 8px; }
+  .proph .opts { display: flex; gap: 6px; margin-top: 10px; }
+  .proph .o { flex: 1; text-align: center; padding: 7px 0; border-radius: 3px; font-weight: 700; font-size: 15px; background: rgba(231,221,198,.06); box-shadow: inset 0 0 0 1px rgba(231,221,198,.2); }
+  .proph .o.on { background: var(--weave); box-shadow: inset 0 0 0 1.5px rgba(231,221,198,.6); }
+  .proph .o small { display: block; font-weight: 400; font-size: 11px; color: var(--paper-dim); }
+  .proph .o.on small { color: var(--paper); }
+  .proph .foot { font-size: 13px; color: var(--paper-dim); margin-top: 8px; }
+  .omen { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
+  .omen i { font-style: normal; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--hazard); color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="screen">
+  <svg class="bg" viewBox="0 0 1920 1080" width="1920" height="1080">
+    <rect width="1920" height="1080" fill="#2a2731"/>
+    <ellipse cx="500" cy="500" rx="520" ry="380" fill="#776054" opacity=".2" filter="url(#wash)"/>
+    <ellipse cx="1500" cy="620" rx="420" ry="380" fill="#315b57" opacity=".14" filter="url(#wash)"/>
+    <rect width="1920" height="1080" filter="url(#grain)" opacity=".45" style="mix-blend-mode:multiply"/>
+  </svg>
+  <div id="ui"></div>
+</div>
+<script type="module">
+import { boot, load, essChip, cap, ESSENCE_ORDER } from './shared.js';
+boot();
+const [bz, cand, t2] = await load('bazaar', 'cand', 'c-form-qvp27e');
+
+// Painted sparkline: a brush stroke through the last ten turnings, no axes.
+function stroke(hist, colour, w = 200, h = 40) {
+  const lo = Math.min(...hist), hi = Math.max(...hist);
+  const pts = hist.map((v, i) => [4 + (i * (w - 8)) / (hist.length - 1), h - 5 - ((v - lo) / (hi - lo || 1)) * (h - 10)]);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const [lx, ly] = pts[pts.length - 1];
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+    <path d="${d} L${w - 4} ${h} L4 ${h} Z" fill="${colour}" opacity=".22" filter="url(#washSoft)"/>
+    <path d="${d}" fill="none" stroke="${colour}" stroke-width="5" opacity=".45" stroke-linecap="round" stroke-linejoin="round" filter="url(#washSoft)"/>
+    <path d="${d}" fill="none" stroke="#e7ddc6" stroke-width="1.4" opacity=".8" stroke-linejoin="round" filter="url(#inkline)"/>
+    <circle cx="${lx}" cy="${ly}" r="3.2" fill="#e7ddc6" stroke="#24212a" stroke-width="1"/></svg>`;
+}
+const COL = { ember: '#a8644a', tide: '#56809a', storm: '#7e6e9e', root: '#6e7f58', glass: '#6f9a97', ash: '#8e877c' };
+const trendWord = (e) => e.trend.replace(`${e.name} has `, '').replace(' over the last five turnings.', ' of late');
+
+const essences = `
+<div class="col c1 panel grain">
+  <div class="h"><span>ESSENCES</span><span>held · last ten turnings · buy / sell in Crowns</span></div>
+  ${ESSENCE_ORDER.map((id) => bz.essences.find((e) => e.id === id)).map((e) => `
+  <div class="erow ${e.status === 'dear' ? 'dear' : ''}">
+    ${essChip(e.id, 32)}
+    <div><div class="nm">${e.name}</div><div class="st">${e.status === 'dear' ? 'dear' : e.status}</div></div>
+    <div>${stroke(e.history, COL[e.id], 300, 40)}<div class="trend">${cap(trendWord(e))}</div></div>
+    <div class="held"><b>${e.held}</b>held</div>
+    <div class="trade"><div class="b"><div class="k">BUY</div><div class="v">${Math.round(e.buyPrice)}</div></div><div class="b sell"><div class="k">SELL</div><div class="v">${Math.round(e.sellPrice)}</div></div></div>
+  </div>`).join('')}
+  <div class="eye"><span class="lock">Merchant's Eye</span> Learn this Ledger passive to see where each price usually sits.</div>
+  <div class="omen"><i>OMEN</i> ${bz.worldEvents[0]} this turning.</div>
+</div>`;
+
+const QN = { burden: 'Burden', veil: 'Veil', reach: 'Reach', knots: 'Knots', flex: 'Flex', bond: 'Bond' };
+const veiledGem = `<svg viewBox="0 0 46 46" width="46" height="46"><path d="M23 4 L40 16 L34 40 L12 40 L6 16 Z" fill="#777b80" opacity=".5" filter="url(#washSoft)"/><path d="M23 4 L40 16 L34 40 L12 40 L6 16 Z" fill="none" stroke="#24212a" stroke-width="1.5"/><text x="23" y="30" text-anchor="middle" font-size="17" font-family="Alegreya SC" fill="#e7ddc6">?</text></svg>`;
+const forms = `
+<div class="col c2 panel grain">
+  <div class="h"><span>VEILED FORMS FOR SALE</span><span>two qualities glimpsed</span></div>
+  ${bz.offers.map((o) => `<div class="offer">${veiledGem}
+    <div><div class="n">Veiled Form</div><div class="r">from the ${o.realmName}</div>
+      <div class="q">${Object.entries(o.revealed).map(([k, v]) => `<span class="${v >= 70 ? 'hi' : v <= 25 ? 'lo' : ''}">${QN[k]} ${Math.round(v)}</span>`).join('')}</div></div>
+    <div class="p">${o.price}<small>CROWNS</small></div></div>`).join('')}
+  <div class="h" style="margin-top:18px"><span>SELL YOUR FORMS</span><span>worth to the Merchant</span></div>
+  <div class="sellrow"><div><div class="n">${cand.name}</div><div class="m"><span class="tier attuned">Attuned</span> · Power ${cand.evaluation.power}</div></div><div class="v">${cand.evaluation.estimatedMarketValue}</div><div class="btn">Sell</div></div>
+  <div class="sellrow"><div><div class="n">${t2.name}</div><div class="m"><span class="tier attuned">Attuned</span> · needs no Storm</div></div><div class="v">${t2.evaluation.estimatedMarketValue}</div><div class="btn">Sell</div></div>
+  <div class="sellrow"><div><div class="n">Veiled Form</div><div class="m"><span class="tier veiled">Veiled</span> · The Bound King</div></div><div class="v">~60</div><div class="btn">Sell</div></div>
+</div>`;
+
+const SEAL = { royal: '♛', noble: '❖' };
+const contracts = `
+<div class="col c3 panel grain">
+  <div class="h"><span>CONTRACTS</span><span>${bz.contracts.length} open</span></div>
+  ${bz.contracts.map((c) => `<div class="contract ${c.issuer === 'royal' ? 'royal' : ''}">
+    <div class="seal">${SEAL[c.issuer] || '❖'}</div>
+    <div class="t">${c.title}</div>
+    <div class="d">${c.description}</div>
+    <div class="why">“${c.reason.replace(/ ×[\d.]+ its usual price/, ' twice its usual')}”</div>
+    <div class="foot"><span><span class="rew">${c.reward}</span> Crowns · ${c.turningsLeft} turnings left</span><span class="acc ${c.issuer === 'royal' ? '' : 'ghost'}">${c.issuer === 'royal' ? 'Accept' : 'Accept'}</span></div>
+  </div>`).join('')}
+  <div class="proph">
+    <div class="q">${essChip('storm', 24)} Will Storm grow scarcer next turning?</div>
+    <div class="opts">${[10, 30, 50, 70, 90].map((p) => `<div class="o ${p === 30 ? 'on' : ''}">${p}%<small>${p <= 30 ? 'unlikely' : p === 50 ? 'unsure' : 'likely'}</small></div>`).join('')}</div>
+    <div class="foot">Settled when the world turns. Your foresight so far: no prophecies yet.</div>
+  </div>
+</div>`;
+
+document.getElementById('ui').innerHTML = `
+<header>
+  <div><h1>The Bazaar</h1><div class="sub"><b>Storm</b> is dear this turning. The Crown pays a premium for Forms that need none.</div></div>
+  <div class="purse">
+    <div><div class="k">CROWNS</div><div class="v" style="color:var(--high-value)">240</div></div>
+    <div><div class="k">TURNING</div><div class="v">${bz.snapshot.index + 1}</div></div>
+  </div>
+</header>
+<div class="tabs"><div class="tab on">Market</div><div class="tab">Contracts</div><div class="tab">Prophecy</div><div class="tab">Ledger</div></div>
+${essences}${forms}${contracts}`;
+</script>
+</body>
+</html>

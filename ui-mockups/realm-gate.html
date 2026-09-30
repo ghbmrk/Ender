@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ender Realm Gate mockup</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .bg { position: absolute; inset: 0; }
+  header { position: absolute; left: 144px; top: 56px; right: 144px; display: flex; justify-content: space-between; align-items: flex-end; }
+  h1 { font-family: var(--display); font-weight: 500; font-size: 52px; line-height: 1; letter-spacing: .03em; }
+  .sub { font-size: 17px; color: var(--paper-dim); margin-top: 8px; }
+  .sub b { color: var(--paper); font-weight: 700; }
+  .purse { display: flex; gap: 22px; align-items: center; font-size: 17px; }
+  .purse .v { font-family: var(--display); font-size: 26px; color: var(--high-value); }
+  .purse .k { font-size: 12px; color: var(--paper-dim); letter-spacing: .1em; }
+
+  .winds { position: absolute; left: 144px; right: 144px; top: 160px; height: 58px; display: flex; gap: 10px; }
+  .wind { flex: 1; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-radius: 3px; background: rgba(36,33,42,.7); box-shadow: inset 0 0 0 1px rgba(231,221,198,.14); }
+  .wind .nm { font-family: var(--display); font-size: 18px; }
+  .wind .w { font-size: 13px; color: var(--paper-dim); }
+  .wind .gauge { margin-left: auto; width: 64px; height: 6px; background: rgba(231,221,198,.12); border-radius: 3px; position: relative; }
+  .wind .gauge i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--paper-faint); }
+  .wind.hot { box-shadow: inset 0 0 0 1.5px rgba(225,106,84,.7), 0 0 18px rgba(225,106,84,.15); background: rgba(84,49,49,.55); }
+  .wind.hot .w { color: #eba395; font-weight: 700; }
+  .wind.hot .gauge i { background: var(--danger); }
+  .wind.low .w { color: #9cc0b6; }
+
+  .cards { position: absolute; left: 144px; right: 144px; top: 246px; display: flex; gap: 36px; }
+  .card { width: 520px; height: 690px; border-radius: 4px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .card.sel { box-shadow: 0 0 0 2px var(--interact), 0 0 0 5px rgba(91,148,134,.25), 0 18px 40px rgba(0,0,0,.55); transform: translateY(-8px); }
+  .card.locked .art, .card.locked .body { filter: saturate(.35) brightness(.55); }
+  .art { height: 196px; position: relative; flex: none; }
+  .art svg { position: absolute; inset: 0; }
+  .diff { position: absolute; right: 16px; top: 14px; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-family: var(--display); font-size: 21px; color: var(--paper); background: rgba(36,33,42,.8); box-shadow: 0 0 0 1.5px rgba(231,221,198,.45); }
+  .omen { position: absolute; left: 16px; top: 16px; font-size: 13px; padding: 3px 10px; border-radius: 12px; background: rgba(154,141,66,.85); color: var(--ink); font-weight: 700; }
+  .body { padding: 16px 24px 20px; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+  .name { font-family: var(--display); font-size: 34px; line-height: 1; }
+  .tagline { font-style: italic; color: var(--paper-dim); font-size: 15px; margin-top: 4px; }
+  .sec .h { font-family: var(--display); font-size: 14px; letter-spacing: .1em; color: var(--paper-dim); margin-bottom: 7px; }
+  .essrow { display: grid; grid-template-columns: 24px 58px 1fr 92px; align-items: center; gap: 8px; height: 26px; font-size: 15px; }
+  .essrow .share { height: 8px; border-radius: 4px; background: rgba(231,221,198,.1); position: relative; }
+  .essrow .share i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+  .essrow .word { font-size: 13px; color: var(--paper-dim); text-align: right; }
+  .essrow .word.hot { color: #eba395; font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 14px; padding: 3px 10px; border-radius: 3px; background: rgba(231,221,198,.08); box-shadow: inset 0 0 0 1px rgba(231,221,198,.18); }
+  .foes { font-size: 15px; color: var(--paper-dim); }
+  .demand { margin-top: auto; padding: 12px 14px; border-radius: 3px; background: rgba(192,154,80,.1); box-shadow: inset 0 0 0 1px rgba(192,154,80,.45); }
+  .demand .t { font-family: var(--display); font-size: 18px; color: #e0c68e; display: flex; justify-content: space-between; }
+  .demand .d { font-size: 14px; color: var(--paper-dim); margin-top: 3px; }
+  .demand .fit { color: var(--interact); font-weight: 700; }
+  .demand.weak { background: rgba(231,221,198,.04); box-shadow: inset 0 0 0 1px rgba(231,221,198,.15); }
+  .demand.weak .t { color: var(--paper); }
+  .haul { display: flex; justify-content: space-between; font-size: 15px; color: var(--paper-dim); }
+  .haul b { color: var(--high-value); font-family: var(--display); font-size: 19px; font-weight: 500; }
+  .seal { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); display: flex; align-items: center; flex-direction: column; gap: 4px; padding: 14px 30px; border-radius: 3px; background: rgba(28,26,33,.94); box-shadow: 0 0 0 1px rgba(231,221,198,.3), 0 10px 30px rgba(0,0,0,.6); white-space: nowrap; }
+  .seal .s { font-family: var(--display); font-size: 26px; }
+  .seal .r { font-size: 15px; color: var(--paper-dim); }
+
+  footer { position: absolute; left: 144px; right: 144px; bottom: 44px; display: flex; justify-content: center; gap: 18px; }
+  .btn { display: flex; align-items: center; gap: 10px; padding: 12px 26px; border-radius: 3px; font-family: var(--display); font-size: 21px; background: rgba(36,33,42,.85); box-shadow: inset 0 0 0 1px rgba(231,221,198,.3); }
+  .btn kbd { font: 700 13px var(--body); padding: 2px 8px; border-radius: 3px; background: rgba(231,221,198,.12); box-shadow: 0 0 0 1px rgba(231,221,198,.35); }
+  .btn.primary { background: var(--interactable); box-shadow: inset 0 0 0 1.5px rgba(231,221,198,.5), 0 0 24px rgba(91,148,134,.25); padding: 12px 40px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <svg class="bg" viewBox="0 0 1920 1080" width="1920" height="1080">
+    <defs>
+      <radialGradient id="portal" cx="50%" cy="46%" r="55%">
+        <stop offset="0" stop-color="#393641"/>
+        <stop offset=".7" stop-color="#2a2731"/>
+        <stop offset="1" stop-color="#1c1a21"/>
+      </radialGradient>
+    </defs>
+    <rect width="1920" height="1080" fill="url(#portal)"/>
+    <path d="M560 1080 L560 420 C 560 150, 1360 150, 1360 420 L1360 1080" fill="none" stroke="#a89a83" stroke-width="60" opacity=".08" filter="url(#wash)"/>
+    <path d="M620 1080 L620 430 C 620 210, 1300 210, 1300 430 L1300 1080" fill="none" stroke="#24212a" stroke-width="3" opacity=".6" filter="url(#inkline)"/>
+    <ellipse cx="960" cy="560" rx="420" ry="330" fill="#6676b8" opacity=".1" filter="url(#washSoft)"/>
+    <rect width="1920" height="1080" filter="url(#grain)" opacity=".45" style="mix-blend-mode:multiply"/>
+  </svg>
+  <div id="ui"></div>
+</div>
+<script type="module">
+import { boot, load, essChip, cap, ESSENCE_ORDER } from './shared.js';
+boot();
+const [world, bazaar, a, g, h] = await load('world', 'bazaar', 'realm-ashen-vault', 'realm-glass-fen', 'realm-hollow-keep');
+const realms = [a, g, h];
+const scar = world.scarcity;
+
+// Painted header per Realm (stand-in for key art).
+const ART = {
+  'ashen-vault': `
+    <rect width="520" height="196" fill="#776054"/>
+    <ellipse cx="260" cy="210" rx="380" ry="120" fill="#a89a83" opacity=".7" filter="url(#wash)"/>
+    <path d="M40 196 L40 90 L70 60 L100 90 L100 196 M150 196 L150 70 L190 30 L230 70 L230 196 M330 196 L330 100 L360 80 L390 100 L390 196" fill="#393641" opacity=".85" filter="url(#rough)"/>
+    <path d="M150 196 L150 70 L190 30 L230 70 L230 196" fill="none" stroke="#24212a" stroke-width="2" filter="url(#inkline)"/>
+    <ellipse cx="190" cy="130" rx="18" ry="30" fill="#c09a50" opacity=".45" filter="url(#washSoft)"/>
+    ${Array.from({ length: 26 }, (_, i) => `<circle cx="${(i * 83) % 520}" cy="${(i * 47) % 180}" r="${1 + (i % 3)}" fill="#e7ddc6" opacity="${0.25 + (i % 3) * 0.15}"/>`).join('')}`,
+  'glass-fen': `
+    <rect width="520" height="196" fill="#393641"/>
+    <ellipse cx="260" cy="170" rx="360" ry="70" fill="#56809a" opacity=".6" filter="url(#wash)"/>
+    <ellipse cx="160" cy="80" rx="220" ry="60" fill="#6f9a97" opacity=".35" filter="url(#washSoft)"/>
+    ${Array.from({ length: 30 }, (_, i) => { const x = 10 + i * 17 + (i % 3) * 4, t = 100 + (i * 37) % 60; return `<path d="M${x} 196 Q ${x + 4} ${t + 30} ${x + (i % 2 ? 8 : -6)} ${t}" stroke="#24212a" stroke-width="${1 + (i % 2)}" fill="none" opacity=".7"/>`; }).join('')}
+    <circle cx="410" cy="56" r="26" fill="#e7ddc6" opacity=".35" filter="url(#washSoft)"/>`,
+  'hollow-keep': `
+    <rect width="520" height="196" fill="#393641"/>
+    <ellipse cx="300" cy="100" rx="300" ry="110" fill="#777b80" opacity=".55" filter="url(#wash)"/>
+    <path d="M120 196 L120 60 L150 60 L150 40 L170 40 L170 60 L240 60 L240 20 L270 20 L270 60 L330 60 L330 196 Z" fill="#24212a" opacity=".85" filter="url(#rough)"/>
+    <rect x="215" y="110" width="40" height="86" fill="#1c1a21"/>
+    <ellipse cx="235" cy="150" rx="12" ry="30" fill="#65715d" opacity=".5" filter="url(#washSoft)"/>`,
+};
+
+const hot = (w) => w === 'very scarce' || w === 'scarce';
+const winds = ESSENCE_ORDER.map((e) => {
+  const es = world.essences.find((x) => x.id === e);
+  const cls = hot(es.scarcityWord) ? 'hot' : es.scarcityWord === 'abundant' ? 'low' : '';
+  return `<div class="wind ${cls}">${essChip(e, 26)}<div><div class="nm">${cap(e)}</div><div class="w">${es.scarcityWord}</div></div>
+    <div class="gauge"><i style="width:${scar[e]}%"></i></div></div>`;
+}).join('');
+
+const LOCKED = { 'hollow-keep': 'Clear the Ashen Vault to open' };
+const cards = realms.map((r, i) => {
+  const c = r.card;
+  const foes = Object.values(r.preload.enemies).map((e) => e.name).filter((n) => n !== 'Swarm');
+  const d = c.contracts.find((k) => k.essence === 'storm');
+  const strong = d && d.fit >= 0.9;
+  return `<div class="card panel grain ${i === 0 ? 'sel' : ''} ${LOCKED[c.id] ? 'locked' : ''}">
+    <div class="art"><svg viewBox="0 0 520 196" width="520" height="196">${ART[c.id]}<rect width="520" height="196" filter="url(#grain)" opacity=".5" style="mix-blend-mode:multiply"/></svg>
+      <div class="diff">${c.difficultyLabel}</div>
+      ${c.events.length ? `<div class="omen">Omen · ${c.events[0]}</div>` : ''}
+    </div>
+    <div class="body">
+      <div><div class="name">${c.name}</div><div class="tagline">${c.tagline}</div></div>
+      <div class="sec"><div class="h">ESSENCES FOUND HERE</div>
+        ${c.expectedEssences.map((e) => `<div class="essrow">${essChip(e.essence)}<span>${e.name}</span>
+          <div class="share"><i style="width:${Math.round(e.share * 100 / 0.4)}%;background:var(--${e.essence})"></i></div>
+          <span class="word ${hot(e.scarcity) ? 'hot' : ''}">${e.scarcity}</span></div>`).join('')}
+      </div>
+      <div class="sec"><div class="h">FORMS THAT FALL HERE</div><div class="chips">${c.formBias.map((b) => `<span class="chip">${b}</span>`).join('')}</div></div>
+      <div class="sec"><div class="h">THE HUSHED</div><div class="foes">${foes.join(' · ')}</div></div>
+      <div class="demand ${strong ? '' : 'weak'}">
+        <div class="t"><span>Royal Demand: Storm-free Forms</span><span>+${d.bountyPct}%</span></div>
+        <div class="d">${strong ? `<span class="fit">Good hunting ${d.arrows}</span> · most Forms here need no Storm` : 'Few Storm-free Forms fall here'}</div>
+      </div>
+      <div class="haul"><span>Typical haul</span><b>~${c.haulCrowns} Crowns</b></div>
+    </div>
+    ${LOCKED[c.id] ? `<div class="seal"><div class="s">Sealed</div><div class="r">${LOCKED[c.id]}</div></div>` : ''}
+  </div>`;
+}).join('');
+
+document.getElementById('ui').innerHTML = `
+<header>
+  <div><h1>The Realm Gate</h1><div class="sub">${bazaar.headline.replace(/ \(×[\d.]+\)/, '').replace('Storm', '<b>Storm</b>')} The Crown pays well for Forms that need none.</div></div>
+  <div class="purse"><div><div class="k">CROWNS</div><div class="v">240</div></div><div><div class="k">FOCUS</div><div class="v" style="color:#aeb8e6">12</div></div><div><div class="k">TURNING</div><div class="v" style="color:var(--paper)">${world.index + 1}</div></div></div>
+</header>
+<div class="winds">${winds}</div>
+<div class="cards">${cards}</div>
+<footer>
+  <div class="btn"><kbd>Esc</kbd>Return</div>
+  <div class="btn primary"><kbd>F</kbd>Enter the Ashen Vault</div>
+  <div class="btn"><kbd>B</kbd>Bazaar</div>
+</footer>`;
+</script>
+</body>
+</html>

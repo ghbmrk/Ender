@@ -1,0 +1,154 @@
+@import url(fonts/fonts.css);
+
+/* Palette: spec section 76. Every colour on these screens comes from here. */
+:root {
+  --ink: #24212a;
+  --player-edge: #30365a;
+  --elite: #543131;
+  --interactable: #315b57;
+
+  --paper: #e7ddc6;
+  --warm-stone: #a89a83;
+  --cold-stone: #777b80;
+  --moss: #65715d;
+  --umber: #776054;
+  --deep-wash: #393641;
+
+  --weave: #6676b8;
+  --health: #b84f49;
+  --danger: #e16a54;
+  --hazard: #9a8d42;
+  --interact: #5b9486;
+  --rare: #597da2;
+  --exceptional: #8667a3;
+  --high-value: #c09a50;
+
+  /* Essence pigments. Muted mixes of the palette above; the web build's
+     saturated essence colours are deliberately not reused (section 76). */
+  --ember: #a8644a;
+  --tide: #56809a;
+  --storm: #7e6e9e;
+  --root: #6e7f58;
+  --glass: #6f9a97;
+  --ash: #8e877c;
+
+  --paper-dim: rgba(231, 221, 198, 0.62);
+  --paper-faint: rgba(231, 221, 198, 0.36);
+  --ink-panel: rgba(36, 33, 42, 0.86);
+
+  --display: 'Alegreya SC', Georgia, serif;
+  --body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--body);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.screen { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+.display { font-family: var(--display); letter-spacing: 0.02em; }
+
+/* Paper grain overlay for any surface. Uses the #grain SVG filter. */
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  filter: url(#grain);
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+  border-radius: inherit;
+}
+
+/* Ink-edged panel: dark wash body with a torn, slightly uneven ink border. */
+.panel {
+  position: relative;
+  background:
+    radial-gradient(120% 90% at 20% 0%, rgba(57, 54, 65, 0.95), rgba(36, 33, 42, 0.96) 70%),
+    var(--ink);
+  border-radius: 3px;
+}
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1.5px solid rgba(231, 221, 198, 0.28);
+  border-radius: 4px;
+  filter: url(#rough);
+  pointer-events: none;
+}
+
+/* Parchment card: light paper with wet-edge pooling. */
+.parchment {
+  position: relative;
+  color: var(--ink);
+  background:
+    radial-gradient(140% 100% at 50% 40%, #e7ddc6 55%, #d9ccb0 85%, #c8b995 100%);
+  box-shadow: inset 0 0 0 1px rgba(118, 96, 84, 0.35), inset 0 0 38px rgba(118, 96, 84, 0.35);
+}
+
+.rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(231, 221, 198, 0.35) 15%, rgba(231, 221, 198, 0.35) 85%, transparent);
+}
+.parchment .rule {
+  background: linear-gradient(90deg, transparent, rgba(36, 33, 42, 0.3) 15%, rgba(36, 33, 42, 0.3) 85%, transparent);
+}
+
+/* Essence glyph chip. */
+.ess {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 12px;
+  color: var(--paper);
+  box-shadow: inset 0 0 0 1.5px rgba(36, 33, 42, 0.7), inset 0 -4px 6px rgba(36, 33, 42, 0.35);
+  flex: none;
+}
+.ess.ember { background: var(--ember); }
+.ess.tide { background: var(--tide); }
+.ess.storm { background: var(--storm); }
+.ess.root { background: var(--root); }
+.ess.glass { background: var(--glass); }
+.ess.ash { background: var(--ash); }
+
+.muted { color: var(--paper-dim); }
+.tag {
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--paper-dim);
+}
+
+/* Evidence tiers (section 68). */
+.tier { font-family: var(--display); font-size: 14px; letter-spacing: 0.06em; }
+.tier.veiled { color: var(--cold-stone); }
+.tier.attuned { color: var(--rare); }
+.tier.trialed { color: var(--exceptional); }
+.tier.witnessed { color: var(--high-value); }
+
+/* Mockup annotation, off by default; ?notes=1 turns it on. */
+.note {
+  display: none;
+  position: absolute;
+  font: 12px/1.3 var(--body);
+  color: #ffe9a8;
+  background: rgba(0, 0, 0, 0.72);
+  padding: 3px 6px;
+  border-radius: 2px;
+  white-space: nowrap;
+  z-index: 100;
+}
+body.notes .note { display: block; }

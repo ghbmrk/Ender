@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ender Crucible mockup</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .bg { position: absolute; inset: 0; }
+  header { position: absolute; left: 56px; right: 56px; top: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
+  h1 { font-family: var(--display); font-weight: 500; font-size: 46px; line-height: 1; }
+  .sub { color: var(--paper-dim); font-size: 16px; margin-top: 6px; }
+  .purse { display: flex; gap: 24px; }
+  .purse .k { font-size: 12px; color: var(--paper-dim); letter-spacing: .1em; }
+  .purse .v { font-family: var(--display); font-size: 26px; }
+  .focus-pips { display: flex; gap: 4px; margin-top: 8px; }
+  .focus-pips i { width: 9px; height: 9px; transform: rotate(45deg); background: var(--weave); }
+  .focus-pips i.spent { background: transparent; box-shadow: inset 0 0 0 1px rgba(231,221,198,.3); }
+  .focus-pips i.cost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--weave); }
+
+  .col { position: absolute; top: 130px; bottom: 124px; }
+  .left { left: 56px; width: 380px; padding: 18px; }
+  .mid { left: 460px; width: 620px; padding: 22px 26px; }
+  .right { left: 1104px; right: 56px; padding: 18px 20px; }
+  .h { font-family: var(--display); font-size: 15px; letter-spacing: .1em; color: var(--paper-dim); margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .h span:last-child { font-family: var(--body); letter-spacing: 0; font-size: 13px; }
+
+  /* inventory */
+  .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+  .slot { height: 82px; border-radius: 3px; background: rgba(231,221,198,.05); box-shadow: inset 0 0 0 1px rgba(231,221,198,.16); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; color: var(--paper-dim); }
+  .slot .i { width: 34px; height: 34px; border-radius: 50%; }
+  .slot.full { box-shadow: inset 0 0 0 1.5px var(--rare); color: var(--paper); }
+  .slot.target { box-shadow: inset 0 0 0 1.5px var(--interact), 0 0 14px rgba(91,148,134,.3); color: var(--paper); }
+  .form-row { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 3px; margin-bottom: 6px; background: rgba(231,221,198,.03); }
+  .form-row.sel { background: rgba(102,118,184,.16); box-shadow: inset 0 0 0 1.5px var(--weave); }
+  .form-row .gem { width: 38px; height: 38px; flex: none; }
+  .form-row .n { font-family: var(--display); font-size: 17px; line-height: 1.1; }
+  .form-row .m { font-size: 13px; color: var(--paper-dim); }
+  .form-row .p { margin-left: auto; text-align: right; font-family: var(--display); font-size: 20px; }
+  .form-row .p small { display: block; font-family: var(--body); font-size: 11px; color: var(--paper-dim); }
+
+  /* selected form */
+  .fname { font-family: var(--display); font-size: 38px; line-height: 1; }
+  .fepi { font-family: var(--display); font-size: 20px; color: var(--paper-dim); margin-top: 2px; }
+  .ftop { display: flex; justify-content: space-between; align-items: flex-start; }
+  .power { text-align: right; }
+  .power .v { font-family: var(--display); font-size: 54px; line-height: .9; color: var(--paper); }
+  .power .k { font-size: 12px; letter-spacing: .12em; color: var(--paper-dim); }
+  .radar-wrap { display: flex; gap: 16px; align-items: center; margin: 8px 0 6px; }
+  .qual { flex: 1; }
+  .qrow { display: grid; grid-template-columns: 70px 1fr 38px; gap: 10px; align-items: center; height: 28px; font-size: 15px; }
+  .qrow .b { height: 7px; border-radius: 4px; background: rgba(231,221,198,.1); position: relative; }
+  .qrow .b i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--paper-faint); }
+  .qrow.good .b i { background: var(--interact); }
+  .qrow.bad .b i { background: #9a6a5c; }
+  .qrow .v { text-align: right; font-weight: 700; }
+  .recipe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .rc { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 14px; background: rgba(231,221,198,.06); font-size: 14px; }
+  .rc b { font-weight: 700; }
+  .rc .c { color: var(--paper-dim); font-size: 12px; }
+  .rc.dear { box-shadow: inset 0 0 0 1px rgba(225,106,84,.6); }
+  .ledger { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .lg { padding: 10px 12px; border-radius: 3px; background: rgba(231,221,198,.05); }
+  .lg .k { font-size: 12px; letter-spacing: .1em; color: var(--paper-dim); }
+  .lg .v { font-family: var(--display); font-size: 28px; line-height: 1.1; }
+  .lg .v.neg { color: #d98b7c; }
+  .lg .v.pos { color: #8fbfb2; }
+  .familiar { display: flex; gap: 12px; margin-top: 16px; padding: 12px 14px; border-radius: 3px; background: rgba(49,91,87,.22); box-shadow: inset 0 0 0 1px rgba(91,148,134,.35); }
+  .familiar .f { width: 40px; height: 40px; border-radius: 50%; flex: none; background: radial-gradient(circle at 40% 35%, #5b9486, #315b57); box-shadow: inset 0 0 0 1.5px var(--ink); display: flex; align-items: center; justify-content: center; }
+  .familiar .t { font-style: italic; font-size: 16px; line-height: 1.4; }
+  .familiar .t .who { font-style: normal; font-family: var(--display); font-size: 13px; letter-spacing: .1em; color: #9cc0b6; display: block; }
+
+  /* temper */
+  .tcard { display: grid; grid-template-columns: 96px 1fr 250px; gap: 16px; align-items: center; padding: 14px 16px; border-radius: 3px; margin-bottom: 10px; background: rgba(231,221,198,.04); box-shadow: inset 0 0 0 1px rgba(231,221,198,.14); position: relative; }
+  .tcard.orig { background: transparent; box-shadow: inset 0 0 0 1px rgba(231,221,198,.1); opacity: .8; }
+  .tcard.pick { box-shadow: inset 0 0 0 1.5px var(--high-value), 0 0 18px rgba(192,154,80,.18); background: rgba(192,154,80,.07); }
+  .tcard .n { font-family: var(--display); font-size: 21px; line-height: 1.1; }
+  .tcard .e { font-size: 14px; color: var(--paper-dim); }
+  .tcard .why { font-size: 14px; margin-top: 6px; color: var(--paper); }
+  .tcard .flag { position: absolute; right: 14px; top: -10px; font-family: var(--display); font-size: 13px; letter-spacing: .08em; padding: 1px 10px; border-radius: 2px; background: var(--high-value); color: var(--ink); }
+  .tcard .flag.str { background: var(--rare); color: var(--paper); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; font-size: 14px; }
+  .stats .k { color: var(--paper-dim); }
+  .stats .v { text-align: right; font-weight: 700; }
+  .stats .v .d { font-weight: 400; font-size: 12px; margin-left: 4px; }
+  .up { color: #8fbfb2; } .down { color: #d98b7c; }
+  .dist { font-size: 12px; color: var(--paper-dim); margin-top: 5px; display: flex; align-items: center; gap: 6px; }
+  .dist .track { width: 80px; height: 4px; background: rgba(231,221,198,.12); border-radius: 2px; position: relative; }
+  .dist .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--paper-dim); border-radius: 2px; }
+
+  /* action bar */
+  .actions { position: absolute; left: 56px; right: 56px; bottom: 36px; height: 64px; display: flex; gap: 10px; align-items: stretch; }
+  .act { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-radius: 3px; background: rgba(36,33,42,.9); box-shadow: inset 0 0 0 1px rgba(231,221,198,.22); }
+  .act .nm { font-family: var(--display); font-size: 20px; }
+  .act .c { font-size: 12px; color: var(--paper-dim); line-height: 1.2; }
+  .act kbd { font: 700 12px var(--body); padding: 2px 7px; border-radius: 3px; background: rgba(231,221,198,.1); box-shadow: 0 0 0 1px rgba(231,221,198,.3); }
+  .act.on { box-shadow: inset 0 0 0 1.5px var(--weave); background: rgba(102,118,184,.18); }
+  .act.done { opacity: .45; }
+  .act.equip { margin-left: auto; background: var(--interactable); box-shadow: inset 0 0 0 1.5px rgba(231,221,198,.5); padding: 0 28px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <svg class="bg" viewBox="0 0 1920 1080" width="1920" height="1080">
+    <rect width="1920" height="1080" fill="#2a2731"/>
+    <ellipse cx="770" cy="560" rx="560" ry="420" fill="#776054" opacity=".22" filter="url(#wash)"/>
+    <ellipse cx="770" cy="900" rx="300" ry="90" fill="#c09a50" opacity=".12" filter="url(#washSoft)"/>
+    <rect width="1920" height="1080" filter="url(#grain)" opacity=".45" style="mix-blend-mode:multiply"/>
+  </svg>
+  <div id="ui"></div>
+</div>
+<script type="module">
+import { boot, load, essChip, cap, ESSENCE_ORDER } from './shared.js';
+boot();
+const [world, cand, attune, temper, t1, t2, t3] = await load('world', 'cand', 'attune', 'temper', 'c-form-162sxu4', 'c-form-qvp27e', 'c-form-hmt4sm');
+const byId = { [t1.id]: t1, [t2.id]: t2, [t3.id]: t3 };
+const QUAL = ['burden', 'veil', 'reach', 'knots', 'flex', 'bond'];
+const ev = cand.evaluation;
+const contrib = Object.fromEntries(ev.contributions.map((c) => [c.quality, c]));
+
+// Hexagonal watercolour radar of the six qualities.
+function radar(q, size, stroke = '#e7ddc6', fill = '#6676b8', compare) {
+  const c = size / 2, R = size / 2 - (size > 120 ? 36 : 6);
+  const pt = (i, v) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / 3;
+    return [c + Math.cos(a) * R * v, c + Math.sin(a) * R * v];
+  };
+  const poly = (vals) => vals.map((v, i) => pt(i, v).join(',')).join(' ');
+  const grid = [0.33, 0.66, 1].map((s) => `<polygon points="${poly(QUAL.map(() => s))}" fill="none" stroke="rgba(231,221,198,.14)" stroke-width="1"/>`).join('');
+  const axes = QUAL.map((_, i) => `<line x1="${c}" y1="${c}" x2="${pt(i, 1)[0]}" y2="${pt(i, 1)[1]}" stroke="rgba(231,221,198,.1)"/>`).join('');
+  const vals = QUAL.map((k) => Math.max(0.04, q[k] / 100));
+  const cmp = compare ? `<polygon points="${poly(QUAL.map((k) => Math.max(0.04, compare[k] / 100)))}" fill="none" stroke="rgba(231,221,198,.45)" stroke-width="1.2" stroke-dasharray="3 3"/>` : '';
+  const labels = size > 120 ? QUAL.map((k, i) => { const [x, y] = pt(i, 1.2); return `<text x="${x}" y="${y + 4}" text-anchor="middle" font-family="Alegreya SC" font-size="13" fill="rgba(231,221,198,.7)">${cap(k)}</text>`; }).join('') : '';
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${grid}${axes}
+    <polygon points="${poly(vals)}" fill="${fill}" opacity=".55" filter="url(#washSoft)"/>
+    <polygon points="${poly(vals)}" fill="none" stroke="${stroke}" stroke-width="1.6" stroke-linejoin="round" filter="url(#inkline)"/>${cmp}${labels}</svg>`;
+}
+
+const gem = (hue) => `<svg viewBox="0 0 38 38" width="38" height="38"><path d="M19 3 L33 13 L28 33 L10 33 L5 13 Z" fill="${hue}" opacity=".75" filter="url(#washSoft)"/><path d="M19 3 L33 13 L28 33 L10 33 L5 13 Z M5 13 L33 13 M19 3 L14 13 L19 33 L24 13 Z" fill="none" stroke="#24212a" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+const veiled = `<svg viewBox="0 0 38 38" width="38" height="38"><path d="M19 3 L33 13 L28 33 L10 33 L5 13 Z" fill="#777b80" opacity=".5" filter="url(#washSoft)"/><path d="M19 3 L33 13 L28 33 L10 33 L5 13 Z" fill="none" stroke="#24212a" stroke-width="1.4"/><text x="19" y="25" text-anchor="middle" font-size="15" font-family="Alegreya SC" fill="#e7ddc6">?</text></svg>`;
+
+const price = Object.fromEntries(world.essences.map((e) => [e.id, e]));
+const blade = (p) => `×${(1 + p / 200).toFixed(2)} damage`;
+const pw = (tech) => +(tech * 0.85).toFixed(1); // Attuned multiplier (section 68)
+
+const inventory = `
+<div class="col left panel grain">
+  <div class="h"><span>EQUIPPED</span><span>Binder · Lv 4</span></div>
+  <div class="slots">
+    <div class="slot target"><div class="i" style="background:rgba(231,221,198,.08);box-shadow:inset 0 0 0 1px rgba(231,221,198,.3)"></div>Blade</div>
+    <div class="slot full"><div class="i" style="background:radial-gradient(circle,#597da2,#393641)"></div>Ward 52</div>
+    <div class="slot"><div class="i" style="background:rgba(231,221,198,.05)"></div>Sigil</div>
+    <div class="slot"><div class="i" style="background:rgba(231,221,198,.05)"></div>Charm</div>
+  </div>
+  <div class="h"><span>FORMS HELD</span><span>5 / 24</span></div>
+  <div class="form-row sel">${gem('#6676b8')}<div><div class="n">${cand.name}</div><div class="m"><span class="tier attuned">Attuned</span> · Ashen Vault, Room 4</div></div><div class="p">${ev.power}<small>POWER</small></div></div>
+  <div class="form-row">${gem('#8667a3')}<div><div class="n">Morvane Coil</div><div class="m"><span class="tier trialed">Trialed</span> · equipped as Ward</div></div><div class="p">52.0<small>POWER</small></div></div>
+  <div class="form-row">${veiled}<div><div class="n">Veiled Form</div><div class="m"><span class="tier veiled">Veiled</span> · Keeper, Elite</div></div><div class="p" style="color:var(--paper-dim)">?</div></div>
+  <div class="form-row">${veiled}<div><div class="n">Veiled Form</div><div class="m"><span class="tier veiled">Veiled</span> · The Bound King</div></div><div class="p" style="color:var(--paper-dim)">?</div></div>
+  <div class="form-row">${veiled}<div><div class="n">Veiled Form</div><div class="m"><span class="tier veiled">Veiled</span> · The Bound King</div></div><div class="p" style="color:var(--paper-dim)">?</div></div>
+</div>`;
+
+const recipe = Object.entries(cand.recipe.essenceCosts).sort((a, b) => cand.recipe.costByEssence[b[0]] - cand.recipe.costByEssence[a[0]]);
+const selected = `
+<div class="col mid panel grain">
+  <div class="ftop">
+    <div><div class="fname">${cand.name}</div><div class="fepi">${cand.epithet}</div><div class="tier attuned" style="margin-top:6px">ATTUNED · ×0.85 until Trialed</div></div>
+    <div class="power"><div class="v">${ev.power}</div><div class="k">POWER</div><div style="font-size:13px;color:var(--paper-dim);margin-top:4px">as Blade: ${blade(ev.power)}</div></div>
+  </div>
+  <div class="radar-wrap">
+    ${radar(cand.qualities, 250)}
+    <div class="qual">
+      ${QUAL.map((k) => { const c = contrib[k]; const cls = c && c.satisfaction >= 70 ? 'good' : c && c.satisfaction < 45 ? 'bad' : ''; return `<div class="qrow ${cls}"><span>${cap(k)}</span><div class="b"><i style="width:${cand.qualities[k]}%"></i></div><span class="v">${Math.round(cand.qualities[k])}</span></div>`; }).join('')}
+      <div style="font-size:12px;color:var(--paper-dim);margin-top:4px">Green serves the Ashen Vault's aim; rust works against it.</div>
+    </div>
+  </div>
+  <div class="h" style="margin-top:6px"><span>TO MAKE ANOTHER</span><span>${Math.round(cand.productionCost)} Crowns at today's prices</span></div>
+  <div class="recipe">${recipe.map(([e, q]) => `<span class="rc ${price[e].scarcityWord.includes('scarce') ? 'dear' : ''}">${essChip(e, 22)}<b>${q}</b> ${cap(e)} <span class="c">${Math.round(cand.recipe.costByEssence[e])}</span></span>`).join('')}</div>
+  <div class="ledger">
+    <div class="lg"><div class="k">WORTH</div><div class="v">${ev.estimatedMarketValue}</div></div>
+    <div class="lg"><div class="k">COST TO MAKE</div><div class="v">${Math.round(ev.productionCost)}</div></div>
+    <div class="lg"><div class="k">MARGIN</div><div class="v ${ev.marginPotential < 0 ? 'neg' : 'pos'}">${ev.marginPotential > 0 ? '+' : '−'}${Math.abs(ev.marginPotential)}</div></div>
+  </div>
+  <div class="familiar"><div class="f">${'<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 14 C 6 6, 18 6, 20 14 C 16 12, 8 12, 4 14 Z" fill="#e7ddc6"/><circle cx="12" cy="11" r="2" fill="#24212a"/></svg>'}</div>
+    <div class="t"><span class="who">YOUR FAMILIAR</span>${attune.result.summary}</div></div>
+</div>`;
+
+const choices = temper.result.choices.map((ch) => byId[ch.candidateId]);
+const bestMargin = choices.reduce((a, b) => (b.evaluation.marginPotential > a.evaluation.marginPotential ? b : a));
+const nb = (await load('nb'))[0];
+const dist = Object.fromEntries(nb.neighbors.map((n) => [n.id, n.distance]));
+const delta = (v, base, inv = false, digits = 0) => {
+  const d = +(v - base).toFixed(digits);
+  if (!d) return '';
+  const good = inv ? d < 0 : d > 0;
+  return `<span class="d ${good ? 'up' : 'down'}">${d > 0 ? '+' : '−'}${Math.abs(d)}</span>`;
+};
+const tcard = (f, opts = {}) => {
+  const e = f.evaluation;
+  return `<div class="tcard ${opts.cls || ''}">
+    ${opts.flag ? `<span class="flag ${opts.flagCls || ''}">${opts.flag}</span>` : ''}
+    ${radar(f.qualities, 96, '#e7ddc6', opts.cls === 'orig' ? '#777b80' : '#8667a3', opts.cls === 'orig' ? null : cand.qualities)}
+    <div><div class="n">${f.name}</div><div class="e">${f.epithet || ''}</div>
+      <div class="why">${opts.why || ''}</div>
+      ${opts.cls === 'orig' ? '' : `<div class="dist">Drift <div class="track"><i style="width:${Math.min(100, (dist[f.id] ?? 60) / 0.8)}%"></i></div>${dist[f.id] ?? '—'}</div>`}
+    </div>
+    <div class="stats">
+      <span class="k">Power (est.)</span><span class="v">${pw(e.technicalScore)}${opts.cls === 'orig' ? '' : delta(pw(e.technicalScore), ev.power, false, 1)}</span>
+      <span class="k">Cost to make</span><span class="v">${Math.round(e.productionCost)}${opts.cls === 'orig' ? '' : delta(Math.round(e.productionCost), Math.round(ev.productionCost), true)}</span>
+      <span class="k">Worth</span><span class="v">${e.estimatedMarketValue}${opts.cls === 'orig' ? '' : delta(e.estimatedMarketValue, ev.estimatedMarketValue)}</span>
+      <span class="k">Margin</span><span class="v ${e.marginPotential < 0 ? 'down' : 'up'}">${e.marginPotential > 0 ? '+' : '−'}${Math.abs(e.marginPotential)}</span>
+    </div>
+  </div>`;
+};
+const WHY = {
+  'form-162sxu4': 'Nearly as strong, and a third cheaper to make.',
+  'form-qvp27e': 'Weaker, but the cheapest to make and the best margin here.',
+  'form-hmt4sm': 'A plainer sibling of the first; little to recommend it.',
+};
+const tempered = `
+<div class="col right panel grain">
+  <div class="h"><span>TEMPER · THREE NEAR FORMS</span><span>2 Focus · +44 XP</span></div>
+  ${tcard(cand, { cls: 'orig', why: 'Strongest, but costs more to make than it is worth.', flag: 'Strongest', flagCls: 'str' })}
+  ${choices.map((f) => tcard(f, { cls: f === bestMargin ? 'pick' : '', flag: f === bestMargin ? 'Best margin' : '', why: WHY[f.id] })).join('')}
+  <div style="font-size:13px;color:var(--paper-dim);margin-top:4px">Dashed outline is ${cand.name}. Choosing a near Form replaces it; Trial confirms its true Power.</div>
+</div>`;
+
+const actions = `
+<div class="actions">
+  <div class="act done"><div><div class="nm">Attune</div><div class="c">1 Focus · done</div></div></div>
+  <div class="act"><kbd>R</kbd><div><div class="nm">Fracture</div><div class="c">1 Focus · find its flaw</div></div></div>
+  <div class="act on"><kbd>T</kbd><div><div class="nm">Temper</div><div class="c">2 Focus · +44 XP</div></div></div>
+  <div class="act"><kbd>G</kbd><div><div class="nm">Trial</div><div class="c">no Focus · reveals true Power</div></div></div>
+  <div class="act"><kbd>M</kbd><div><div class="nm">Mirror</div><div class="c">2 Focus · +44 XP</div></div></div>
+  <div class="act"><kbd>D</kbd><div><div class="nm">Deep Trial</div><div class="c">3 Focus · +64 XP</div></div></div>
+  <div class="act equip"><kbd>E</kbd><div><div class="nm">Equip as Blade</div><div class="c" style="color:rgba(231,221,198,.8)">${blade(ev.power)}</div></div></div>
+</div>`;
+
+document.getElementById('ui').innerHTML = `
+<header>
+  <div><h1>The Crucible</h1><div class="sub">Temper a Form toward something stronger, cheaper, or both. Trial settles what it truly is.</div></div>
+  <div class="purse">
+    <div><div class="k">FOCUS</div><div class="v" style="color:#aeb8e6">9</div><div class="focus-pips">${Array.from({ length: 12 }, (_, i) => `<i class="${i >= 9 ? 'spent' : i >= 7 ? 'cost' : ''}"></i>`).join('')}</div></div>
+    <div><div class="k">CROWNS</div><div class="v" style="color:var(--high-value)">240</div></div>
+  </div>
+</header>
+${inventory}${selected}${tempered}${actions}`;
+</script>
+</body>
+</html>
