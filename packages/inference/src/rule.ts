@@ -108,9 +108,11 @@ export function rankCandidates(req: TransformRequest) {
     lo[k] = Math.min(...raw.map((r) => r.f[k]));
     hi[k] = Math.max(...raw.map((r) => r.f[k]));
   }
+  // Squared policy weights: a build's dominant instincts dominate its choices.
   const p = normalizePolicy(req.buildPolicy);
+  const sq = feats.reduce((s, k) => s + p[FEATURE_POLICY[k]] ** 2, 0) || 1;
   const w = {} as Record<Feature, number>;
-  for (const k of feats) w[k] = p[FEATURE_POLICY[k]];
+  for (const k of feats) w[k] = p[FEATURE_POLICY[k]] ** 2 / sq;
   w.economize += req.costWeight * 0.5;
   w.profit += req.costWeight * 0.5;
   return raw
