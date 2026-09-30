@@ -1,9 +1,15 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-// node:sqlite ships with Node ≥ 22.13 — no native build, no database setup.
-import { DatabaseSync } from "node:sqlite";
+/**
+ * Schema and query helpers. The database handle is anything with node:sqlite's
+ * prepare/exec shape: node:sqlite on the server (db-node.ts), sql.js in the browser build.
+ */
+export type Stmt = {
+  all(...params: unknown[]): unknown[];
+  get(...params: unknown[]): unknown;
+  run(...params: unknown[]): unknown;
+};
+export type Db = { prepare(sql: string): Stmt; exec(sql: string): void; close(): void };
 
-const SCHEMA = `
+export const SCHEMA = `
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
@@ -230,21 +236,13 @@ CREATE TABLE IF NOT EXISTS prophecies (
 );
 `;
 
-export type Db = DatabaseSync;
-
-export function openDb(path: string): Db {
-  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
-  const db = new DatabaseSync(path);
-  db.exec(SCHEMA);
-  return db;
-}
 
 export const now = () => new Date().toISOString();
 
 type Row = Record<string, unknown>;
-export const all = <T = Row>(db: Db, sql: string, ...params: unknown[]) => db.prepare(sql).all(...(params as never[])) as T[];
-export const get = <T = Row>(db: Db, sql: string, ...params: unknown[]) => db.prepare(sql).get(...(params as never[])) as T | undefined;
-export const run = (db: Db, sql: string, ...params: unknown[]) => db.prepare(sql).run(...(params as never[]));
+export const all = <T = Row>(db: Db, sql: string, ...params: unknown[]) => db.prepare(sql).all(...params) as T[];
+export const get = <T = Row>(db: Db, sql: string, ...params: unknown[]) => db.prepare(sql).get(...params) as T | undefined;
+export const run = (db: Db, sql: string, ...params: unknown[]) => db.prepare(sql).run(...params);
 
 export function tx<T>(db: Db, fn: () => T): T {
   db.exec("BEGIN");

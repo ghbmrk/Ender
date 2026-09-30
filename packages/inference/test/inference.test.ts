@@ -15,6 +15,7 @@ import {
   validateFixture,
   type TransformRequest,
 } from "../src";
+import { fsFixtureStore } from "../src/node";
 
 const objective = REALMS[0]!.objective;
 const q = (burden: number, knots: number, veil: number) => ({ burden, knots, veil, reach: 20, flex: 20, bond: 20 });
@@ -84,12 +85,12 @@ describe("fixture validation", () => {
 describe("providers", () => {
   it("strict fixture mode throws FixtureRequired and records the request", async () => {
     const dir = mkdtempSync(join(tmpdir(), "weave-fx-"));
-    const p = new FixtureInferenceProvider({ fixturesDir: join(dir, "f"), requestsDir: join(dir, "r"), strict: true });
+    const p = new FixtureInferenceProvider({ store: fsFixtureStore(join(dir, "f"), join(dir, "r")), strict: true });
     await expect(p.transform(request())).rejects.toBeInstanceOf(FixtureRequired);
   });
   it("non-strict mode falls back to rules", async () => {
     const dir = mkdtempSync(join(tmpdir(), "weave-fx-"));
-    const p = new FixtureInferenceProvider({ fixturesDir: join(dir, "f"), requestsDir: join(dir, "r"), recordMissing: false });
+    const p = new FixtureInferenceProvider({ store: fsFixtureStore(join(dir, "f"), join(dir, "r")), recordMissing: false });
     const out = await p.transform(request());
     expect(out.provenance.provider).toBe("rule");
   });

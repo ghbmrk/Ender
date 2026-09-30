@@ -1,5 +1,3 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { canonicalize } from "@weave/shared";
 import { requestHash } from "./hash";
 import { RuleInferenceProvider } from "./rule";
@@ -33,9 +31,27 @@ export type FixtureFile<T = unknown> = {
   usage?: { workUnits: number };
 };
 
+/** Where fixtures live and missing requests go: the filesystem in Node, a bundled map in the browser. */
+export interface FixtureStore {
+  readFixture(kind: InferenceKind, hash: string): FixtureFile | undefined;
+  hasRequest(kind: InferenceKind, hash: string): boolean;
+  /** Returns where the request was recorded (for error messages). */
+  recordRequest(kind: InferenceKind, hash: string, request: unknown): string;
+  listMissing?(): { type: string; hash: string }[];
+}
+
+/** A read-only store over fixtures already in memory (e.g. bundled into the browser build). */
+export function memoryFixtureStore(fixtures: FixtureFile[]): FixtureStore {
+  const byKey = new Map(fixtures.map((f) => [`${f.type}/${f.requestHash}`, f]));
+  return {
+    readFixture: (kind, hash) => byKey.get(`${kind}/${hash}`),
+    hasRequest: () => true,
+    recordRequest: (kind, hash) => `${kind}/${hash} (not recorded in this build)`,
+  };
+}
+
 export type FixtureProviderOptions = {
-  fixturesDir: string;
-  requestsDir: string;
+  store: FixtureStore;
   strict?: boolean;
   fallback?: InferenceProvider;
   /** Don't write missing requests (e.g. read-only test runs). */
@@ -45,8 +61,8 @@ export type FixtureProviderOptions = {
 };
 
 /**
- * request → canonicalize → SHA-256 → data/inference-fixtures/<type>/<hash>.json.
- * Missing fixtures are recorded to data/inference-requests/<type>/<hash>.json and either
+ * request → canonicalize → SHA-256 → store (data/inference-fixtures/<type>/<hash>.json in Node).
+ * Missing fixtures are recorded (data/inference-requests/<type>/<hash>.json) and either
  * throw (strict) or fall back to the RuleInferenceProvider.
  */
 export class FixtureInferenceProvider implements InferenceProvider {
@@ -67,16 +83,11 @@ export class FixtureInferenceProvider implements InferenceProvider {
 
   private async run<T>(kind: InferenceKind, request: unknown, fallback: () => Promise<InferenceEnvelope<T>>): Promise<InferenceEnvelope<T>> {
     const hash = requestHash(kind, request);
-    const path = join(this.opts.fixturesDir, kind, `${hash}.json`);
-    const reqPath = join(this.opts.requestsDir, kind, `${hash}.json`);
-    const record = () => {
-      if (existsSync(reqPath)) return;
-      mkdirSync(dirname(reqPath), { recursive: true });
-      writeFileSync(reqPath, JSON.stringify({ type: kind, requestHash: hash, request: JSON.parse(canonicalize(request)) }, null, 1));
-    };
-    if (existsSync(path)) {
+    const store = this.opts.store;
+    const record = () => (store.hasRequest(kind, hash) ? `${kind}/${hash}` : store.recordRequest(kind, hash, JSON.parse(canonicalize(request))));
+    const file = store.readFixture(kind, hash) as FixtureFile<T> | undefined;
+    if (file) {
       if (this.opts.recordAll) record();
-      const file = JSON.parse(readFileSync(path, "utf8")) as FixtureFile<T>;
       const parsed = RESULT_SCHEMAS[kind].safeParse(file.result);
       if (!parsed.success) throw new Error(`invalid fixture ${kind}/${hash}: ${parsed.error.message}`);
       this.hits.push({ kind, hash });
@@ -87,10 +98,10 @@ export class FixtureInferenceProvider implements InferenceProvider {
         provenance: { provider: "fixture", requestHash: hash, fixtureVersion: file.fixtureVersion },
       };
     }
-    if (this.opts.recordMissing !== false) record();
+    const where = this.opts.recordMissing !== false ? record() : `${kind}/${hash}`;
     this.misses.push({ kind, hash });
     this.remember(kind, hash, request, "fallback");
-    if (this.opts.strict) throw new FixtureRequired(kind, hash, reqPath);
+    if (this.opts.strict) throw new FixtureRequired(kind, hash, where);
     return fallback();
   }
 

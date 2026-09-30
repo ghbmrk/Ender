@@ -1,7 +1,8 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 import { configFromEnv, type ServerConfig } from "./config";
-import { createContext, type Ctx } from "./services/context";
+import type { Ctx } from "./services/context";
+import { createNodeContext } from "./node-context";
 import { HttpError } from "./services/character";
 import { ensureWorld } from "./services/world";
 import { registerCharacterRoutes } from "./routes/character";
@@ -13,7 +14,7 @@ import { registerDevRoutes } from "./routes/dev";
 
 export async function buildApp(overrides: Partial<ServerConfig> = {}): Promise<{ app: FastifyInstance; ctx: Ctx }> {
   const config = configFromEnv(overrides);
-  const ctx = createContext(config);
+  const ctx = createNodeContext(config);
   ensureWorld(ctx);
   const app = Fastify({ logger: false });
   app.setErrorHandler((err, _req, reply) => {

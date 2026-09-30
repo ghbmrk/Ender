@@ -1,9 +1,8 @@
-import { resolve } from "node:path";
 import { percentile, type WorldSnapshot } from "@weave/shared";
-import { basePrices, buildSnapshots, productionCost, type BuiltWorld } from "@weave/economy";
-import { loadMarketSeed, loadReality, type PubChemRealityAdapter } from "@weave/reality";
-import { FixtureInferenceProvider, RuleInferenceProvider, type InferenceProvider } from "@weave/inference";
-import { openDb, type Db } from "../db";
+import { basePrices, buildSnapshots, productionCost, type BuiltWorld, type MarketSeed } from "@weave/economy";
+import type { PubChemRealityAdapter } from "@weave/reality";
+import { FixtureInferenceProvider, RuleInferenceProvider, type FixtureStore, type InferenceProvider } from "@weave/inference";
+import type { Db } from "../db";
 import type { ServerConfig } from "../config";
 
 export type Ctx = {
@@ -13,6 +12,7 @@ export type Ctx = {
   world: BuiltWorld;
   snapshotById: Map<string, WorldSnapshot>;
   inference: InferenceProvider;
+  fixtures: FixtureStore;
   /** Median corpus production cost at base prices; anchors efficiency. */
   referenceCost: number;
 };
@@ -21,10 +21,9 @@ export type Ctx = {
  * Runtime inference selection: fixtures first, deterministic rules when no fixture exists.
  * The future ChatGPT-plan provider is never selected in the MVP.
  */
-export function selectInferenceProvider(config: ServerConfig): InferenceProvider {
+export function selectInferenceProvider(config: ServerConfig, store: FixtureStore): InferenceProvider {
   return new FixtureInferenceProvider({
-    fixturesDir: resolve(config.dataDir, "inference-fixtures"),
-    requestsDir: resolve(config.dataDir, "inference-requests"),
+    store,
     strict: config.strictFixtures,
     recordMissing: config.recordMissing,
     recordAll: config.recordAllRequests,
@@ -32,10 +31,12 @@ export function selectInferenceProvider(config: ServerConfig): InferenceProvider
   });
 }
 
-export function createContext(config: ServerConfig): Ctx {
-  const db = openDb(config.dbPath);
-  const reality = loadReality(config.dataDir);
-  const world = buildSnapshots(loadMarketSeed(config.dataDir));
+export type ContextParts = { db: Db; reality: PubChemRealityAdapter; marketSeed: MarketSeed; fixtures: FixtureStore };
+
+/** Assemble a context from its parts; Node (node-context.ts) and the browser build supply them differently. */
+export function createContext(config: ServerConfig, parts: ContextParts): Ctx {
+  const { db, reality, fixtures } = parts;
+  const world = buildSnapshots(parts.marketSeed);
   const costs = reality
     .all()
     .map((c) => productionCost(c.recipe, basePrices()))
@@ -46,7 +47,8 @@ export function createContext(config: ServerConfig): Ctx {
     reality,
     world,
     snapshotById: new Map(world.snapshots.map((s) => [s.id, s])),
-    inference: selectInferenceProvider(config),
+    inference: selectInferenceProvider(config, fixtures),
+    fixtures,
     referenceCost: percentile(costs, 0.5),
   };
 }

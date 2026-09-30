@@ -5,6 +5,7 @@ import { join, relative, resolve } from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../../apps/server/src/app";
 import { selectInferenceProvider } from "../../apps/server/src/services/context";
+import { nodeFixtureStore } from "../../apps/server/src/node-context";
 import { configFromEnv } from "../../apps/server/src/config";
 
 const ROOT = resolve(__dirname, "../..");
@@ -82,7 +83,8 @@ describe("no paid inference: runtime", () => {
   });
 
   it("selects the fixture provider (rule fallback), never the future ChatGPT stub", () => {
-    const p = selectInferenceProvider(configFromEnv({ dbPath: ":memory:" }));
+    const config = configFromEnv({ dbPath: ":memory:" });
+    const p = selectInferenceProvider(config, nodeFixtureStore(config));
     expect(p.name).toBe("fixture");
     const src = readFileSync(join(ROOT, "apps/server/src/services/context.ts"), "utf8");
     expect(src).not.toMatch(/new\s+ChatGPTPlanInferenceProvider/);

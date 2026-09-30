@@ -19,5 +19,9 @@
   },
   "devDependencies": {
     "tsx": "^4.23.15"
+  },
+  "exports": {
+    ".": "./src/app.ts",
+    "./browser": "./src/browser.ts"
   }
 }

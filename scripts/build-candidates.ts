@@ -1,7 +1,8 @@
 /** Normalize qualities, compute feature vectors and nearest neighbours; write the candidate graph. */
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { buildCandidateGraph, loadCompounds } from "@weave/reality";
+import { buildCandidateGraph } from "@weave/reality";
+import { loadCompounds } from "@weave/reality/node";
 import { DATA_DIR } from "./paths";
 
 const compounds = loadCompounds(DATA_DIR);

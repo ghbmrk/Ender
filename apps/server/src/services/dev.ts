@@ -1,5 +1,3 @@
-import { readdirSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
 import { ESSENCE_IDS, QUALITY_KEYS } from "@weave/shared";
 import { ESSENCE_MARKET_SERIES } from "@weave/content";
 import { rawQualityValues } from "@weave/domain";
@@ -64,17 +62,4 @@ export function economyDebug(ctx: Ctx) {
   };
 }
 
-export function missingFixtures(ctx: Ctx) {
-  const reqDir = resolve(ctx.config.dataDir, "inference-requests");
-  const fixDir = resolve(ctx.config.dataDir, "inference-fixtures");
-  const out: { type: string; hash: string }[] = [];
-  if (!existsSync(reqDir)) return out;
-  for (const type of readdirSync(reqDir)) {
-    for (const f of readdirSync(join(reqDir, type))) {
-      if (!f.endsWith(".json")) continue;
-      const hash = f.replace(/\.json$/, "");
-      if (!existsSync(join(fixDir, type, f))) out.push({ type, hash });
-    }
-  }
-  return out;
-}
+export const missingFixtures = (ctx: Ctx) => ctx.fixtures.listMissing?.() ?? [];

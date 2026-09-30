@@ -22,7 +22,9 @@
     "data:build": "tsx scripts/build-candidates.ts",
     "fixtures:list": "tsx scripts/fixture-list.ts",
     "fixtures:validate": "tsx scripts/fixture-validate.ts",
-    "fixtures:collect": "tsx scripts/fixture-collect.ts"
+    "fixtures:collect": "tsx scripts/fixture-collect.ts",
+    "build:web": "pnpm --filter @weave/game build:web && tsx scripts/bundle-web.ts",
+    "dev:web": "pnpm --filter @weave/game dev:web"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
