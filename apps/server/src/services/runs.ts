@@ -4,7 +4,7 @@ import { BASE_FOCUS, masteryEffects, technicalScore } from "@ender/domain";
 import { all, get, now, run, tx } from "../db";
 import type { Ctx } from "./context";
 import { HttpError, addItem, adjustCrowns, charRow, combatStatsFor, getMastery, passivesFor } from "./character";
-import { artifactView, createArtifact, getArtifact } from "./artifacts";
+import { artifactView, createArtifact, getArtifact, realityIdForCandidate } from "./artifacts";
 import { currentSnapshot } from "./world";
 
 export const ARENA = { width: 1600, height: 1000 };
@@ -87,6 +87,25 @@ function essenceDrop(r: Rng, realm: RealmTemplate, units: number, glut: Partial<
 }
 
 /**
+ * The candidate pool Form drops are drawn from in a Realm: the whole corpus, ranked by technical
+ * score for the Realm's objective (ascending, id as tie-break). A drop takes the Form at
+ * percentile clamp(max(u₁..u_draws)^0.85 + bonus/100, 0, 0.995) of this list.
+ */
+export function realmPool(ctx: Ctx, realmId: string): { id: string; s: number }[] {
+  const realm = realmById(realmId);
+  return ctx.reality
+    .all()
+    .map((c) => ({ id: c.id, s: technicalScore(c.qualities, realm.objective) }))
+    .sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
+}
+
+/** Seed the next run for this character will use (runs are seeded `${charId}:${n}`). */
+export const nextRunSeed = (ctx: Ctx, charId: string) => `${charId}:${charRow(ctx, charId).runs_started + 1}`;
+
+/** A Form that actually dropped, as reported by a native client that chose it from the Realm pool. */
+export type ClientForm = { room: number; candidateId: string };
+
+/**
  * Deterministic Realm generation from (worldSnapshotId, realmTemplate, runSeed).
  * Loot quality also depends on explicit bonuses (Charm power, Discovery mastery).
  */
@@ -100,10 +119,7 @@ export function generateRunPlan(
   const glut: Partial<Record<EssenceId, number>> = {};
   for (const m of snapshot.realmModifiers) if (m.realmId === realm.id && m.factor < 1) glut[m.essence] = 1.6;
 
-  const ranked = ctx.reality
-    .all()
-    .map((c) => ({ id: c.id, s: technicalScore(c.qualities, realm.objective) }))
-    .sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
+  const ranked = realmPool(ctx, realm.id);
   const pickForm = (draws: number, bonus: number) => {
     let u = 0;
     for (let i = 0; i < draws; i++) u = Math.max(u, r.next());
@@ -228,7 +244,23 @@ function getRun(ctx: Ctx, charId: string, runId: string) {
   return r;
 }
 
-function grantRooms(ctx: Ctx, charId: string, r: RunRow, rooms: number[]) {
+/**
+ * Validate client-reported drops: each room must be one being reported cleared and each Form must
+ * be in the Realm's pool (fantasy id or reality id). Returns reality ids grouped by room.
+ */
+function clientFormsByRoom(ctx: Ctx, realmId: string, forms: ClientForm[], roomsCleared: number[]) {
+  const pool = new Set(realmPool(ctx, realmId).map((x) => x.id));
+  const out = new Map<number, { realityId: string }[]>();
+  for (const f of forms) {
+    if (!roomsCleared.includes(f.room)) throw new HttpError(400, `Form ${f.candidateId} reported for room ${f.room}, which is not among the rooms cleared`);
+    const realityId = realityIdForCandidate(ctx, f.candidateId);
+    if (!realityId || !pool.has(realityId)) throw new HttpError(400, `Form ${f.candidateId} is not in the ${realmId} pool`);
+    out.set(f.room, [...(out.get(f.room) ?? []), { realityId }]);
+  }
+  return out;
+}
+
+function grantRooms(ctx: Ctx, charId: string, r: RunRow, rooms: number[], clientForms?: Map<number, { realityId: string }[]>) {
   const plan = JSON.parse(r.plan) as RunPlan;
   const granted = new Set(JSON.parse(r.rooms_granted) as number[]);
   const loot = { crowns: 0, essences: {} as Partial<Record<EssenceId, number>>, artifacts: [] as string[], currencies: [] as string[] };
@@ -242,7 +274,9 @@ function grantRooms(ctx: Ctx, charId: string, r: RunRow, rooms: number[]) {
       addItem(ctx, charId, "essence", e, q!);
       loot.essences[e as EssenceId] = (loot.essences[e as EssenceId] ?? 0) + q!;
     }
-    for (const f of room.loot.forms) loot.artifacts.push(createArtifact(ctx, charId, { realityId: f.realityId, realmId: plan.realmId, origin: "drop", runId: r.id }).id);
+    // A native client that chose drops locally from the Realm pool reports them; otherwise use the plan's.
+    const forms = clientForms ? (clientForms.get(idx) ?? []) : room.loot.forms;
+    for (const f of forms) loot.artifacts.push(createArtifact(ctx, charId, { realityId: f.realityId, realmId: plan.realmId, origin: "drop", runId: r.id }).id);
     if (room.loot.currency) {
       addItem(ctx, charId, "currency", room.loot.currency, 1);
       loot.currencies.push(room.loot.currency);
@@ -253,11 +287,12 @@ function grantRooms(ctx: Ctx, charId: string, r: RunRow, rooms: number[]) {
 }
 
 /** Bank loot from cleared rooms mid-run (e.g. on reaching the shrine), so Forms can be Attuned there. */
-export function checkpointRun(ctx: Ctx, charId: string, runId: string, roomsCleared: number[]) {
+export function checkpointRun(ctx: Ctx, charId: string, runId: string, roomsCleared: number[], forms?: ClientForm[]) {
   const r = getRun(ctx, charId, runId);
   if (r.status !== "active") throw new HttpError(400, `run is ${r.status}`);
+  const clientForms = forms ? clientFormsByRoom(ctx, r.realm_id, forms, roomsCleared) : undefined;
   return tx(ctx.db, () => {
-    const loot = grantRooms(ctx, charId, r, roomsCleared.filter((i) => i < 7));
+    const loot = grantRooms(ctx, charId, r, roomsCleared.filter((i) => i < 7), clientForms);
     run(ctx.db, "INSERT INTO run_events (run_id, type, payload, created_at) VALUES (?, 'checkpoint', ?, ?)", runId, JSON.stringify({ roomsCleared, loot }), now());
     return { loot, artifacts: loot.artifacts.map((id) => artifactView(ctx, getArtifact(ctx, id))) };
   });
@@ -271,15 +306,17 @@ export type RunCompletion = {
   deaths?: number;
   bossPhaseMs?: number[];
   wardBreaks?: number;
+  forms?: ClientForm[];
 };
 
 export function completeRun(ctx: Ctx, charId: string, runId: string, body: RunCompletion) {
   const r = getRun(ctx, charId, runId);
   if (r.status !== "active") throw new HttpError(400, `run is ${r.status}`);
+  const clientForms = body.forms ? clientFormsByRoom(ctx, r.realm_id, body.forms, body.roomsCleared) : undefined;
   return tx(ctx.db, () => {
     // Boss loot only on victory; loot from cleared rooms is kept on death.
     const rooms = body.roomsCleared.filter((i) => i < 7 || (i === 7 && body.outcome === "victory"));
-    const loot = grantRooms(ctx, charId, r, rooms);
+    const loot = grantRooms(ctx, charId, r, rooms, clientForms);
     const status = body.outcome === "victory" ? "victory" : body.outcome === "death" ? "death" : "abandoned";
     const all_ = get<{ rooms_granted: string }>(ctx.db, "SELECT rooms_granted FROM runs WHERE id = ?", runId)!;
     const result = { ...body, lootThisCall: loot, roomsGranted: JSON.parse(all_.rooms_granted) };

@@ -122,3 +122,15 @@ export const RESULT_SCHEMAS = {
 
 /** Default normalized Work Units per inference call. */
 export const DEFAULT_WU: Record<InferenceKind, number> = { attune: 1, transform: 3, critique: 1 };
+
+/** Critique Work Units depend on the action that asked for it: Fracture 1, Mirror 3, Deep Trial 5. */
+export const CRITIQUE_WU: Record<CritiqueRequest["mode"], number> = { fracture: 1, mirror: 3, deep: 5 };
+
+/** Normalized Work Units a fixture/rule call reports in its envelope. */
+export function workUnitsFor(kind: InferenceKind, request: unknown): number {
+  if (kind === "critique") {
+    const mode = (request as Partial<CritiqueRequest> | null)?.mode;
+    if (mode && mode in CRITIQUE_WU) return CRITIQUE_WU[mode];
+  }
+  return DEFAULT_WU[kind];
+}

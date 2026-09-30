@@ -2,7 +2,12 @@
 
 A top-down dark-fantasy ARPG whose crafting, economy and progression are coupled to real external data. Forms you find are real PubChem compounds wearing fantasy qualities. Essence prices move with real ECB exchange-rate history. The Familiar that reads your Forms costs you Focus and teaches you (XP), but only objectively good decisions earn Mastery.
 
-This repository is the MVP vertical slice: fight, loot, Attune, Temper, Trial, sell or equip, watch the world turn, and adapt.
+This repository holds two clients over one set of rules and data:
+
+- **`game/`** is the native Unreal Engine 5.8 vertical slice (C++, GAS, Enhanced Input, StateTree, Niagara, UMG), which is the target build. It talks only to the local **`reality-service/`** (port 8788). The C++ has not been compiled yet, so treat it as unbuilt until the first Windows build. `docs/UNREAL_BUILD.md` covers building it, `docs/IMPLEMENTATION_STATUS.md` shows what exists for each of the 50 implementation steps, and `docs/COMBAT_SPEC.md`, `ART_SPEC.md`, `ECONOMY_SPEC.md`, `REALITY_SPEC.md` and `THIRD_PARTY.md` hold the specs.
+- **`apps/game`** is the earlier TypeScript/Phaser prototype and no-install web build. It stays playable in a browser while the Unreal client is brought up.
+
+The loop is the same in both: fight, loot, Attune, Temper, Trial, sell or equip, watch the world turn, and adapt.
 
 ## Play it
 
@@ -88,6 +93,7 @@ pnpm typecheck
 
 - **Unit** (`packages/*/test`): normalization, objective scoring, recipes, production cost, market value, efficiency, scarcity, local demand, contracts, artifact power, XP, levels, Mastery, Work Units, Brier scoring, SearchPolicy, candidate ranking, fixture hashing and validation. The required §69 Storm scenario is in `packages/economy/test/storm-scenario.test.ts`.
 - **Integration** (`tests/integration`): each arrow of the loop through the HTTP API, from combat → loot to Prophecy → Mastery.
+- **Rule core** (`tests/cpp/run.sh`, no Unreal needed): combat timings, the Evade curve, Unravel radius, the damage model, the input buffer, attack tokens, telegraph floors, the Bound King and loot bias. It also runs the §94 simulation of 100 seeded rooms: token caps, spawn legality, off-screen fairness and enemy caps.
 - **E2E** (`tests/e2e`): new Binder kills the Bound King; equip changes stats; a Forge passive reaches the Temper request; Explorer and Smith choose differently from identical candidates; the Merchant avoids costly Forms; a turning moves prices and contracts; everything works with external hosts blocked; the full §70 loop.
 
 E2E starts its own server on :8797 and game on :5183 with a fresh database. Combat tests use the autopilot (`?autoplay=1&god=1&speed=2&dmg=6`), which drives the same input interface as the keyboard.
@@ -95,6 +101,10 @@ E2E starts its own server on :8797 and game on :5183 with a fresh database. Comb
 ## Layout
 
 ```
+game             Unreal project: Source/Ender (C++), Config, Content (data + READMEs), Tools (asset generator, shaders, paper texture)
+game/Source/Ender/Rules  engine-free combat/encounter/loot rules, also built by tests/cpp
+reality-service  local HTTP service for the Unreal client (wraps apps/server; spec endpoints + /api/*)
+docs             combat, art, economy, reality, third-party, build and status docs
 apps/game        Vite + React + Phaser client (combat, hub, UI); src/standalone = in-page server
 apps/server      Fastify + node:sqlite; services hold all rules; browser.ts = same routes in-page
 packages/shared  types, rng, canonical JSON, SHA-256

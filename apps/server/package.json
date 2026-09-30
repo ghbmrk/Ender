@@ -22,6 +22,10 @@
   },
   "exports": {
     ".": "./src/app.ts",
-    "./browser": "./src/browser.ts"
+    "./browser": "./src/browser.ts",
+    "./config": "./src/config.ts",
+    "./node-context": "./src/node-context.ts",
+    "./db": "./src/db.ts",
+    "./services/*": "./src/services/*.ts"
   }
 }

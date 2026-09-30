@@ -3,7 +3,7 @@ import { FORM_NOUNS, NAME_PREFIX, NAME_SUFFIX, QUALITY_NAMES, ESSENCES } from "@
 import { normalizePolicy, scoreObjective, weaknesses } from "@ender/domain";
 import { requestHash } from "./hash";
 import {
-  DEFAULT_WU,
+  workUnitsFor,
   type AttuneRequest,
   type AttuneResult,
   type CritiqueRequest,
@@ -42,7 +42,7 @@ export function ruleFantasyName(fantasyId: string, q: AttuneRequest["artifact"][
 
 const env = <T>(kind: "attune" | "transform" | "critique", request: unknown, result: T): InferenceEnvelope<T> => ({
   result,
-  usage: { workUnits: DEFAULT_WU[kind] },
+  usage: { workUnits: workUnitsFor(kind, request) },
   provenance: { provider: "rule", requestHash: requestHash(kind, request) },
 });
 

@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @ender/server --filter @ender/game dev",
     "start": "pnpm dev",
+    "service": "pnpm --filter @ender/reality-service start",
+    "service:dev": "pnpm --filter @ender/reality-service dev",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run packages",

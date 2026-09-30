@@ -1,0 +1,14 @@
+{
+  "_comment": "UEnderEncounterDefinition assets. Wave plans come from the engine-free rules (EnderRules::PlanEncounter) seeded from the run seed; these assets only choose the room kind, the roster and the per-room seed offset. Service room indices: Room1-4 = 0-3, shrine = 5, elite = 6, boss = 7.",
+  "folder": "/Game/Encounters",
+  "encounters": {
+    "DA_Encounter_Room1": { "RoomKind": "Room1", "bFirstRealmRoster": true, "SeedOffset": 1, "AllowedArchetypes": ["Husk", "Hound"] },
+    "DA_Encounter_Room2": { "RoomKind": "Room2", "bFirstRealmRoster": true, "SeedOffset": 2, "AllowedArchetypes": ["Husk", "Hound", "Wisp"] },
+    "DA_Encounter_Room3": { "RoomKind": "Room3", "bFirstRealmRoster": true, "SeedOffset": 3, "AllowedArchetypes": ["Husk", "Hound", "Wisp", "Keeper"] },
+    "DA_Encounter_Room4": { "RoomKind": "Room4", "bFirstRealmRoster": true, "SeedOffset": 4, "AllowedArchetypes": ["Husk", "Hound", "Wisp", "Keeper", "Seer"] },
+    "DA_Encounter_Elite": { "RoomKind": "Elite", "bFirstRealmRoster": true, "SeedOffset": 6, "AllowedArchetypes": ["Husk", "Hound", "Wisp", "Keeper", "Seer"] }
+  },
+  "_rosterNote": "AllowedArchetypes is written only when bOverrideAllowedArchetypes is true; by default the rules decide the roster from RoomKind. The lists above document the first-Realm progression and are applied with --override-rosters.",
+  "realmSequence": ["Entry", "Room1", "Connector", "Room2", "AttunementShrine", "Room3", "Room4", "Elite", "RecoverySpace", "Boss", "RewardAltar", "ReturnPortal"],
+  "firstCompletionMinutes": [7, 10]
+}
