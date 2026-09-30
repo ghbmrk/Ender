@@ -1,0 +1,40 @@
+{
+  "name": "the-weave",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @weave/server --filter @weave/game dev",
+    "start": "pnpm dev",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run packages",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "test:no-paid-inference": "vitest run tests/no-paid-inference",
+    "data:sync:pubchem": "tsx scripts/sync-pubchem.ts",
+    "data:sync:markets": "tsx scripts/sync-markets.ts",
+    "data:sync:openalex": "tsx scripts/sync-openalex.ts",
+    "data:sync": "pnpm data:sync:pubchem && pnpm data:sync:markets && pnpm data:sync:openalex",
+    "data:build": "tsx scripts/build-candidates.ts",
+    "fixtures:list": "tsx scripts/fixture-list.ts",
+    "fixtures:validate": "tsx scripts/fixture-validate.ts",
+    "fixtures:collect": "tsx scripts/fixture-collect.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3",
+    "@weave/content": "workspace:*",
+    "@weave/domain": "workspace:*",
+    "@weave/economy": "workspace:*",
+    "@weave/inference": "workspace:*",
+    "@weave/reality": "workspace:*",
+    "@weave/shared": "workspace:*",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
