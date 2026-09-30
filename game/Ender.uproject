@@ -22,5 +22,5 @@
 		{ "Name": "EditorScriptingUtilities", "Enabled": true, "TargetAllowList": ["Editor"] },
 		{ "Name": "FunctionalTestingEditor", "Enabled": true, "TargetAllowList": ["Editor"] }
 	],
-	"TargetPlatforms": ["Windows"]
+	"TargetPlatforms": ["Windows", "Mac"]
 }

@@ -1,6 +1,6 @@
 # Building and running the Unreal client
 
-The Unreal project is `game/Ender.uproject`: UE 5.8.3, C++ module `Ender`, Windows 10/11 x64. It has never been compiled. The repository's build container is Linux with no engine, so the first build on a real machine will surface compile errors, and they should be fixed there.
+The Unreal project is `game/Ender.uproject`: UE 5.8.3, C++ module `Ender`. It targets Windows 10/11 x64 and also builds on Apple Silicon macOS (see below). It has never been compiled. The repository's build container is Linux with no engine, so the first build on a real machine will surface compile errors, and they should be fixed there.
 
 ## Requirements
 
@@ -8,6 +8,27 @@ The Unreal project is `game/Ender.uproject`: UE 5.8.3, C++ module `Ender`, Windo
 - Unreal Engine 5.8.3 from the Epic launcher or a source build.
 - Visual Studio 2022 with the "Game development with C++" workload, including the MSVC toolchain the 5.8 release notes name.
 - Node 22.13+ and pnpm 10 for the reality service.
+
+## Building on macOS (Apple Silicon)
+
+The code has no Windows-specific parts, so a Mac can compile it, run the automation tests and play it in the editor. The performance targets still refer to the Windows reference hardware.
+
+1. Install Xcode (the version the UE 5.8 release notes name), open it once to accept the licence, and install Unreal Engine 5.8 from the Epic Games Launcher. It lands in `/Users/Shared/Epic Games/UE_5.8`.
+2. Build the editor target:
+
+   ```sh
+   UE="/Users/Shared/Epic Games/UE_5.8"
+   "$UE/Engine/Build/BatchFiles/Mac/Build.sh" EnderEditor Mac Development -Project="$PWD/game/Ender.uproject" -waitmutex
+   ```
+
+3. Run the rules automation tests headless:
+
+   ```sh
+   "$UE/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor" "$PWD/game/Ender.uproject" \
+     -ExecCmds="Automation RunTests Ender.Rules; Quit" -unattended -nullrhi -nosplash -log
+   ```
+
+4. The steps under "First run" below are the same on a Mac, apart from these path changes.
 
 ## First run
 
