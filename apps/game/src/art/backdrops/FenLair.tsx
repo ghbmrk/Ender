@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { INK, P, GLOW } from "../palette";
 import { rng, scatter, busy } from "./paint";
+import { Atmosphere } from "./Atmosphere";
 
 /*
  * Authored in a 540x960 space, scaled x2 into the 1080x1920 viewBox. Parallax layers are
@@ -166,9 +167,9 @@ export default function FenLair({ className }: { className?: string }) {
           <stop offset="1" stopColor="#010607" stopOpacity="0.85" />
         </radialGradient>
         <linearGradient id={id("bands")} x1="0" y1="0" x2="0" y2="1920" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#010507" stopOpacity="0.92" />
-          <stop offset="0.08" stopColor="#010507" stopOpacity="0.55" />
-          <stop offset="0.14" stopColor="#010507" stopOpacity="0" />
+          <stop offset="0" stopColor="#010507" stopOpacity="0.72" />
+          <stop offset="0.06" stopColor="#010507" stopOpacity="0.3" />
+          <stop offset="0.11" stopColor="#010507" stopOpacity="0" />
           <stop offset="0.64" stopColor="#010507" stopOpacity="0" />
           <stop offset="0.78" stopColor="#010507" stopOpacity="0.45" />
           <stop offset="1" stopColor="#010507" stopOpacity="0.82" />
@@ -316,6 +317,7 @@ export default function FenLair({ className }: { className?: string }) {
         </g>
       </Layer>
 
+      <Atmosphere light={{ x: 540, y: 420, color: "#7dffd6", strength: 0.9 }} rays={{ n: 5, spread: 1.0, length: 1300, seed: 4 }} haze={{ y: 620, color: "#2c8f84", opacity: 0.22 }} />
       <rect width="1080" height="1920" fill={url("vig")} />
       <rect width="1080" height="1920" fill={url("bands")} />
       <g transform="scale(2)">

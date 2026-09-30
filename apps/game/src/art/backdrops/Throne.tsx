@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { INK, P, GLOW } from "../palette";
 import { flagstones, scatter, busy, rng } from "./paint";
+import { Atmosphere } from "./Atmosphere";
 
 /*
  * Authored in a 540x960 space, scaled x2 into the 1080x1920 viewBox. Parallax layers are
@@ -225,9 +226,9 @@ export default function Throne({ className }: { className?: string }) {
           <stop offset="1" stopColor="#040308" stopOpacity="0.88" />
         </radialGradient>
         <linearGradient id={id("bands")} x1="0" y1="0" x2="0" y2="1920" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#030206" stopOpacity="0.92" />
-          <stop offset="0.08" stopColor="#030206" stopOpacity="0.55" />
-          <stop offset="0.14" stopColor="#030206" stopOpacity="0" />
+          <stop offset="0" stopColor="#030206" stopOpacity="0.72" />
+          <stop offset="0.06" stopColor="#030206" stopOpacity="0.3" />
+          <stop offset="0.11" stopColor="#030206" stopOpacity="0" />
           <stop offset="0.64" stopColor="#030206" stopOpacity="0" />
           <stop offset="0.78" stopColor="#030206" stopOpacity="0.45" />
           <stop offset="1" stopColor="#030206" stopOpacity="0.85" />
@@ -370,6 +371,7 @@ export default function Throne({ className }: { className?: string }) {
         ))}
       </Layer>
 
+      <Atmosphere light={{ x: 540, y: 420, color: "#ffd98a" }} rays={{ n: 8, spread: 0.75, length: 1600, seed: 2 }} haze={{ y: 600, color: "#6a44a3", opacity: 0.22 }} />
       <rect width="1080" height="1920" fill={url("vig")} />
       <rect width="1080" height="1920" fill={url("bands")} />
       <g transform="scale(2)">

@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { AFF_COLOR, AFF_DEEP } from "./affinity";
+import { CardArt, formAffinities } from "./CardArt";
 import { QUALITY_KEYS } from "@ender/shared";
 import { QUALITY_DESCRIPTIONS } from "@ender/content";
 import { TIER_LABEL, crowns, essenceColor, essenceGlyph, essenceName, fmt, qualityName } from "../economy/format";
@@ -65,8 +67,11 @@ export function EvalLine({ ev }: { ev: any }) {
 
 export function FormCard({ a, children, compact, selected, onClick }: { a: any; children?: ReactNode; compact?: boolean; selected?: boolean; onClick?: () => void }) {
   const fam = a.familiar;
+  const [dom, second] = a.tier === "veiled" ? [null, null] : formAffinities(a.qualities);
+  // Colour identity: the frame takes the dominant Affinity's pigment (a Veiled Form is uncoloured).
+  const style = dom ? ({ ["--aff" as string]: AFF_COLOR[dom], ["--aff-deep" as string]: AFF_DEEP[dom], ["--aff2" as string]: AFF_COLOR[second ?? dom] } as CSSProperties) : undefined;
   return (
-    <div className={`form-card tier-${a.tier} ${selected ? "selected" : ""} ${compact ? "compact" : ""}`} onClick={onClick} data-testid={`form-${a.id}`} data-tier={a.tier}>
+    <div className={`form-card tier-${a.tier} ${dom ? `aff-${dom}` : "aff-none"} ${selected ? "selected" : ""} ${compact ? "compact" : ""}`} style={style} onClick={onClick} data-testid={`form-${a.id}`} data-tier={a.tier}>
       <div className="fc-head">
         <div>
           <div className="fc-name">{a.name}</div>
@@ -77,13 +82,23 @@ export function FormCard({ a, children, compact, selected, onClick }: { a: any; 
           {a.inscribedRole && <span className="slot-badge">{a.inscribedRole}</span>}
         </div>
       </div>
-      <div className="fc-realm dim">Shaped by {a.realmName}</div>
-      {!compact && <QualityRunes qualities={a.qualities} />}
-      <EvalLine ev={a.evaluation} />
-      {!compact && a.evaluation?.recipe && <Recipe recipe={a.evaluation.recipe} />}
-      {!compact && fam?.attune && <div className="familiar">“{fam.attune.summary}”</div>}
-      {!compact && fam?.critique && <div className="familiar crit">“{fam.critique.weakness.text}”</div>}
-      {children}
+      {!compact && (
+        <div className="fc-art">
+          <CardArt seed={a.id} aff={dom} aff2={second} />
+        </div>
+      )}
+      <div className="fc-realm">
+        {dom ? <span className="fc-type-aff">{dom}</span> : <span className="fc-type-aff">Veiled</span>}
+        {second && second !== dom && <span className="fc-type-aff"> / {second}</span>} Form <span className="fc-dash">·</span> Shaped by {a.realmName}
+      </div>
+      <div className="fc-rules">
+        {!compact && <QualityRunes qualities={a.qualities} />}
+        <EvalLine ev={a.evaluation} />
+        {!compact && a.evaluation?.recipe && <Recipe recipe={a.evaluation.recipe} />}
+        {!compact && fam?.attune && <div className="familiar">“{fam.attune.summary}”</div>}
+        {!compact && fam?.critique && <div className="familiar crit">“{fam.critique.weakness.text}”</div>}
+        {children}
+      </div>
     </div>
   );
 }

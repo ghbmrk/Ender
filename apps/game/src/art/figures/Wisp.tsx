@@ -73,7 +73,7 @@ export default function Wisp({ viewBox, className, pose = "idle" }: FigureProps)
           <path d={strike ? "M126 196 C140 220 148 238 164 258" : "M120 206 C126 226 132 240 144 256"} stroke={P.spirit[4]} strokeWidth="1.6" />
         </g>
 
-        <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+        <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
           {/* back veil: violet, trailing furthest */}
           <path
             d={strike

@@ -75,7 +75,7 @@ export default function Wyrm({ viewBox, className, pose = "idle" }: FigureProps)
       {/* ground/water shadow */}
       <ellipse cx="210" cy="318" rx="180" ry="16" fill={INK} opacity="0.3" filter="url(#wc-wash)" />
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
         {/* far coil arching out of the water, with a tail fin */}
         {tube("M372 312 C380 226 290 214 270 312", 40, "coil1")}
         <path d="M352 236 L366 206 L368 232 L384 214 L380 246 Z" fill={url("fin")} strokeWidth="1.8" />

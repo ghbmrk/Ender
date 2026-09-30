@@ -100,7 +100,7 @@ export default function Ranger({ viewBox, className, pose = "idle" }: FigureProp
       {/* ground shadow */}
       <ellipse cx="102" cy="267" rx="58" ry="7" fill={INK} opacity="0.3" filter="url(#wc-wash)" />
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
         {/* ── quiver on the back, fletchings over the far shoulder ── */}
         <g transform={strike ? "rotate(-6 100 150)" : undefined}>
           <path d="M72 70 L78 88 M79 66 L83 86 M86 68 L88 86 M92 72 L91 88" stroke={P.leather[3]} strokeWidth="1.5" />

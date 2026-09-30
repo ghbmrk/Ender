@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { INK, P, GLOW } from "../palette";
 import { rng, scatter } from "./paint";
+import { Atmosphere } from "./Atmosphere";
 
 /*
  * The Crossing: the hub town square at dusk, seen from a high three-quarter view. Authored in a
@@ -493,6 +494,7 @@ export default function Crossing({ className }: { className?: string }) {
         </g>
       </Layer>
 
+      <Atmosphere light={{ x: 540, y: 320, color: "#c9a8ff", strength: 0.8 }} rays={{ n: 5, spread: 0.8, length: 900, seed: 6 }} haze={{ y: 320, color: "#6a44a3", opacity: 0.18 }} pools={[[540, 1180, 460, 220]]} poolColor="#ffd98a" vignette={0.45} />
       <rect width="1080" height="1920" fill={url("vig")} />
       <rect width="1080" height="1920" fill={url("bottom")} />
       <g transform="scale(2)">

@@ -55,7 +55,7 @@ export default function Husk({ viewBox, className, pose = "idle" }: FigureProps)
 
       <ellipse cx={strike ? 96 : 104} cy="268" rx={strike ? 66 : 54} ry="8" fill={INK} opacity="0.32" filter="url(#wc-wash)" />
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round" transform="translate(104 268) scale(1.1) translate(-104 -268)">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round" transform="translate(104 268) scale(1.1) translate(-104 -268)">
         {/* ---------- far leg ---------- */}
         {strike ? (
           <path d="M132 164 C140 180 150 194 156 206 C160 214 158 220 156 226 C162 238 170 250 176 258 C178 262 176 268 170 268 L150 268 C150 264 156 262 162 260 C154 250 146 238 142 228 C138 220 138 212 140 206 C132 196 122 184 116 172 Z" fill={url("skinDark")} strokeWidth="2.2" />

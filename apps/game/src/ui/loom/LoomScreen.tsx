@@ -28,6 +28,7 @@ import { Head } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
 import { goTo } from "../../game/tutorial";
 import { Coach } from "../Coach";
+import { CardArt } from "../CardArt";
 
 /** Flat-topped hexes on the portrait stage. */
 const HEX = 104;
@@ -277,7 +278,7 @@ export function LoomScreen() {
 
       <div className={`tray ${drag?.moved && drag.over === "tray" ? "hover" : ""}`} style={{ top: TRAY_TOP, height: TRAY_H }}>
         <div className="tray-label">
-          Inscribed Forms <span className="dim">· drag onto the Loom · double-tap a node to lift it off · hold for details</span>
+          Forms <span className="dim">· drag onto the Loom · hold for details</span>
         </div>
         <div className="tray-row">
           {pool.length === 0 && <div className="tray-empty">No unplaced nodes. Attune a Form, then Inscribe it at the Crucible.</div>}
@@ -292,7 +293,7 @@ export function LoomScreen() {
         </div>
       </div>
 
-      {coach && !drag?.moved && <Coach text={coach.text} action={coach.action} key={coach.text} style={{ top: 985 }} />}
+      {coach && !drag?.moved && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: 985 }} />}
       <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} />
 
       {drag?.moved && (
@@ -467,11 +468,18 @@ function NodeDetail({ n, compiled, rank, onClose, onRemove }: { n: LoomNode; com
   const ev = market?.artifact?.evaluation;
   return (
     <div className="sheet-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()} data-testid="node-detail">
-      <div className="sheet">
-        <h2>{n.name}</h2>
-        <div className="sheet-sub">
-          {ROLE_GLYPH[n.role]} {ROLE_NAME[n.role]} · <span style={{ color: AFF_COLOR[a] }}>{a}</span> / <span style={{ color: AFF_COLOR[b] }}>{b}</span> · {n.evidence} · score {Math.round(n.technicalScore)}
+      <div className="sheet card-sheet" style={{ ["--aff" as string]: AFF_COLOR[a], ["--aff-deep" as string]: AFF_DEEP[a], ["--aff2" as string]: AFF_COLOR[b] }}>
+        <div className="cs-title">
+          <h2>{n.name}</h2>
+          <span className="cs-cost" title="Capacity">{CAPACITY_COST[n.role]}</span>
         </div>
+        <div className="cs-art">
+          <CardArt seed={n.formId} aff={a} aff2={b} />
+        </div>
+        <div className="sheet-sub">
+          {ROLE_GLYPH[n.role]} {ROLE_NAME[n.role]} · <span className="cs-aff" style={{ color: AFF_COLOR[a] }}>{a}</span> / <span className="cs-aff" style={{ color: AFF_COLOR[b] }}>{b}</span> · {n.evidence} · score {Math.round(n.technicalScore)}
+        </div>
+        <div className="cs-rules">
         <div className="sheet-kv">
           <span>Potency</span>
           <b>{pot.toFixed(2)}</b>
@@ -520,6 +528,7 @@ function NodeDetail({ n, compiled, rank, onClose, onRemove }: { n: LoomNode; com
           </p>
         )}
         {compiled.dormancy[n.id] && <p className="bad">Dormant: {compiled.dormancy[n.id]}.</p>}
+        </div>
         <div className="row end">
           {!DEMO && (
             <button onClick={() => setState({ panel: "crucible", crucibleFocus: n.formId, crucibleMode: "craft" })} disabled={!getState().loomEditable && !!getState().expedition}>

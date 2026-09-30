@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { INK, P, GLOW } from "../palette";
 import { rng, scatter, busy } from "./paint";
+import { Atmosphere } from "./Atmosphere";
 
 /*
  * Authored in a 540x960 space, scaled x2 into the 1080x1920 viewBox. Parallax layers are
@@ -215,9 +216,9 @@ export default function GlassFen({ className }: { className?: string }) {
           <stop offset="1" stopColor="#020a0c" stopOpacity="0.8" />
         </radialGradient>
         <linearGradient id={id("bands")} x1="0" y1="0" x2="0" y2="1920" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#02070a" stopOpacity="0.9" />
-          <stop offset="0.08" stopColor="#02070a" stopOpacity="0.55" />
-          <stop offset="0.14" stopColor="#02070a" stopOpacity="0" />
+          <stop offset="0" stopColor="#02070a" stopOpacity="0.72" />
+          <stop offset="0.06" stopColor="#02070a" stopOpacity="0.3" />
+          <stop offset="0.11" stopColor="#02070a" stopOpacity="0" />
           <stop offset="0.64" stopColor="#02070a" stopOpacity="0" />
           <stop offset="0.78" stopColor="#02070a" stopOpacity="0.45" />
           <stop offset="1" stopColor="#02070a" stopOpacity="0.8" />
@@ -382,6 +383,7 @@ export default function GlassFen({ className }: { className?: string }) {
         </g>
       </Layer>
 
+      <Atmosphere light={{ x: 800, y: 356, color: "#d6fff2" }} rays={{ n: 7, spread: 1.0, length: 1500, tilt: -0.5, seed: 3 }} haze={{ y: 600, color: "#7cc4b6", opacity: 0.22 }} poolColor="#bff5e6" />
       <rect width="1080" height="1920" fill={url("vig")} />
       <rect width="1080" height="1920" fill={url("bands")} />
       <g transform="scale(2)">

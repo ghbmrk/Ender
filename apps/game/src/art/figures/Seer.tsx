@@ -71,7 +71,7 @@ export default function Seer({ viewBox, className, pose = "idle" }: FigureProps)
         <path d="M118 20 L118 12 M146 30 L152 24 M156 58 L164 58 M146 86 L152 92 M90 30 L84 24" stroke={P.gold[2]} strokeWidth="2" />
       </g>
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
         {/* trailing back of the outer robe */}
         <path d="M130 100 C150 130 164 190 184 258 C172 266 158 266 146 262 Z" fill={P.verdigris[0]} strokeWidth="2.2" />
 

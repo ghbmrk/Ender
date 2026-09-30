@@ -143,7 +143,7 @@ export default function Swarm({ viewBox, className, pose = "idle" }: FigureProps
         </g>
       )}
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
         {moths.map(moth)}
       </g>
 

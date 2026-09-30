@@ -22,8 +22,9 @@ const REALM_NAME: Record<string, string> = { "ashen-vault": "The Ashen Vault", "
 export function MapScreen() {
   const ex = useStore((s) => s.expedition);
   const { h } = useStage();
-  const TOP = 330;
-  const BOTTOM = h - 330;
+  // Route between the header (status, top) and the thumb-zone dock (actions and party, bottom).
+  const TOP = 290;
+  const BOTTOM = h - 540;
   useStore((s) => s.panel);
   if (!ex) return null;
   const layers = ex.plan.map.layers;
@@ -50,20 +51,6 @@ export function MapScreen() {
         <div>
           <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
           <div className="map-sub">Choose your path. The Loom is locked until a Shrine.</div>
-        </div>
-        <div className="row">
-          <button onClick={() => setState({ screen: "loom" })} data-testid="map-loom">
-            Loom
-          </button>
-          <button onClick={() => setState({ panel: "inventory" })}>Forms</button>
-          <button
-            className="ghost"
-            onClick={() => {
-              if (confirm("Withdraw from this Expedition? You keep what you found.")) finishExpedition("abandon").catch((e) => toast(e.message, "loss"));
-            }}
-          >
-            Withdraw
-          </button>
         </div>
       </header>
       <svg className="map-svg" viewBox={`0 0 1080 ${h}`} style={{ height: h }}>
@@ -102,21 +89,38 @@ export function MapScreen() {
           <Head figure="warden" size={70} />
         </div>
       )}
-      <div className="map-party">
-        {PARTY.map((r: RootId) => {
-          const hp = ex.partyHp[r] ?? ROOTS[r].hp;
-          return (
-            <div key={r} className="mp-hero">
-              <Head figure={ROOTS[r].hero} size={72} />
-              <div className="gbar hp hero">
-                <div style={{ width: `${(hp / ROOTS[r].hp) * 100}%` }} />
+      {/* Thumb-zone dock: the actions, then the party's health. */}
+      <div className="map-dock">
+        <div className="map-actions">
+          <button onClick={() => setState({ screen: "loom" })} data-testid="map-loom">
+            Loom
+          </button>
+          <button onClick={() => setState({ panel: "inventory" })}>Forms</button>
+          <button
+            className="ghost"
+            onClick={() => {
+              if (confirm("Withdraw from this Expedition? You keep what you found.")) finishExpedition("abandon").catch((e) => toast(e.message, "loss"));
+            }}
+          >
+            Withdraw
+          </button>
+        </div>
+        <div className="map-party">
+          {PARTY.map((r: RootId) => {
+            const hp = ex.partyHp[r] ?? ROOTS[r].hp;
+            return (
+              <div key={r} className="mp-hero">
+                <Head figure={ROOTS[r].hero} size={72} />
+                <div className="gbar hp hero">
+                  <div style={{ width: `${(hp / ROOTS[r].hp) * 100}%` }} />
+                </div>
+                <span>
+                  {hp}/{ROOTS[r].hp}
+                </span>
               </div>
-              <span>
-                {hp}/{ROOTS[r].hp}
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

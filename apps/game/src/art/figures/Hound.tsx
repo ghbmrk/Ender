@@ -75,7 +75,7 @@ export default function Hound({ viewBox, className, pose = "idle" }: FigureProps
 
       <ellipse cx={strike ? 132 : 124} cy="188" rx={strike ? 62 : 84} ry="7" fill={INK} opacity={strike ? 0.22 : 0.32} filter="url(#wc-wash)" />
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round" transform={strike ? "translate(-4 -24) rotate(12 130 120)" : undefined}>
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round" transform={strike ? "translate(-4 -24) rotate(12 130 120)" : undefined}>
         {/* ---------- far legs (behind the body) ---------- */}
         {strike ? (
           <g fill={url("coatDark")} strokeWidth="2">

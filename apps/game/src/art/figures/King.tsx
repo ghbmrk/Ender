@@ -85,7 +85,7 @@ export default function King({ viewBox, className, pose = "idle" }: FigureProps)
         </g>
       )}
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
         {/* ---------- standing collar fanning behind the skull ---------- */}
         <path d="M118 138 C104 110 100 84 110 60 L124 76 L130 46 L146 70 L166 44 L186 70 L202 46 L208 76 L222 60 C232 84 228 110 214 138 Z" fill={url("blood")} strokeWidth="2.6" />
         <path d="M126 132 C116 108 114 88 120 72 M210 132 C218 108 220 88 214 72" fill="none" stroke={P.gold[3]} strokeWidth="2.2" />

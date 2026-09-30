@@ -84,7 +84,7 @@ export default function Binder({ viewBox, className, pose = "idle" }: FigureProp
       <ellipse cx="98" cy="267" rx="64" ry="7.5" fill={INK} opacity="0.3" filter="url(#wc-wash)" />
       {strike && <ellipse cx="170" cy="266" rx="26" ry="5" fill={GLOW.thread} opacity="0.25" filter="url(#glow-soft)" />}
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
         <g transform={lean}>
           {/* ── cape, trailing behind ── */}
           {strike ? (

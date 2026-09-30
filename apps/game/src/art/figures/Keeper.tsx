@@ -76,7 +76,7 @@ export default function Keeper({ viewBox, className, pose = "idle" }: FigureProp
       <ellipse cx="116" cy="287" rx="92" ry="10" fill={INK} opacity="0.32" filter="url(#wc-wash)" />
       {strike && <ellipse cx="50" cy="280" rx="46" ry="18" fill={url("impact")} />}
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
         {/* ---------- back leg ---------- */}
         <path d="M130 192 L162 190 C164 206 164 222 162 236 L134 240 C132 224 130 208 130 192 Z" fill={url("dark")} strokeWidth="2.4" />
         <path d="M137 248 L163 245 C166 256 167 268 168 278 L139 280 C139 268 138 258 137 248 Z" fill={url("dark")} strokeWidth="2.4" />

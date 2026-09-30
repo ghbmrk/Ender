@@ -4,6 +4,7 @@ import { debug } from "./game/debug";
 import { getState, setState } from "./state/store";
 import { api } from "./api";
 import "./styles.css";
+import "./frame.css";
 
 // Developer / test surface. Gameplay never depends on it.
 (window as any).__ender = { debug, getState, setState, api };

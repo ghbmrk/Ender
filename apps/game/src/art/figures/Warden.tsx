@@ -109,7 +109,7 @@ export default function Warden({ viewBox, className, pose = "idle" }: FigureProp
       {/* ground shadow */}
       <ellipse cx="102" cy="267" rx="66" ry="7.5" fill={INK} opacity="0.32" filter="url(#wc-wash)" />
 
-      <g filter="url(#wc)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <g filter="url(#fig)" stroke={INK} strokeLinejoin="round" strokeLinecap="round">
         <g transform={lean}>
           <g transform="translate(108 99) scale(0.76) translate(-108 -99)">
 {/* ── plume, streaming back from the crest ── */}
