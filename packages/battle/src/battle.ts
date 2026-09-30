@@ -1,147 +1,145 @@
-import { ENEMIES, type EliteModifier } from "@ender/content";
-import { clamp, rng, type Rng } from "@ender/shared";
-import {
-  FOES,
-  HEROES,
-  KING_ATK,
-  KING_HP_SCALE,
-  PARTY_ORDER,
-  RULES,
-  skillById,
-  skillsFor,
-  type Defense,
-  type FoeAttack,
-  type FoeKind,
-  type Grade,
-  type HeroId,
-  type Skill,
-} from "./defs";
+import { rng, type Rng } from "@ender/shared";
+import { RULES, ROOTS, TEMPLATES, isDodge, isParry, type Affinity, type Defense, type Grade, type RootId, type StatusId } from "./defs";
+import { FOES, type FoeAttack, type FoeKind } from "./foes";
+import type { CompiledAction, CompiledLoom, CompiledReaction } from "./loom";
 
-/** What the Binder brings in from the server: combat stats derived from equipped Forms and passives. */
-export type PartyStats = {
-  maxHealth: number;
-  attackDamage: number;
-  critChance: number;
-  critMultiplier: number;
-  cooldownRate: number;
-  areaMultiplier: number;
-  armor: number;
-  wardPower: number;
-  wardMultiplier: number;
-};
-
-export type FoeSpec = { kind: FoeKind; elite?: EliteModifier };
-
+export type HeroSetup = { root: RootId; loom: CompiledLoom; hp?: number };
 export type BattleSetup = {
   seed: string;
-  stats: PartyStats;
+  party: HeroSetup[];
+  /** Foes arrive wave by wave (usually one wave of 1–5). */
+  waves: FoeKind[][];
   difficulty: number;
-  /** Foes arrive wave by wave; the next wave enters when the field is clear. */
-  waves: FoeSpec[][];
-  /** Party health carried between battles (missing = full). */
-  partyHp?: Partial<Record<HeroId, number>>;
-  /** Boss fights: the King's health from the run plan and its Ward targets per phase. */
-  boss?: { hp: number; wardTargets: readonly number[] };
 };
+
+type Dot = { rounds: number; dmg: number };
+export type Statuses = { marked: number; slow: number; fracture: number; burn: Dot | null; poison: Dot | null };
 
 export type Unit = {
   id: string;
   side: "party" | "foe";
-  kind: HeroId | FoeKind;
+  kind: RootId | FoeKind;
   name: string;
-  elite?: EliteModifier;
+  figure: string;
   maxHp: number;
   hp: number;
-  atk: number;
-  armor: number;
   speed: number;
-  crit: number;
-  critMult: number;
+  /** Heroes: Basic damage. Foes: base hit damage. */
+  power: number;
+  breakTaken: number;
+  tier: "hero" | "normal" | "elite" | "boss";
   ap: number;
-  breakMax: number;
   breakVal: number;
-  /** Staggered: skips its next turn and takes more damage until then. */
-  broken: boolean;
-  guard: number;
-  taunt: number;
-  mark: number;
-  /** Charge-time: the unit acts when the clock reaches this. */
-  next: number;
+  /** Staggered: skips its next turn; stays Broken until the end of that round (a boss: until that turn ends). */
+  broken: null | { skipPending: boolean };
+  status: Statuses;
+  barrier: number;
+  /** Initiative delay reduction for the next round (fraction). */
+  initBonus: number;
+  initFromKeystone: number;
   alive: boolean;
-  ward?: { value: number; up: boolean; downTurns: number };
+  phase: number;
+  // hero state
+  loom?: CompiledLoom;
+  pattern: number;
+  patternFree: boolean;
+  knotsDiscount: boolean;
+  linked: boolean;
+  farSight: boolean;
+  bondRiderTurn: number;
+  livingPattern: string[];
+  hiddenEdgeMarks: boolean;
 };
 
 export type BattleEvent =
-  | { type: "damage"; source: string; target: string; amount: number; crit: boolean; grade?: Grade; beat?: number }
+  | { type: "damage"; source: string; target: string; amount: number; crit: boolean; grade?: Grade; weakPoint?: boolean; absorbed?: number; dot?: StatusId }
   | { type: "heal"; source: string; target: string; amount: number }
-  | { type: "ap"; unit: string; delta: number; ap: number }
+  | { type: "barrier"; target: string; amount: number }
+  | { type: "ap"; unit: string; delta: number; ap: number; reason: string }
   | { type: "break"; target: string }
   | { type: "recover"; target: string }
-  | { type: "ward-break"; target: string }
-  | { type: "ward-restored"; target: string }
   | { type: "ko"; target: string }
   | { type: "defend"; target: string; result: Defense; hit: number }
+  | { type: "full-parry"; target: string }
   | { type: "counter"; source: string; target: string }
-  | { type: "status"; target: string; status: "guard" | "taunt" | "mark"; turns: number }
-  | { type: "phase"; target: string; phase: number }
+  | { type: "reaction"; unit: string; name: string }
+  | { type: "status"; target: string; status: StatusId; value: number }
+  | { type: "advance"; unit: string }
   | { type: "summon"; units: string[] }
   | { type: "wave"; index: number; units: string[] }
+  | { type: "round"; round: number; order: string[] }
   | { type: "skip"; unit: string }
   | { type: "outcome"; outcome: "victory" | "defeat" };
 
 export type FoePlan = { actor: string; attack: FoeAttack; targets: string[]; healTarget?: string };
 
-/** Foes the field holds at once (the King's hall holds one more). */
-export const FIELD_CAP = 3;
+export type Command = {
+  actor: string;
+  /** "basic" or a compiled Action's nodeId. */
+  command: string;
+  target: string;
+  /** Link's chosen ally. */
+  ally?: string;
+  /** One grade per timed beat. */
+  grades: Grade[];
+  /** A weak point was tapped in time. */
+  weakPoint?: boolean;
+};
+
+/** Measured per battle, per side (used by the build-difference design test, §97). */
+export type BattleStats = { breakDealt: number; apTransferred: number; apRefunded: number; damageDealt: number; parries: number; perfects: number; breaks: number };
+
+export const FIELD_CAP = 5;
+const CONDITIONS: StatusId[] = ["marked", "slow", "fracture", "burn", "poison"];
 
 export class Battle {
   units: Unit[] = [];
-  clock = 0;
+  round = 0;
+  order: string[] = [];
+  cursor = -1;
   current: Unit | null = null;
   waveIndex = 0;
-  phase = 1;
-  wardBreaks = 0;
   kills: Record<string, number> = {};
   outcome: "ongoing" | "victory" | "defeat" = "ongoing";
-  /** Reactions that must play before the next turn (a volatile elite's death burst). */
   reactions: FoePlan[] = [];
+  stats: BattleStats = { breakDealt: 0, apTransferred: 0, apRefunded: 0, damageDealt: 0, parries: 0, perfects: 0, breaks: 0 };
+  breaksByUnit: Record<string, number> = {};
   readonly rng: Rng;
   private seq = 0;
+  private turnNo = 0;
+  private oneThreadAction = -1;
 
   constructor(readonly setup: BattleSetup) {
     this.rng = rng(`battle|${setup.seed}`);
-    const s = setup.stats;
-    const apStart = RULES.apStart + Math.max(0, Math.round((1 - s.cooldownRate) * 5));
-    for (const id of PARTY_ORDER) {
-      const d = HEROES[id];
-      const maxHp = Math.round(s.maxHealth * d.hp);
-      const hp = setup.partyHp?.[id];
-      this.units.push({
-        id,
-        side: "party",
-        kind: id,
-        name: d.name,
-        maxHp,
-        hp: hp === undefined ? maxHp : clamp(Math.round(hp), 0, maxHp),
-        atk: s.attackDamage * d.atk,
-        armor: clamp(s.armor / 100, 0, 0.5) + d.armor,
-        speed: d.speed,
-        crit: clamp(s.critChance + d.crit, 0, 0.9),
-        critMult: s.critMultiplier,
-        ap: apStart,
-        breakMax: 0,
-        breakVal: 0,
-        broken: false,
-        guard: 0,
-        taunt: 0,
-        mark: 0,
-        // The party gets the jump on the first wave.
-        next: (1000 / d.speed) * (0.25 + 0.5 * this.rng.next()),
-        alive: true,
-      });
+    for (const h of setup.party) {
+      const r = ROOTS[h.root];
+      const hp = h.hp === undefined ? r.hp : Math.max(0, Math.min(r.hp, Math.round(h.hp)));
+      this.units.push(this.blank({ id: h.root, side: "party", kind: h.root, name: r.name.replace(" Root", ""), figure: r.hero, maxHp: r.hp, hp, speed: r.speed, power: r.basic, breakTaken: 0, tier: "hero", ap: RULES.apStart, loom: h.loom, alive: hp > 0 }));
     }
-    for (const u of this.party()) if (u.hp <= 0) u.alive = false;
     this.spawnWave(0);
+  }
+
+  private blank(u: Partial<Unit> & Pick<Unit, "id" | "side" | "kind" | "name" | "figure" | "maxHp" | "hp" | "speed" | "power" | "breakTaken" | "tier">): Unit {
+    return {
+      ap: 0,
+      breakVal: 0,
+      broken: null,
+      status: { marked: 0, slow: 0, fracture: 0, burn: null, poison: null },
+      barrier: 0,
+      initBonus: 0,
+      initFromKeystone: 0,
+      alive: true,
+      phase: 0,
+      pattern: 0,
+      patternFree: false,
+      knotsDiscount: false,
+      linked: false,
+      farSight: false,
+      bondRiderTurn: -1,
+      livingPattern: [],
+      hiddenEdgeMarks: false,
+      ...u,
+    };
   }
 
   // ───────────────────────── queries ─────────────────────────
@@ -160,327 +158,544 @@ export class Battle {
     if (!u) throw new Error(`no unit ${id}`);
     return u;
   }
-  get king() {
-    return this.units.find((u) => u.kind === "king");
+  hasCondition(u: Unit) {
+    return CONDITIONS.some((c) => this.statusOn(u, c));
   }
-  get wavesLeft() {
-    return this.setup.waves.length - 1 - this.waveIndex;
+  statusOn(u: Unit, s: StatusId) {
+    const v = u.status[s];
+    return typeof v === "number" ? v > 0 : !!v;
   }
-  /** Effective Form power against the current Ward target: above 1 the Ward breaks faster and the King presses less. */
-  get wardRatio() {
-    const b = this.setup.boss;
-    if (!b) return 1;
-    const target = b.wardTargets[Math.min(this.phase, b.wardTargets.length) - 1] ?? 1;
-    return clamp((this.setup.stats.wardPower * this.setup.stats.wardMultiplier) / target, 0.25, 2);
+  private conditionCount(u: Unit) {
+    return CONDITIONS.filter((c) => this.statusOn(u, c)).length;
   }
-  get wardTarget() {
-    const b = this.setup.boss;
-    return b ? (b.wardTargets[Math.min(this.phase, b.wardTargets.length) - 1] ?? 0) : 0;
+  effectiveSpeed(u: Unit) {
+    return u.speed * (u.status.slow > 0 ? 1 - RULES.slow : 1) * (1 + Math.min(RULES.initiativeCap, u.initBonus));
+  }
+  actionsOf(heroId: string): CompiledAction[] {
+    return this.unit(heroId).loom?.actions ?? [];
+  }
+  private reactionOf(u: Unit, trigger: CompiledReaction["trigger"]) {
+    return u.loom?.reactions.find((r) => r.executes && r.trigger === trigger);
+  }
+  private keystone(u: Unit): Affinity | undefined {
+    return u.loom?.keystone?.affinity;
   }
 
-  private interval(u: Unit) {
-    let speed = u.speed;
-    if (u.kind === "king" && this.wardRatio < 1) speed *= 1 + 0.6 * (1 - this.wardRatio);
-    return 1000 / speed;
+  /** The AP a command costs right now, after Pattern, Knots and Living Pattern discounts. */
+  costOf(heroId: string, command: string): number {
+    if (command === "basic") return 0;
+    const u = this.unit(heroId);
+    const a = this.actionsOf(heroId).find((x) => x.nodeId === command);
+    if (!a) throw new Error(`${heroId} has no Action ${command}`);
+    if (a.template === "pattern" && u.patternFree) return 0;
+    if (this.keystone(u) === "knots" && u.livingPattern.length >= 2 && !u.livingPattern.includes(a.nodeId)) return 0;
+    return Math.max(0, a.apCost - (u.knotsDiscount ? 2 : 0));
   }
 
-  /** The next n turns, as unit ids, without changing anything. */
-  timeline(n = 8): string[] {
-    const sim = this.units.filter((u) => u.alive).map((u) => ({ id: u.id, next: u.next, step: this.interval(u) }));
-    const out: string[] = [];
-    if (this.current && this.current.alive) out.push(this.current.id);
-    while (out.length < n && sim.length) {
-      sim.sort((a, b) => a.next - b.next || a.id.localeCompare(b.id));
-      const u = sim[0]!;
-      out.push(u.id);
-      u.next += u.step;
-    }
-    return out;
+  /** Remaining turns this round, then the next round as it stands now (§62: always visible). */
+  timeline(): { round: number; ids: string[] }[] {
+    const rest = this.order.slice(this.cursor + 1).filter((id) => this.unit(id).alive);
+    const now = this.current?.alive ? [this.current.id, ...rest] : rest;
+    return [
+      { round: this.round, ids: now },
+      { round: this.round + 1, ids: this.roundOrder() },
+    ];
+  }
+
+  private roundOrder() {
+    return this.units
+      .filter((u) => u.alive)
+      .sort((a, b) => this.effectiveSpeed(b) - this.effectiveSpeed(a) || (a.side === b.side ? 0 : a.side === "party" ? -1 : 1) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .map((u) => u.id);
   }
 
   // ───────────────────────── setup ─────────────────────────
 
-  private makeFoe(kind: FoeKind, elite?: EliteModifier): Unit {
-    const def = FOES[kind];
-    const d = this.setup.difficulty;
-    let maxHp: number;
-    let atk: number;
-    if (kind === "king") {
-      maxHp = Math.round((this.setup.boss?.hp ?? 1400) * KING_HP_SCALE);
-      atk = KING_ATK * (1 + 0.12 * (d - 1));
-    } else {
-      const base = ENEMIES[kind];
-      maxHp = Math.round(base.hp * def.hpScale * (1 + 0.18 * (d - 1)) * (elite === "hardened" ? 1.8 : elite === "volatile" ? 1.6 : 1));
-      atk = base.damage * def.atkScale * (1 + 0.12 * (d - 1)) * (elite ? 1.3 : 1);
-    }
-    const id = `${kind}-${++this.seq}`;
-    return {
-      id,
+  private makeFoe(kind: FoeKind): Unit {
+    const d = FOES[kind];
+    const diff = this.setup.difficulty;
+    const maxHp = Math.round(d.hp * (1 + 0.25 * (diff - 1)));
+    return this.blank({
+      id: `${kind}-${++this.seq}`,
       side: "foe",
       kind,
-      name: elite ? `${elite === "hardened" ? "Hardened" : "Volatile"} ${def.name}` : def.name,
-      elite,
+      name: d.name,
+      figure: d.figure,
       maxHp,
       hp: maxHp,
-      atk,
-      armor: def.armor + (elite === "hardened" ? 0.2 : 0),
-      speed: def.speed * (elite ? 1.1 : 1),
-      crit: 0,
-      critMult: 1,
-      ap: 0,
-      breakMax: def.breakMax * (elite === "hardened" ? 1.5 : 1),
-      breakVal: 0,
-      broken: false,
-      guard: 0,
-      taunt: 0,
-      mark: 0,
-      next: this.clock + (1000 / def.speed) * (0.6 + 0.6 * this.rng.next()),
-      alive: true,
-      ward: kind === "king" ? { value: 100, up: true, downTurns: 0 } : undefined,
-    };
+      speed: d.speed,
+      power: d.atk * (1 + 0.12 * (diff - 1)),
+      breakTaken: d.breakTaken,
+      tier: d.tier,
+    });
   }
 
   private spawnWave(i: number) {
     this.waveIndex = i;
-    const spawned = (this.setup.waves[i] ?? []).slice(0, FIELD_CAP + (this.setup.boss ? 1 : 0)).map((f) => this.makeFoe(f.kind, f.elite));
+    const spawned = (this.setup.waves[i] ?? []).slice(0, FIELD_CAP).map((k) => this.makeFoe(k));
     this.units.push(...spawned);
     return spawned.map((u) => u.id);
   }
 
-  // ───────────────────────── turns ─────────────────────────
+  // ───────────────────────── rounds and turns ─────────────────────────
 
-  /**
-   * Advance the clock to the next actor. A broken unit spends this turn recovering; the caller should show the skip
-   * and call nextTurn() again.
-   */
+  private startRound(events: BattleEvent[]) {
+    this.round++;
+    for (const u of this.units) {
+      if (u.alive && u.broken && !u.broken.skipPending) {
+        u.broken = null;
+        u.breakVal = 0;
+        events.push({ type: "recover", target: u.id });
+      }
+    }
+    this.order = this.roundOrder();
+    // Initiative changes apply to the round they were earned for, then clear.
+    for (const u of this.units) {
+      u.initBonus = 0;
+      u.initFromKeystone = 0;
+    }
+    this.cursor = -1;
+    events.push({ type: "round", round: this.round, order: [...this.order] });
+  }
+
+  /** Advance to the next actor. Turn-start effects (AP, burn, poison, stagger) are applied here. */
   nextTurn(): { actor: Unit; skipped: boolean; events: BattleEvent[] } {
     if (this.outcome !== "ongoing") throw new Error("battle is over");
-    const alive = this.units.filter((u) => u.alive);
-    alive.sort((a, b) => a.next - b.next || a.id.localeCompare(b.id));
-    const u = alive[0]!;
-    this.clock = u.next;
-    u.next += this.interval(u);
-    this.current = u;
     const events: BattleEvent[] = [];
-    // Statuses tick at the start of their owner's turn.
-    for (const k of ["guard", "taunt", "mark"] as const) if (u[k] > 0) u[k]--;
-    if (u.broken) {
-      if (u.ward && !u.ward.up) {
-        u.ward.downTurns--;
+    for (let guard = 0; guard < 200; guard++) {
+      this.cursor++;
+      if (this.cursor >= this.order.length) { this.startRound(events); this.cursor = 0; }
+      const u = this.unit(this.order[this.cursor]!);
+      if (!u.alive) continue;
+      this.current = u;
+      this.turnNo++;
+      // Damage over time at turn start (§72).
+      for (const s of ["burn", "poison"] as const) {
+        const dot = u.status[s];
+        if (!dot) continue;
+        this.hurt(u, u, dot.dmg, events, { dot: s });
+        dot.rounds--;
+        if (dot.rounds <= 0) u.status[s] = null;
+      }
+      if (u.status.slow > 0) u.status.slow--;
+      if (u.status.fracture > 0) u.status.fracture--;
+      if (!u.alive) {
+        this.settleInto(events);
+        if (this.outcome !== "ongoing") return { actor: u, skipped: true, events };
+        continue;
+      }
+      if (u.broken?.skipPending) {
+        u.broken.skipPending = false;
         events.push({ type: "skip", unit: u.id });
-        if (u.ward.downTurns <= 0) {
-          u.ward.up = true;
-          u.ward.value = RULES.wardRestore;
-          u.broken = false;
-          events.push({ type: "ward-restored", target: u.id });
+        if (u.tier === "boss") {
+          u.broken = null;
+          u.breakVal = 0;
+          events.push({ type: "recover", target: u.id });
         }
         return { actor: u, skipped: true, events };
       }
-      u.broken = false;
-      u.breakVal = 0;
-      events.push({ type: "skip", unit: u.id }, { type: "recover", target: u.id });
-      return { actor: u, skipped: true, events };
+      if (u.side === "party") this.gainAp(u, RULES.apPerTurn, events, "turn");
+      return { actor: u, skipped: false, events };
     }
-    return { actor: u, skipped: false, events };
+    throw new Error("no one can act");
   }
 
-  // ───────────────────────── heroes ─────────────────────────
+  // ───────────────────────── shared mechanics ─────────────────────────
 
-  skillsFor(heroId: string) {
-    const u = this.unit(heroId);
-    return skillsFor(u.kind as HeroId).map((s) => ({ skill: s, usable: u.ap >= s.ap }));
-  }
-
-  targetsFor(skill: Skill, actorId: string): string[] {
-    if (skill.target === "foe" || skill.target === "all-foes") return this.living("foe").map((u) => u.id);
-    if (skill.target === "ally") return this.living("party").map((u) => u.id);
-    return [actorId];
-  }
-
-  private damage(src: Unit, dst: Unit, raw: number, events: BattleEvent[], extra: { grade?: Grade; beat?: number; crit?: boolean } = {}) {
-    let amt = raw * (1 - dst.armor);
-    if (dst.side === "foe") {
-      if (dst.mark > 0) amt *= RULES.markTakenMult;
-      if (dst.ward) {
-        if (dst.ward.up) {
-          dst.ward.value -= amt * RULES.wardLossPerDamage * this.wardRatio;
-          amt *= RULES.wardUpMult;
-        } else amt *= RULES.brokenTakenMult;
-      } else if (dst.broken) amt *= RULES.brokenTakenMult;
-    } else if (dst.guard > 0) amt *= RULES.guardTakenMult;
-    const amount = Math.max(1, Math.round(amt));
-    dst.hp = Math.max(0, dst.hp - amount);
-    events.push({ type: "damage", source: src.id, target: dst.id, amount, crit: !!extra.crit, grade: extra.grade, beat: extra.beat });
-    this.checkWard(dst, events);
-    if (dst.hp <= 0 && dst.alive) this.kill(dst, events);
-  }
-
-  private addBreak(dst: Unit, amount: number, events: BattleEvent[]) {
-    if (!dst.alive || dst.side !== "foe") return;
-    if (dst.ward) {
-      if (dst.ward.up) dst.ward.value -= amount * RULES.wardLossPerBreak * this.wardRatio;
-      this.checkWard(dst, events);
-      return;
+  private gainAp(u: Unit, amount: number, events: BattleEvent[], reason: string, from?: Unit) {
+    if (amount <= 0 || !u.alive) return 0;
+    const before = u.ap;
+    u.ap = Math.min(RULES.apMax, u.ap + amount);
+    const got = u.ap - before;
+    if (got <= 0) return 0;
+    events.push({ type: "ap", unit: u.id, delta: got, ap: u.ap, reason });
+    if (from && from !== u) this.stats.apTransferred += got;
+    if (reason === "refund") this.stats.apRefunded += got;
+    // One Thread (§45): when this character gains AP, an ally at ≤2 AP gains 1, once per party action.
+    if (u.side === "party" && this.keystone(u) === "bond" && this.oneThreadAction !== this.turnNo) {
+      const ally = this.living("party").filter((p) => p !== u && p.ap <= 2).sort((a, b) => a.ap - b.ap || (a.id < b.id ? -1 : 1))[0];
+      if (ally) {
+        this.oneThreadAction = this.turnNo;
+        this.gainAp(ally, 1, events, "one thread", u);
+      }
     }
-    if (dst.broken) return;
-    dst.breakVal = Math.min(dst.breakMax, dst.breakVal + amount);
-    if (dst.breakVal >= dst.breakMax) {
-      dst.broken = true;
-      events.push({ type: "break", target: dst.id });
-    }
+    return got;
   }
 
-  private checkWard(u: Unit, events: BattleEvent[]) {
-    if (!u.ward || !u.ward.up || u.ward.value > 0 || !u.alive) return;
-    u.ward.value = 0;
-    u.ward.up = false;
-    u.ward.downTurns = 1 + (this.wardRatio >= 1.3 ? 1 : 0);
-    u.broken = true;
-    this.wardBreaks++;
-    events.push({ type: "ward-break", target: u.id });
+  private lowestAp(except?: Unit) {
+    return this.living("party").filter((p) => p !== except).sort((a, b) => a.ap - b.ap || (a.id < b.id ? -1 : 1))[0];
+  }
+  private lowestHp() {
+    return this.living("party").sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || (a.id < b.id ? -1 : 1))[0];
+  }
+  private addInit(u: Unit, frac: number, keystone = false) {
+    if (keystone) {
+      const room = Math.max(0, 0.24 - u.initFromKeystone);
+      frac = Math.min(frac, room);
+      u.initFromKeystone += frac;
+    }
+    u.initBonus += frac;
+  }
+
+  private mark(t: Unit, hits: number, events: BattleEvent[]) {
+    t.status.marked = Math.max(t.status.marked, hits);
+    events.push({ type: "status", target: t.id, status: "marked", value: t.status.marked });
+  }
+
+  private applyStatus(src: Unit, t: Unit, s: StatusId, events: BattleEvent[]) {
+    const potency = src.power * 3;
+    if (s === "marked") return this.mark(t, 1, events);
+    if (s === "slow" || s === "fracture") t.status[s] = RULES.statusRounds;
+    else if (s === "burn") t.status.burn = { rounds: RULES.dotRounds, dmg: Math.max(1, Math.round(potency * RULES.burnPct)) };
+    else t.status.poison = { rounds: RULES.dotRounds, dmg: Math.max(1, Math.round(Math.min(t.maxHp * RULES.poisonMaxHpPct, potency * RULES.burnPct))) };
+    events.push({ type: "status", target: t.id, status: s, value: s === "burn" || s === "poison" ? RULES.dotRounds : RULES.statusRounds });
+  }
+
+  /** Raw damage after Barrier; handles KO. */
+  private hurt(src: Unit, t: Unit, raw: number, events: BattleEvent[], extra: { crit?: boolean; grade?: Grade; weakPoint?: boolean; dot?: StatusId } = {}) {
+    let amount = Math.max(1, Math.round(raw));
+    let absorbed = 0;
+    if (t.barrier > 0) {
+      absorbed = Math.min(t.barrier, amount);
+      t.barrier -= absorbed;
+      amount -= absorbed;
+    }
+    t.hp = Math.max(0, t.hp - amount);
+    if (src.side === "party" && t.side === "foe") this.stats.damageDealt += amount;
+    events.push({ type: "damage", source: src.id, target: t.id, amount, crit: !!extra.crit, grade: extra.grade, weakPoint: extra.weakPoint, absorbed: absorbed || undefined, dot: extra.dot });
+    if (t.hp <= 0 && t.alive) this.kill(t, events);
+  }
+
+  /** A damaging hit on a foe: Marked, Broken and crits apply. */
+  private strike(src: Unit, t: Unit, raw: number, events: BattleEvent[], opts: { grade?: Grade; weakPoint?: boolean; critBonus?: number } = {}) {
+    if (!t.alive) return;
+    let dmg = raw;
+    if (t.status.marked > 0) {
+      dmg *= 1 + (this.keystone(src) === "veil" ? RULES.hiddenEdgeMarkBonus : RULES.markBonus);
+      t.status.marked--;
+    }
+    if (t.broken) dmg *= RULES.brokenTakenMult;
+    const crit = this.rng.chance(RULES.critChance + (opts.critBonus ?? 0));
+    if (crit) {
+      if (this.keystone(src) === "veil") this.mark(t, 2, events);
+      else dmg *= RULES.critMult;
+    }
+    this.hurt(src, t, dmg, events, { crit, grade: opts.grade, weakPoint: opts.weakPoint });
+  }
+
+  private addBreak(src: Unit, t: Unit, amount: number, events: BattleEvent[]) {
+    if (!t.alive || t.side !== "foe" || amount <= 0) return;
+    const add = amount * t.breakTaken * (t.status.fracture > 0 ? RULES.fractureBreakMult : 1);
+    if (src.side === "party") {
+      this.stats.breakDealt += add;
+      this.breaksByUnit[src.id] = (this.breaksByUnit[src.id] ?? 0) + add;
+    }
+    if (t.broken) return;
+    t.breakVal = Math.min(100, t.breakVal + add);
+    if (t.breakVal >= 100) {
+      t.broken = { skipPending: true };
+      this.stats.breaks++;
+      events.push({ type: "break", target: t.id });
+    }
   }
 
   private kill(u: Unit, events: BattleEvent[]) {
     u.alive = false;
     u.hp = 0;
-    u.broken = false;
+    u.broken = null;
     events.push({ type: "ko", target: u.id });
     if (u.side === "foe") {
       this.kills[u.kind] = (this.kills[u.kind] ?? 0) + 1;
-      if (u.elite === "volatile" && this.living("party").length) {
-        this.reactions.push({ actor: u.id, attack: RULES.volatileBurst, targets: this.living("party").map((p) => p.id) });
-      }
+      const burst = FOES[u.kind as FoeKind].deathBurst;
+      if (burst && this.living("party").length) this.reactions.push({ actor: u.id, attack: burst, targets: this.living("party").map((p) => p.id) });
     }
   }
 
-  private gainAp(u: Unit, delta: number, events: BattleEvent[]) {
-    const before = u.ap;
-    u.ap = clamp(u.ap + delta, 0, RULES.apMax);
-    if (u.ap !== before) events.push({ type: "ap", unit: u.id, delta: u.ap - before, ap: u.ap });
-  }
+  // ───────────────────────── hero commands ─────────────────────────
 
-  /** Apply a hero's skill with the grades of its timed presses (one per beat). */
-  resolveHero(actorId: string, skillId: string, targetId: string, grades: Grade[]): BattleEvent[] {
-    const actor = this.unit(actorId);
-    const skill = skillById(skillId);
-    if (skill.hero !== actor.kind) throw new Error(`${actor.kind} cannot use ${skill.id}`);
-    if (actor.ap < skill.ap) throw new Error(`not enough AP for ${skill.id}`);
+  /** Resolve a hero's command with the grades of its timed presses. */
+  resolveHero(cmd: Command): BattleEvent[] {
+    const u = this.unit(cmd.actor);
+    if (u.side !== "party" || !u.alive) throw new Error(`${cmd.actor} cannot act`);
     const events: BattleEvent[] = [];
-    if (skill.ap) this.gainAp(actor, -skill.ap, events);
-    const g = skill.beats.map((_, i) => grades[i] ?? "miss");
+    const target = this.unit(cmd.target);
+    if (target.side !== "foe" || !target.alive) throw new Error("target a living foe");
+    const key = this.keystone(u);
 
-    if (skill.target === "foe" || skill.target === "all-foes") {
-      const area = skill.target === "all-foes" ? this.setup.stats.areaMultiplier : 1;
-      g.forEach((grade, beat) => {
-        const targets = skill.target === "all-foes" ? this.living("foe") : [this.unit(targetId)].filter((t) => t.alive);
-        for (const t of targets) {
-          const crit = this.rng.chance(actor.crit);
-          const raw = actor.atk * skill.power * area * RULES.gradeMult[grade] * (crit ? actor.critMult : 1);
-          this.damage(actor, t, raw, events, { grade, beat, crit });
-          this.addBreak(t, skill.breakPower * RULES.gradeMult[grade], events);
-          if (skill.mark && t.alive) {
-            t.mark = skill.mark + 1;
-            events.push({ type: "status", target: t.id, status: "mark", turns: skill.mark });
-          }
-        }
-      });
-    } else if (skill.target === "ally") {
-      const t = this.unit(targetId);
-      if (!t.alive) throw new Error("cannot heal a fallen ally");
-      for (const grade of g) {
-        const amount = Math.round(Math.min(t.maxHp - t.hp, actor.atk * (skill.heal ?? 0) * RULES.gradeMult[grade]));
-        t.hp += amount;
-        events.push({ type: "heal", source: actor.id, target: t.id, amount });
-      }
-    } else {
-      const best = g.includes("perfect");
-      if (skill.guard) {
-        actor.guard = skill.guard + 1 + (best ? 1 : 0);
-        events.push({ type: "status", target: actor.id, status: "guard", turns: actor.guard - 1 });
-      }
-      if (skill.taunt) {
-        actor.taunt = skill.taunt + 1;
-        events.push({ type: "status", target: actor.id, status: "taunt", turns: skill.taunt });
+    if (cmd.command === "basic") {
+      const g = cmd.grades[0] ?? "miss";
+      if (g === "perfect") this.stats.perfects++;
+      this.strike(u, target, u.power * RULES.gradeMult[g], events, { grade: g });
+      this.addBreak(u, target, RULES.basicBreak * RULES.gradeMult[g], events);
+      this.gainAp(u, ROOTS[u.kind as RootId].basicAp, events, "basic");
+      this.perfectInitiative(u, g === "perfect", undefined);
+      return events;
+    }
+
+    const a = this.actionsOf(u.id).find((x) => x.nodeId === cmd.command);
+    if (!a) throw new Error(`${u.id} has no Action ${cmd.command}`);
+    const cost = this.costOf(u.id, a.nodeId);
+    if (u.ap < cost) throw new Error(`not enough AP for ${a.name}`);
+    u.ap -= cost;
+    events.push({ type: "ap", unit: u.id, delta: -cost, ap: u.ap, reason: a.name });
+    // Consume discounts.
+    if (a.template === "pattern" && u.patternFree) u.patternFree = false;
+    else if (u.knotsDiscount && a.apCost > 0) u.knotsDiscount = false;
+    if (key === "knots") {
+      if (u.livingPattern.length >= 2 && !u.livingPattern.includes(a.nodeId)) u.livingPattern = [];
+      else if (!u.livingPattern.includes(a.nodeId)) u.livingPattern.push(a.nodeId);
+    }
+
+    const tpl = TEMPLATES[a.template];
+    const grades = tpl.beats.length ? tpl.beats.map((_, i) => cmd.grades[i] ?? "miss") : [cmd.grades[0] ?? "good"];
+    const allPerfect = grades.every((g) => g === "perfect");
+    this.stats.perfects += grades.filter((g) => g === "perfect").length;
+    const debuffed = this.hasCondition(target);
+    const conditions = this.conditionCount(target);
+    const critBonus = (a.rider === "veil" && debuffed ? 0.15 : 0) + a.modifiers.filter((m) => m.affinity === "veil").length * (debuffed ? 0.1 : 0);
+
+    let mult = 1;
+    if (u.linked) {
+      mult *= 1.2;
+      u.linked = false;
+    }
+    if (a.rider === "knots" && debuffed) mult *= 1.2;
+    const knotsMods = a.modifiers.filter((m) => m.affinity === "knots").length;
+    if (knotsMods) mult *= 1 + Math.min(0.3, 0.15 * Math.min(2, conditions) * knotsMods);
+    const weakPoint = !!cmd.weakPoint && (a.weakPoint || u.farSight);
+    u.farSight = false;
+    const perHit = u.power * (a.damagePct / 100);
+    const brkPerHit = a.breakTotal / Math.max(1, a.hits) - (a.rider === "burden" ? 15 / a.hits : 0);
+
+    for (let i = 0; i < a.hits; i++) {
+      const g = grades[Math.min(i, grades.length - 1)]!;
+      let gm = RULES.gradeMult[g];
+      if (a.template === "flurry" && g === "perfect") gm = RULES.flurryPerfect;
+      if (a.template === "lance" || tpl.beats.length === 0) gm = 1;
+      let hitMult = mult * gm;
+      if (a.template === "pattern" && i === 1 && debuffed) hitMult *= 1.5;
+      const wp = weakPoint && i === 0;
+      if (wp) hitMult *= a.weakPoint ? a.weakPointMult : RULES.weakPointMult;
+      this.strike(u, target, perHit * hitMult, events, { grade: tpl.beats.length ? g : undefined, weakPoint: wp, critBonus });
+      this.addBreak(u, target, brkPerHit * gm + (wp ? RULES.weakPointBreak : 0) + (i === 0 && a.rider === "burden" ? 15 : 0), events);
+    }
+
+    // Template effects.
+    if (a.template === "mark" && target.alive) this.mark(target, grades[0] === "perfect" ? RULES.markHits + 1 : RULES.markHits, events);
+    if (a.template === "pattern" && allPerfect) this.addPattern(u, events);
+    let generated = 0;
+    if (a.template === "flurry" && allPerfect) generated += this.gainAp(u, 1, events, "refund");
+    if (a.template === "link" && cmd.ally) {
+      const ally = this.unit(cmd.ally);
+      if (ally.alive && ally.side === "party") {
+        ally.linked = true;
+        events.push({ type: "reaction", unit: ally.id, name: "Linked +20%" });
+        if (grades[0] === "perfect") generated += this.gainAp(ally, 1, events, "link", u);
       }
     }
-    if (skill.apGain) this.gainAp(actor, skill.apGain + (g[0] === "perfect" ? RULES.perfectApBonus : 0), events);
+    // Bond rider: lowest-AP ally +1 AP, once per turn.
+    if (a.rider === "bond" && u.bondRiderTurn !== this.turnNo) {
+      u.bondRiderTurn = this.turnNo;
+      const ally = this.lowestAp(u);
+      if (ally) generated += this.gainAp(ally, 1, events, "bond rider", u);
+    }
+    // Bond Modifier: 25% of generated AP also to the lowest-AP ally.
+    for (const m of a.modifiers)
+      if (m.affinity === "bond") {
+        const share = Math.floor(generated * 0.25);
+        const ally = this.lowestAp(u);
+        if (share > 0 && ally) this.gainAp(ally, share, events, "bond modifier", u);
+      }
+    this.perfectInitiative(u, grades.includes("perfect") && grades.every((g) => g === "perfect"), a);
     return events;
+  }
+
+  private perfectInitiative(u: Unit, perfect: boolean, a?: CompiledAction) {
+    if (!perfect) return;
+    if (u.kind === "quick") this.addInit(u, 0.1);
+    if (a?.rider === "flex") this.addInit(u, 0.08);
+    if (a) for (const m of a.modifiers) if (m.affinity === "flex") this.addInit(u, 0.1);
+    if (this.keystone(u) === "flex") this.addInit(u, 0.08, true);
+  }
+
+  private addPattern(u: Unit, events: BattleEvent[]) {
+    u.pattern++;
+    events.push({ type: "reaction", unit: u.id, name: `Pattern ${u.pattern}/3` });
+    if (u.pattern >= 3) {
+      u.pattern = 0;
+      u.patternFree = true;
+      if (this.reactionOf(u, "full-parry")?.affinity === "knots") u.knotsDiscount = true;
+    }
   }
 
   // ───────────────────────── foes ─────────────────────────
 
-  /** Choose the current foe's attack and targets. */
   planFoe(actorId: string): FoePlan {
     const actor = this.unit(actorId);
     const def = FOES[actor.kind as FoeKind];
-    const party = this.living("party");
     const wounded = this.living("foe")
       .filter((f) => f.id !== actor.id && f.hp < f.maxHp * 0.6)
       .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-    const options = def.attacks.filter((a) => (a.minPhase ?? 1) <= this.phase && (!a.healAlly || wounded));
+    const options = def.attacks.filter((a) => (a.minPhase ?? 1) <= actor.phase + 1 && (!a.healAlly || wounded));
     const attack = this.rng.weighted(options, options.map((a) => a.weight));
     if (attack.healAlly) return { actor: actor.id, attack, targets: [], healTarget: wounded!.id };
-    const taunting = party.filter((p) => p.taunt > 0);
-    const targets = attack.target === "all" ? party.map((p) => p.id) : [(taunting[0] ?? this.rng.pick(party)).id];
+    const party = this.living("party");
+    const targets = attack.target === "all" ? party.map((p) => p.id) : [this.rng.pick(party).id];
     return { actor: actor.id, attack, targets };
   }
 
   /**
-   * Apply a foe's attack. `defenses` has one entry per hit; an area attack's single defence covers every target.
-   * A hero who parries every hit aimed at them counters.
+   * Resolve a foe's attack given one defence per impact. An area attack's single defence covers every target.
+   * Parry: 0 damage, +1 AP, +10 Break to the attacker, Parry Reactions. Dodge: 0 damage. Parrying every impact
+   * earns a counter at 65% Basic potency (§66–70).
    */
   resolveFoe(plan: FoePlan, defenses: Defense[]): BattleEvent[] {
-    const actor = this.unit(plan.actor);
+    const foe = this.unit(plan.actor);
     const events: BattleEvent[] = [];
+    this.turnNo++;
     if (plan.healTarget) {
       const t = this.unit(plan.healTarget);
       if (t.alive) {
-        const amount = Math.round(Math.min(t.maxHp - t.hp, actor.atk * (plan.attack.healAlly ?? 0)));
+        const amount = Math.round(Math.min(t.maxHp - t.hp, t.maxHp * (plan.attack.healAlly ?? 0)));
         t.hp += amount;
-        events.push({ type: "heal", source: actor.id, target: t.id, amount });
+        events.push({ type: "heal", source: foe.id, target: t.id, amount });
       }
       return events;
     }
+    const heroes = plan.targets.map((id) => this.unit(id));
     plan.attack.hits.forEach((hit, i) => {
-      const result = defenses[i] ?? "hit";
-      for (const tid of plan.targets) {
-        const t = this.unit(tid);
+      const d = defenses[i] ?? "hit";
+      for (const t of heroes) {
         if (!t.alive) continue;
-        events.push({ type: "defend", target: t.id, result, hit: i });
-        if (result === "hit") this.damage(actor, t, actor.atk * hit.power, events);
-        else if (result === "parry") this.gainAp(t, RULES.parryAp, events);
+        events.push({ type: "defend", target: t.id, result: d, hit: i });
+        if (d === "hit") {
+          this.hurt(foe, t, foe.power * hit.power, events);
+          if (hit.status && t.alive) this.applyStatus(foe, t, hit.status, events);
+          continue;
+        }
+        if (isParry(d)) {
+          this.stats.parries++;
+          this.gainAp(t, RULES.parryAp, events, "parry");
+          this.addBreak(t, foe, RULES.parryBreak * (t.kind === "iron" ? 1.2 : 1), events);
+          if (t.kind === "bond") {
+            const least = this.lowestAp();
+            if (least) this.gainAp(least, 1, events, "bond root", t);
+          }
+          this.react(t, foe, "parry", d === "perfect-parry", events);
+          if (d === "perfect-parry") {
+            this.react(t, foe, "perfect-parry", true, events);
+            if (this.keystone(t) === "flex") this.addInit(t, 0.08, true);
+          }
+        } else if (isDodge(d)) {
+          this.react(t, foe, "dodge", d === "perfect-dodge", events);
+          if (d === "perfect-dodge") this.react(t, foe, "perfect-dodge", true, events);
+        }
       }
     });
-    const allParried = plan.attack.hits.length > 0 && plan.attack.hits.every((_, i) => defenses[i] === "parry");
-    const counterer = plan.targets.map((id) => this.unit(id)).find((t) => t.alive);
-    if (allParried && counterer && actor.alive) {
-      events.push({ type: "counter", source: counterer.id, target: actor.id });
-      const crit = this.rng.chance(counterer.crit);
-      this.damage(counterer, actor, counterer.atk * RULES.counterPower * (crit ? counterer.critMult : 1), events, { crit, grade: "perfect" });
-      this.addBreak(actor, RULES.counterBreak, events);
+    const n = plan.attack.hits.length;
+    for (const t of heroes) {
+      if (!t.alive || !n) continue;
+      const allDefended = defenses.slice(0, n).every((d) => d !== "hit") && defenses.length >= n;
+      const allParried = allDefended && defenses.slice(0, n).every(isParry);
+      // Knots Modifier on a Reaction: a full defensive sequence stores a Pattern stack.
+      if (allDefended && t.loom?.reactions.some((r) => r.executes && r.modifiers.some((m) => m.affinity === "knots"))) this.addPattern(t, events);
+      if (allParried) {
+        events.push({ type: "full-parry", target: t.id });
+        this.react(t, foe, "full-parry", false, events);
+      }
+    }
+    const counterer = heroes.find((t) => t.alive);
+    if (counterer && n && defenses.slice(0, n).every(isParry) && defenses.length >= n) {
+      const anyEnemy = counterer.loom?.reactions.some((r) => r.executes && r.modifiers.some((m) => m.affinity === "reach"));
+      const tgt = foe.alive && !anyEnemy ? foe : (anyEnemy ? this.living("foe").sort((a, b) => a.hp - b.hp)[0] : undefined);
+      if (tgt) {
+        events.push({ type: "counter", source: counterer.id, target: tgt.id });
+        this.strike(counterer, tgt, counterer.power * RULES.counterPotency, events, { grade: "perfect" });
+      }
     }
     return events;
   }
 
+  /** Run the executing Reaction for a trigger, plus its adjacent Modifiers' effects (§26–38). */
+  private react(t: Unit, attacker: Unit, trigger: CompiledReaction["trigger"], perfect: boolean, events: BattleEvent[]) {
+    const r = this.reactionOf(t, trigger);
+    if (!r) return;
+    events.push({ type: "reaction", unit: t.id, name: r.name });
+    const p = r.nodePotency;
+    switch (r.affinity) {
+      case "burden":
+        this.giveBarrier(t, t.maxHp * 0.1 * p, events);
+        break;
+      case "veil":
+        if (attacker.alive) this.mark(attacker, 2, events);
+        break;
+      case "reach":
+        t.farSight = true;
+        break;
+      case "knots":
+        this.addPattern(t, events);
+        break;
+      case "flex":
+        this.addInit(t, 0.15 * p);
+        break;
+      case "bond": {
+        const ally = this.lowestAp();
+        if (ally) {
+          this.gainAp(ally, 1, events, "shared thread", t);
+          if (perfect) this.heal(t, ally, ally.maxHp * 0.03 * p, events);
+        }
+        break;
+      }
+    }
+    for (const m of r.modifiers) {
+      if (m.affinity === "burden") this.giveBarrier(t, t.maxHp * 0.06, events);
+      else if (m.affinity === "veil" && attacker.alive) this.mark(attacker, 1, events);
+      else if (m.affinity === "bond") {
+        const low = this.lowestHp();
+        if (low) this.heal(t, low, low.maxHp * 0.04, events);
+      } else if (m.affinity === "flex" && trigger === "perfect-parry" && this.rng.chance(0.2)) this.advance(t, events);
+    }
+  }
+
+  private giveBarrier(t: Unit, amount: number, events: BattleEvent[]) {
+    const a = Math.round(amount);
+    if (a <= 0) return;
+    t.barrier += a;
+    events.push({ type: "barrier", target: t.id, amount: a });
+  }
+  private heal(src: Unit, t: Unit, amount: number, events: BattleEvent[]) {
+    const a = Math.round(Math.min(t.maxHp - t.hp, amount));
+    if (a <= 0) return;
+    t.hp += a;
+    events.push({ type: "heal", source: src.id, target: t.id, amount: a });
+  }
+  /** Move a unit one place earlier in the rest of this round. */
+  private advance(t: Unit, events: BattleEvent[]) {
+    const i = this.order.indexOf(t.id, this.cursor + 1);
+    if (i > this.cursor + 1) {
+      [this.order[i - 1], this.order[i]] = [this.order[i]!, this.order[i - 1]!];
+      events.push({ type: "advance", unit: t.id });
+    }
+  }
+
   // ───────────────────────── after each action ─────────────────────────
 
-  /** Phase changes, reinforcements and the outcome. Call after every resolved action or reaction. */
+  private settleInto(events: BattleEvent[]) {
+    events.push(...this.settle());
+  }
+
+  /** Boss phases, reinforcements and the outcome. Call after every resolved action or reaction. */
   settle(): BattleEvent[] {
     const events: BattleEvent[] = [];
-    const king = this.king;
-    if (king?.alive && this.setup.boss) {
-      const next = king.hp < king.maxHp * 0.33 ? 3 : king.hp < king.maxHp * 0.66 ? 2 : 1;
-      if (next > this.phase) {
-        this.phase = next;
-        king.ward = { value: 100, up: true, downTurns: 0 };
-        king.broken = false;
-        events.push({ type: "phase", target: king.id, phase: next });
-        const adds: FoeKind[] = next === 2 ? ["husk", "wisp"] : ["hound", "seer"];
-        if (this.wardRatio < 1) adds.push(next === 2 ? "husk" : "wisp");
-        const room = FIELD_CAP + 1 - this.living("foe").length;
-        const spawned = adds.slice(0, Math.max(0, room)).map((k) => this.makeFoe(k));
+    for (const b of this.living("foe").filter((f) => f.tier === "boss")) {
+      const phases = FOES[b.kind as FoeKind].phases ?? [];
+      while (b.phase < phases.length && b.hp < b.maxHp * phases[b.phase]!.at) {
+        const ph = phases[b.phase]!;
+        b.phase++;
+        const room = FIELD_CAP - this.living("foe").length;
+        const spawned = ph.summon.slice(0, Math.max(0, room)).map((k) => this.makeFoe(k));
         this.units.push(...spawned);
-        if (spawned.length) events.push({ type: "summon", units: spawned.map((u) => u.id) });
+        if (spawned.length) events.push({ type: "summon", units: spawned.map((s) => s.id) });
       }
     }
     if (!this.living("party").length) {
@@ -489,14 +704,13 @@ export class Battle {
       events.push({ type: "outcome", outcome: "defeat" });
       return events;
     }
-    const bossDown = this.setup.boss ? !king?.alive : false;
-    if (bossDown) {
-      // The King's fall unbinds everything he summoned.
+    const bosses = this.foes().filter((f) => f.tier === "boss");
+    if (bosses.length && bosses.every((b) => !b.alive)) {
       for (const f of this.living("foe")) this.kill(f, events);
       this.reactions = [];
     }
     if (!this.living("foe").length && !this.reactions.length) {
-      if (!bossDown && this.waveIndex + 1 < this.setup.waves.length) {
+      if (this.waveIndex + 1 < this.setup.waves.length) {
         const units = this.spawnWave(this.waveIndex + 1);
         events.push({ type: "wave", index: this.waveIndex, units });
       } else {
@@ -508,11 +722,10 @@ export class Battle {
   }
 
   /** Party health to carry into the next battle: the fallen get up, the rest catch their breath. */
-  partyHpAfter(): Record<HeroId, number> {
-    const out = {} as Record<HeroId, number>;
-    for (const u of this.party()) {
-      out[u.kind as HeroId] = u.alive ? Math.min(u.maxHp, Math.round(u.hp + u.maxHp * RULES.restFraction)) : Math.round(u.maxHp * RULES.reviveFraction);
-    }
+  partyHpAfter(): Record<RootId, number> {
+    const out = {} as Record<RootId, number>;
+    for (const u of this.party())
+      out[u.kind as RootId] = u.alive ? Math.min(u.maxHp, Math.round(u.hp + u.maxHp * RULES.restFraction)) : Math.round(u.maxHp * RULES.reviveFraction);
     return out;
   }
 }

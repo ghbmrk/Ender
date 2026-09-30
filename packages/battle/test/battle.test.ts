@@ -3,250 +3,345 @@ import {
   AttackTracker,
   Battle,
   DefenseTracker,
-  WINDOWS,
-  autoGrades,
-  autoHeroAction,
-  roomEncounter,
-  waveToEncounter,
-  type BattleEvent,
+  FOES,
+  ROOTS,
+  affinitiesOf,
+  capacityForRank,
+  compileLoom,
+  diffLooms,
+  nodePotency,
+  simulate,
+  type Affinity,
+  type CompiledLoom,
   type Defense,
-  type FoeSpec,
-  type PartyStats,
+  type Evidence,
+  type FoeKind,
+  type LoomNode,
+  type Role,
 } from "../src";
 
-const STATS: PartyStats = { maxHealth: 120, attackDamage: 14, critChance: 0.05, critMultiplier: 1.75, cooldownRate: 1, areaMultiplier: 1, armor: 0, wardPower: 0, wardMultiplier: 1 };
+let nid = 0;
+const node = (role: Role, q: number, r: number, aff: [Affinity, Affinity], score = 60, evidence: Evidence = "trialed"): LoomNode => ({
+  id: `n${++nid}`,
+  formId: `f${nid}`,
+  name: `Form ${nid}`,
+  role,
+  q,
+  r,
+  affinities: aff,
+  technicalScore: score,
+  evidence,
+});
+const EMPTY = (rank = 1) => compileLoom([], rank);
+const party = (looms: Partial<Record<"iron" | "quick" | "bond", CompiledLoom>> = {}, hp?: Partial<Record<string, number>>) =>
+  (["iron", "bond", "quick"] as const).map((root) => ({ root, loom: looms[root] ?? EMPTY(), hp: hp?.[root] }));
 
-/** Play a battle to the end with the auto party; `defend` decides each hit's defence. */
-function play(b: Battle, opts: { grade?: "perfect" | "good" | "miss"; defend?: (i: number) => Defense; maxTurns?: number } = {}) {
-  const log: BattleEvent[] = [];
-  let n = 0;
-  let hitNo = 0;
-  const defend = opts.defend ?? (() => "hit");
-  const react = () => {
-    while (b.reactions.length && b.outcome === "ongoing") {
-      const plan = b.reactions.shift()!;
-      log.push(...b.resolveFoe(plan, plan.attack.hits.map(() => defend(hitNo++))), ...b.settle());
-    }
-  };
-  while (b.outcome === "ongoing" && n++ < (opts.maxTurns ?? 400)) {
-    const turn = b.nextTurn();
-    log.push(...turn.events);
-    if (turn.skipped) {
-      log.push(...b.settle());
-      continue;
-    }
-    const a = turn.actor;
-    if (a.side === "party") {
-      const act = autoHeroAction(b, a.id);
-      log.push(...b.resolveHero(a.id, act.skillId, act.targetId, autoGrades(act.skillId, opts.grade ?? "good")));
-    } else {
-      const plan = b.planFoe(a.id);
-      log.push(...b.resolveFoe(plan, plan.attack.hits.map(() => defend(hitNo++))));
-    }
-    log.push(...b.settle());
-    react();
-  }
-  return { log, turns: n };
-}
-
-describe("timing", () => {
-  it("grades attack presses by distance to the beat", () => {
-    const t = new AttackTracker([600, 900]);
-    expect(t.press(600 + WINDOWS.attack.perfect - 1)).toEqual({ index: 0, grade: "perfect" });
-    expect(t.press(900 + WINDOWS.attack.good - 1)).toEqual({ index: 1, grade: "good" });
-    expect(t.done).toBe(true);
+describe("timing (§64, §67–69)", () => {
+  it("grades attack presses: Perfect ±70, Good ±150, else Miss", () => {
+    const t = new AttackTracker([600, 900, 1200]);
+    expect(t.press(600 + 69)).toEqual({ index: 0, grade: "perfect" });
+    expect(t.press(900 - 149)).toEqual({ index: 1, grade: "good" });
+    expect(t.press(1200 + 160)).toBeNull(); // beat already passed: it expires as a miss
+    expect(t.expire(1400)).toEqual([2]);
+    expect(t.result()).toEqual(["perfect", "good", "miss"]);
   });
-  it("ignores presses far too early and expires unpressed beats as misses", () => {
-    const t = new AttackTracker([600]);
-    expect(t.press(100)).toBeNull();
-    expect(t.expire(600 + WINDOWS.attack.good + 1)).toEqual([0]);
-    expect(t.result()).toEqual(["miss"]);
+  it("Dodge −260..+100, Parry −90..+70, Perfect Parry −45..+35", () => {
+    const d = new DefenseTracker([1000, 2000, 3000, 4000]);
+    expect(d.press(1000 - 250, "dodge")).toEqual({ index: 0, result: "dodge" });
+    expect(d.press(2000 + 60, "parry")).toEqual({ index: 1, result: "parry" });
+    expect(d.press(3000 - 40, "parry")).toEqual({ index: 2, result: "perfect-parry" });
+    expect(d.press(4000 - 150, "parry")).toEqual({ index: 3, result: "hit" });
   });
-  it("parry needs a tighter window than dodge, and a whiff locks the buttons", () => {
-    const d = new DefenseTracker([1000, 1500]);
-    // a parry 400 ms early claims nothing and locks both buttons
-    expect(d.press(1000 - 400, "parry")).toEqual({ whiff: true });
-    expect(d.press(1000 - 300, "parry")).toEqual({ locked: true });
-    // after the lockout a dodge 150 ms late still works
-    expect(d.press(1000 + 150, "dodge")).toEqual({ index: 0, result: "dodge" });
-    expect(d.press(1500 + 40, "parry")).toEqual({ index: 1, result: "parry" });
-    expect(d.result()).toEqual(["dodge", "parry"]);
-  });
-  it("gentle assist widens the windows", () => {
-    const d = new DefenseTracker([1000], 1.6);
-    expect(d.press(1000 - 140, "parry")).toEqual({ index: 0, result: "parry" });
+  it("a mistimed input is consumed: no second try on that impact", () => {
+    const d = new DefenseTracker([1000, 1600]);
+    expect(d.press(700, "parry")).toEqual({ index: 0, result: "hit" });
+    // The next press goes to the next impact, not back to the first.
+    expect(d.press(1000, "parry")).toEqual({ index: 1, result: "hit" });
+    expect(d.result()).toEqual(["hit", "hit"]);
   });
 });
 
-describe("encounters", () => {
-  it("folds swarms into one unit, puts elites first and caps the field", () => {
-    const wave = [
-      { kind: "husk" as const },
-      { kind: "swarm" as const },
-      { kind: "swarm" as const },
-      { kind: "swarm" as const },
-      { kind: "swarm" as const },
-      { kind: "keeper" as const },
-      { kind: "wisp" as const },
-      { kind: "hound" as const, elite: "volatile" as const },
-    ];
-    const enc = waveToEncounter(wave);
-    expect(enc).toHaveLength(3);
-    expect(enc.find((f) => f.elite)).toEqual({ kind: "hound", elite: "volatile" });
-    expect(enc.some((f) => f.kind === "keeper")).toBe(true);
-    expect(enc.filter((f) => f.kind === "swarm").length).toBeLessThanOrEqual(1);
+describe("the Loom (§6–13, §84)", () => {
+  it("affinities are the two strongest qualities", () => {
+    expect(affinitiesOf({ burden: 31, veil: 67, reach: 83, knots: 42, flex: 71, bond: 25 })).toEqual(["reach", "flex"]);
   });
-  it("boss rooms are the King alone", () => {
-    expect(roomEncounter({ kind: "boss", waves: [] })).toEqual([[{ kind: "king" }]]);
+  it("capacity and board size follow Loom Rank", () => {
+    expect([1, 2, 3, 8, 12, 19, 20, 30].map(capacityForRank)).toEqual([6, 6, 7, 9, 11, 15, 16, 16]);
+    const outer = node("modifier", 2, 0, ["burden", "veil"]);
+    const inner = node("modifier", 1, 0, ["burden", "veil"]);
+    expect(compileLoom([inner, outer], 1).dormancy[outer.id]).toBe("locked cell");
+    expect(compileLoom([inner, outer], 8).activeNodeIds).toContain(outer.id);
+  });
+  it("the Root anchors the first ring; beyond it links need a shared Affinity", () => {
+    const a = node("action", 1, 0, ["burden", "knots"]);
+    const m1 = node("modifier", 2, 0, ["knots", "flex"]); // shares Knots with a
+    const m2 = node("modifier", 2, -1, ["veil", "reach"]); // adjacent to a, shares nothing
+    const l = compileLoom([a, m1, m2], 8);
+    expect(l.activeNodeIds.sort()).toEqual([a.id, m1.id].sort());
+    expect(l.dormancy[m2.id]).toBe("disconnected");
+    expect(l.links).toContainEqual({ a: a.id, b: m1.id, affinity: "knots" });
+    expect(l.links).toContainEqual({ a: "root", b: a.id, affinity: "root" });
+  });
+  it("over capacity: the farthest node goes dormant first", () => {
+    const a = node("action", 1, 0, ["burden", "knots"]); // 3
+    const b = node("action", 0, 1, ["reach", "flex"]); // 3 → 6 = capacity at rank 1
+    const c = node("modifier", -1, 1, ["bond", "veil"]); // 1 → over
+    const l = compileLoom([a, b, c], 1);
+    // All three are 1 step away; priority keeps lower q then lower r, so the dropped node has the highest q: a (1,0).
+    expect(l.usedCapacity).toBe(4);
+    expect(l.dormancy[a.id]).toBe("over capacity");
+    expect(l.activeNodeIds.sort()).toEqual([b.id, c.id].sort());
+  });
+  it("role limits: at most 4 Actions, 2 Reactions, 1 Keystone; closest wins", () => {
+    const ring1 = [
+      [1, 0],
+      [1, -1],
+      [0, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, 1],
+    ] as const;
+    const reactions = ring1.slice(0, 3).map(([q, r]) => node("reaction", q, r, ["burden", "bond"]));
+    const l = compileLoom(reactions, 20);
+    expect(l.reactions).toHaveLength(2);
+    expect(Object.values(l.dormancy)).toContain("role limit");
+    const actions = ring1.map(([q, r]) => node("action", q, r, ["flex", "bond"]));
+    expect(compileLoom(actions, 20).actions).toHaveLength(4);
+  });
+  it("a Keystone needs Witnessed evidence and a score of at least 80", () => {
+    const weak = node("keystone", 1, 0, ["knots", "flex"], 79, "witnessed");
+    const unproven = node("keystone", 0, 1, ["knots", "flex"], 90, "trialed");
+    const real = node("keystone", -1, 0, ["knots", "flex"], 85, "witnessed");
+    const l = compileLoom([weak, unproven, real], 20);
+    expect(l.keystone?.nodeId).toBe(real.id);
+    expect(l.keystone?.name).toBe("Living Pattern");
+    expect(l.dormancy[weak.id]).toBe("keystone not eligible");
+  });
+  it("the board is executable: moving a Modifier next to an Action changes that Action", () => {
+    const a = node("action", 1, 0, ["burden", "knots"]);
+    const far = node("modifier", -1, 0, ["burden", "flex"]);
+    const near = { ...far, q: 1, r: -1 };
+    const before = compileLoom([a, far], 8);
+    const after = compileLoom([a, near], 8);
+    expect(before.actions[0]!.name).toBe("Crush");
+    expect(after.actions[0]!.breakTotal).toBeGreaterThan(before.actions[0]!.breakTotal);
+    expect(diffLooms(before, after).some((s) => s.startsWith("Crush: Break"))).toBe(true);
+    // Replacing the Action's Form with a Reach one swaps Crush for Lance (§87).
+    const lance = compileLoom([{ ...a, affinities: ["reach", "knots"] }, near], 8);
+    expect(lance.actions[0]!.name).toBe("Lance");
+  });
+  it("only the strongest Reaction per trigger executes", () => {
+    const weak = node("reaction", 1, 0, ["burden", "veil"], 50);
+    const strong = node("reaction", 0, 1, ["veil", "burden"], 90, "witnessed");
+    const l = compileLoom([weak, strong], 8);
+    expect(l.reactions.find((r) => r.nodeId === strong.id)!.executes).toBe(true);
+    expect(l.reactions.find((r) => r.nodeId === weak.id)!.executes).toBe(false);
+  });
+  it("compilation is deterministic regardless of input order", () => {
+    const ns = [node("action", 1, 0, ["flex", "bond"]), node("modifier", 2, -1, ["bond", "veil"]), node("reaction", 0, 1, ["bond", "reach"]), node("modifier", 1, 1, ["flex", "knots"])];
+    expect(compileLoom([...ns].reverse(), 12)).toEqual(compileLoom(ns, 12));
   });
 });
 
-describe("battle", () => {
-  const waves: FoeSpec[][] = [[{ kind: "husk" }, { kind: "hound" }, { kind: "wisp" }], [{ kind: "keeper" }, { kind: "seer" }]];
-
-  it("is deterministic for a seed and inputs", () => {
-    const a = play(new Battle({ seed: "s1", stats: STATS, difficulty: 1, waves }));
-    const b = play(new Battle({ seed: "s1", stats: STATS, difficulty: 1, waves }));
-    expect(a.log).toEqual(b.log);
+describe("§99 reality progression: outcome quality produces power", () => {
+  it("a Witnessed 82 out-powers an Attuned 61 of the same template at the same rank", () => {
+    expect(nodePotency(50, "attuned")).toBe(1);
+    expect(nodePotency(75, "trialed")).toBe(1.15);
+    expect(nodePotency(100, "witnessed")).toBe(1.3);
+    const a = compileLoom([node("action", 1, 0, ["burden", "veil"], 61, "attuned")], 5).actions[0]!;
+    const b = compileLoom([node("action", 1, 0, ["burden", "veil"], 82, "witnessed")], 5).actions[0]!;
+    expect(b.template).toBe(a.template);
+    expect(b.nodePotency).toBeGreaterThan(a.nodePotency);
+    expect(b.damagePct).toBeGreaterThan(a.damagePct);
+    expect(b.breakTotal).toBeGreaterThan(a.breakTotal);
   });
+});
 
-  it("a timeline lists upcoming turns without changing the battle", () => {
-    const b = new Battle({ seed: "t", stats: STATS, difficulty: 1, waves });
-    const before = JSON.stringify(b.units);
-    const tl = b.timeline(10);
-    expect(tl).toHaveLength(10);
-    expect(JSON.stringify(b.units)).toBe(before);
-    expect(b.nextTurn().actor.id).toBe(tl[0]);
+describe("combat rules (§61–72)", () => {
+  it("turn order sorts by speed each round; ties go to the party, then by id", () => {
+    const b = new Battle({ seed: "o", party: party(), waves: [["hound", "keeper"]], difficulty: 1 });
+    const first = b.nextTurn();
+    const order = b.order.map((id) => b.unit(id));
+    for (let i = 1; i < order.length; i++) expect(b.effectiveSpeed(order[i - 1]!)).toBeGreaterThanOrEqual(b.effectiveSpeed(order[i]!));
+    expect(order[0]!.id).toBe("hound-1"); // 120 beats Quick's 110
+    expect(first.actor.id).toBe("hound-1");
   });
-
-  it("a skilled party wins a two-wave room; a party that never defends or times anything loses it more", () => {
-    let skilled = 0;
-    let clumsy = 0;
-    for (let i = 0; i < 30; i++) {
-      const s = new Battle({ seed: `w${i}`, stats: STATS, difficulty: 2, waves });
-      play(s, { grade: "perfect", defend: (k) => (k % 3 === 0 ? "parry" : k % 3 === 1 ? "dodge" : "hit") });
-      if (s.outcome === "victory") skilled++;
-      const c = new Battle({ seed: `w${i}`, stats: STATS, difficulty: 2, waves });
-      play(c, { grade: "miss", defend: () => "hit" });
-      if (c.outcome === "victory") clumsy++;
+  it("AP: start 3, +1 at the start of your turn, Basic +2, max 9", () => {
+    const b = new Battle({ seed: "ap", party: party(), waves: [["keeper"]], difficulty: 1 });
+    let t = b.nextTurn();
+    while (t.actor.side !== "party") {
+      b.resolveFoe(b.planFoe(t.actor.id), []);
+      t = b.nextTurn();
     }
-    expect(skilled).toBeGreaterThanOrEqual(28);
-    expect(clumsy).toBeLessThan(skilled);
+    expect(t.actor.ap).toBe(4);
+    b.resolveHero({ actor: t.actor.id, command: "basic", target: "keeper-1", grades: ["good"] });
+    expect(t.actor.ap).toBe(6);
   });
-
-  it("waves arrive in order and the battle ends in victory with kills counted", () => {
-    const b = new Battle({ seed: "v", stats: STATS, difficulty: 1, waves });
-    const { log } = play(b, { grade: "perfect", defend: () => "dodge" });
-    expect(b.outcome).toBe("victory");
-    expect(log.some((e) => e.type === "wave")).toBe(true);
-    expect(Object.values(b.kills).reduce((a, x) => a + x, 0)).toBe(5);
+  it("Perfect timing hits harder than Good, which beats Miss", () => {
+    const dmg = (g: "perfect" | "good" | "miss") => {
+      const b = new Battle({ seed: "same", party: party(), waves: [["keeper"]], difficulty: 1 });
+      b.rng.chance = () => false; // no crits
+      b.resolveHero({ actor: "iron", command: "basic", target: "keeper-1", grades: [g] });
+      return b.unit("keeper-1").maxHp - b.unit("keeper-1").hp;
+    };
+    expect(dmg("perfect")).toBe(50);
+    expect(dmg("good")).toBe(40);
+    expect(dmg("miss")).toBe(32);
   });
-
-  it("parrying every hit gains AP and counters", () => {
-    const b = new Battle({ seed: "p", stats: STATS, difficulty: 1, waves: [[{ kind: "hound" }]] });
-    const hound = b.foes()[0]!;
-    const plan = b.planFoe(hound.id);
-    const target = b.unit(plan.targets[0]!);
-    const ap = target.ap;
-    const ev = b.resolveFoe(plan, plan.attack.hits.map(() => "parry"));
+  it("Parry: no damage, +1 AP, +10 Break to the attacker (Iron +20%); full Parry counters at 65% Basic", () => {
+    const b = new Battle({ seed: "p", party: party(), waves: [["husk"]], difficulty: 1 });
+    const husk = b.unit("husk-1");
+    const plan = { actor: husk.id, attack: FOES.husk.attacks[0]!, targets: ["iron"] };
+    const iron = b.unit("iron");
+    const ev = b.resolveFoe(plan, ["parry", "perfect-parry"]);
+    expect(iron.hp).toBe(iron.maxHp);
+    expect(iron.ap).toBe(5);
     expect(ev.some((e) => e.type === "counter")).toBe(true);
-    expect(target.ap).toBe(Math.min(9, ap + plan.attack.hits.length));
-    expect(hound.hp).toBeLessThan(hound.maxHp);
+    expect(husk.breakVal).toBeCloseTo(24, 5);
+    expect(husk.hp).toBeLessThan(husk.maxHp);
   });
-
-  it("dodging takes no damage; getting hit does", () => {
-    const b = new Battle({ seed: "d", stats: STATS, difficulty: 1, waves: [[{ kind: "husk" }]] });
-    const husk = b.foes()[0]!;
-    const plan = b.planFoe(husk.id);
-    const t = b.unit(plan.targets[0]!);
-    b.resolveFoe(plan, plan.attack.hits.map(() => "dodge"));
-    expect(t.hp).toBe(t.maxHp);
-    b.resolveFoe(plan, plan.attack.hits.map(() => "hit"));
-    expect(t.hp).toBeLessThan(t.maxHp);
+  it("Dodge takes no damage and earns nothing; getting hit hurts", () => {
+    const b = new Battle({ seed: "d", party: party(), waves: [["husk"]], difficulty: 1 });
+    const plan = { actor: "husk-1", attack: FOES.husk.attacks[0]!, targets: ["quick"] };
+    b.resolveFoe(plan, ["dodge", "perfect-dodge"]);
+    expect(b.unit("quick").hp).toBe(ROOTS.quick.hp);
+    expect(b.unit("quick").ap).toBe(3);
+    b.resolveFoe(plan, ["hit", "hit"]);
+    expect(b.unit("quick").hp).toBeLessThan(ROOTS.quick.hp);
   });
-
-  it("break staggers a foe: it skips its next turn, then recovers", () => {
-    const b = new Battle({ seed: "b", stats: STATS, difficulty: 1, waves: [[{ kind: "keeper" }]] });
-    const k = b.foes()[0]!;
-    const ev: BattleEvent[] = [];
-    b.unit("warden").ap = 9;
-    for (let i = 0; i < 5 && !k.broken; i++) ev.push(...b.resolveHero("warden", "bash", k.id, ["perfect"]));
-    expect(k.broken).toBe(true);
-    expect(ev.some((e) => e.type === "break")).toBe(true);
-    let turn = b.nextTurn();
-    while (turn.actor.id !== k.id) turn = b.nextTurn();
-    expect(turn.skipped).toBe(true);
-    expect(k.broken).toBe(false);
+  it("Bond Root: a successful Parry gives 1 AP to the party member with the least AP", () => {
+    const b = new Battle({ seed: "bond", party: party(), waves: [["husk"]], difficulty: 1 });
+    b.unit("quick").ap = 0;
+    b.resolveFoe({ actor: "husk-1", attack: FOES.husk.attacks[1]!, targets: ["bond"] }, ["parry"]);
+    expect(b.unit("quick").ap).toBe(1);
   });
-
-  it("AP is spent by skills and refused when short", () => {
-    const b = new Battle({ seed: "ap", stats: STATS, difficulty: 1, waves: [[{ kind: "husk" }]] });
-    const husk = b.foes()[0]!;
-    b.unit("binder").ap = 1;
-    expect(() => b.resolveHero("binder", "lash", husk.id, ["good", "good"])).toThrow(/AP/);
-    b.resolveHero("binder", "bolt", husk.id, ["perfect"]);
-    expect(b.unit("binder").ap).toBe(3);
+  it("Break at 100: the foe loses its next turn, takes +25%, then recovers with an empty gauge", () => {
+    const b = new Battle({ seed: "br", party: party(), waves: [["husk", "wisp"]], difficulty: 1 });
+    const husk = b.unit("husk-1");
+    husk.breakVal = 95;
+    b.resolveHero({ actor: "iron", command: "basic", target: husk.id, grades: ["good"] });
+    expect(husk.broken).not.toBeNull();
+    let skipped = false;
+    for (let i = 0; i < 12 && !skipped; i++) {
+      const t = b.nextTurn();
+      if (t.actor.id === husk.id) skipped = t.skipped;
+    }
+    expect(skipped).toBe(true);
+    // Still Broken for the rest of that round, recovered at the next.
+    expect(husk.broken).not.toBeNull();
+    const r = b.round;
+    while (b.round === r) b.nextTurn();
+    expect(husk.broken).toBeNull();
+    expect(husk.breakVal).toBe(0);
   });
-
-  it("a volatile elite bursts on death, and the burst must play before victory", () => {
-    const b = new Battle({ seed: "vol", stats: STATS, difficulty: 1, waves: [[{ kind: "husk", elite: "volatile" }]] });
-    const e = b.foes()[0]!;
-    e.hp = 1;
-    b.resolveHero("ranger", "arrow", e.id, ["good"]);
+  it("a boss is Broken for one of its turns only", () => {
+    const b = new Battle({ seed: "bb", party: party(), waves: [["king"]], difficulty: 1 });
+    const k = b.unit("king-1");
+    k.breakVal = 99;
+    b.resolveHero({ actor: "iron", command: "basic", target: k.id, grades: ["perfect"] });
+    expect(k.broken).not.toBeNull();
+    let t = b.nextTurn();
+    while (t.actor.id !== k.id) t = b.nextTurn();
+    expect(t.skipped).toBe(true);
+    expect(k.broken).toBeNull();
+  });
+  it("statuses: Burn and Poison tick at turn start, Slow cuts Speed by 20%", () => {
+    const b = new Battle({ seed: "st", party: party(), waves: [["seer"]], difficulty: 1 });
+    const q = b.unit("quick");
+    const base = b.effectiveSpeed(q);
+    b.resolveFoe({ actor: "seer-1", attack: { ...FOES.seer.attacks[0]!, hits: [{ t: 0, power: 0.1, status: "burn" }, { t: 1, power: 0.1, status: "slow" }] }, targets: ["quick"] }, ["hit", "hit"]);
+    expect(q.status.burn).not.toBeNull();
+    expect(b.effectiveSpeed(q)).toBeCloseTo(base * 0.8, 5);
+  });
+  it("a volatile elite's death burst plays before victory", () => {
+    const b = new Battle({ seed: "vol", party: party(), waves: [["cinder"]], difficulty: 1 });
+    b.unit("cinder-1").hp = 1;
+    b.resolveHero({ actor: "quick", command: "basic", target: "cinder-1", grades: ["good"] });
     b.settle();
     expect(b.outcome).toBe("ongoing");
-    expect(b.reactions).toHaveLength(1);
     const plan = b.reactions.shift()!;
     b.resolveFoe(plan, ["dodge"]);
-    expect(b.settle().some((x) => x.type === "outcome")).toBe(true);
+    b.settle();
     expect(b.outcome).toBe("victory");
   });
-
-  it("the King's Ward breaks faster with stronger Forms, and phases summon help", () => {
-    const boss = { hp: 1400, wardTargets: [25, 45, 65] };
-    const weak = new Battle({ seed: "k", stats: { ...STATS, wardPower: 5 }, difficulty: 1, waves: [[{ kind: "king" }]], boss });
-    const strong = new Battle({ seed: "k", stats: { ...STATS, wardPower: 60 }, difficulty: 1, waves: [[{ kind: "king" }]], boss });
-    const hitsToBreak = (b: Battle) => {
-      const k = b.king!;
-      let n = 0;
-      while (k.ward!.up && n < 100) {
-        b.resolveHero("ranger", "arrow", k.id, ["good"]);
-        n++;
-      }
-      return n;
-    };
-    expect(hitsToBreak(strong)).toBeLessThan(hitsToBreak(weak));
-    expect(strong.wardBreaks).toBe(1);
-    const k = strong.king!;
+  it("bosses summon at their phase thresholds, and their fall ends the fight", () => {
+    const b = new Battle({ seed: "king", party: party(), waves: [["king"]], difficulty: 1 });
+    const k = b.unit("king-1");
     k.hp = Math.floor(k.maxHp * 0.6);
-    const ev = strong.settle();
-    expect(ev.some((e) => e.type === "phase" && e.phase === 2)).toBe(true);
-    expect(ev.some((e) => e.type === "summon")).toBe(true);
-    expect(k.ward!.up).toBe(true);
+    expect(b.settle().some((e) => e.type === "summon")).toBe(true);
+    expect(b.living("foe").length).toBe(3);
     k.hp = 1;
-    strong.resolveHero("ranger", "arrow", k.id, ["good"]);
-    strong.settle();
-    expect(strong.outcome).toBe("victory");
-    expect(strong.living("foe")).toHaveLength(0);
+    b.resolveHero({ actor: "iron", command: "basic", target: k.id, grades: ["good"] });
+    b.settle();
+    expect(b.outcome).toBe("victory");
   });
-
-  it("across a whole run at the hardest difficulty, timing decides it: good timing clears, never defending falls", () => {
-    // Five two-wave rooms, a hardened elite and the King, carrying health between battles.
-    const room: FoeSpec[][] = [[{ kind: "husk" }, { kind: "hound" }, { kind: "wisp" }], [{ kind: "seer" }, { kind: "husk" }]];
-    const rooms: FoeSpec[][][] = [room, room, room, room, room, [[{ kind: "keeper", elite: "hardened" }, { kind: "seer" }]], [[{ kind: "king" }]]];
-    const runWith = (seed: number, grade: "perfect" | "good", defend: (k: number) => Defense) => {
-      let hp: Record<string, number> | undefined;
-      for (const [i, w] of rooms.entries()) {
-        const b = new Battle({ seed: `run${seed}-${i}`, stats: { ...STATS, wardPower: 40 }, difficulty: 3, waves: w, partyHp: hp, boss: i === 6 ? { hp: 1400 * 1.5, wardTargets: [25, 45, 65] } : undefined });
-        play(b, { grade, defend });
-        if (b.outcome !== "victory") return false;
-        hp = b.partyHpAfter();
-      }
-      return true;
+  it("is deterministic for a seed and inputs", () => {
+    const run = () => {
+      const b = new Battle({ seed: "det", party: party(), waves: [["husk", "hound", "wisp"]], difficulty: 2 });
+      simulate(b, { grade: "good", defend: (k) => (k % 2 ? "dodge" : "hit") });
+      return JSON.stringify(b.units) + b.outcome;
     };
-    const skilled = Array.from({ length: 8 }, (_, s) => runWith(s, "perfect", (k) => (k % 3 === 2 ? "hit" : k % 3 ? "dodge" : "parry")));
-    const passive = Array.from({ length: 8 }, (_, s) => runWith(s, "good", () => "hit"));
-    expect(skilled.every(Boolean)).toBe(true);
-    expect(passive.some(Boolean)).toBe(false);
+    expect(run()).toBe(run());
+  });
+  it("a normal fight is winnable with decent timing and losable without defending", () => {
+    const waves: FoeKind[][] = [["husk", "hound", "wisp"]];
+    let good = 0;
+    let bad = 0;
+    for (let i = 0; i < 20; i++) {
+      const a = new Battle({ seed: `n${i}`, party: party(), waves, difficulty: 3 });
+      simulate(a, { grade: "good", defend: (k) => (k % 3 === 2 ? "hit" : k % 3 ? "dodge" : "parry") });
+      if (a.outcome === "victory") good++;
+      const c = new Battle({ seed: `n${i}`, party: party(), waves: [["keeper", "seer", "hound", "husk", "swarm"]], difficulty: 3 });
+      simulate(c, { grade: "miss", defend: () => "hit" });
+      if (c.outcome === "victory") bad++;
+    }
+    expect(good).toBe(20);
+    expect(bad).toBeLessThan(20);
+  });
+});
+
+describe("§97 required design test: builds differ materially", () => {
+  // Same Loom Rank, same pool of Forms, same encounters, same execution. Only the arrangement differs.
+  const rank = 9;
+  const buildA = (): CompiledLoom =>
+    compileLoom(
+      [
+        node("action", 1, 0, ["burden", "knots"], 70),
+        node("modifier", 2, -1, ["knots", "burden"], 70),
+        node("modifier", 1, 1, ["burden", "knots"], 70),
+        node("reaction", 0, 1, ["burden", "knots"], 70),
+      ],
+      rank,
+    );
+  const buildB = (): CompiledLoom =>
+    compileLoom(
+      [
+        node("action", 1, 0, ["flex", "bond"], 70),
+        node("modifier", 2, -1, ["bond", "flex"], 70),
+        node("modifier", 1, 1, ["flex", "bond"], 70),
+        node("reaction", 0, 1, ["bond", "flex"], 70),
+      ],
+      rank,
+    );
+  const measure = (loom: () => CompiledLoom) => {
+    let brk = 0;
+    let ap = 0;
+    const encounters: FoeKind[][] = [["husk", "hound"], ["keeper"], ["wisp", "seer", "swarm"], ["ironbound"], ["husk", "husk", "wisp"]];
+    for (const [i, w] of encounters.entries())
+      for (let s = 0; s < 6; s++) {
+        const b = new Battle({ seed: `d97-${i}-${s}`, party: party({ iron: loom(), quick: loom(), bond: loom() }), waves: [w], difficulty: 2 });
+        simulate(b, { grade: "perfect", defend: (k) => (k % 2 ? "parry" : "perfect-parry") });
+        brk += b.stats.breakDealt;
+        ap += b.stats.apTransferred + b.stats.apRefunded;
+      }
+    return { brk, ap };
+  };
+  it("Burden/Knots deals ≥25% more Break; Flex/Bond moves ≥20% more AP", () => {
+    const a = measure(buildA);
+    const b = measure(buildB);
+    expect(a.brk).toBeGreaterThanOrEqual(1.25 * b.brk);
+    expect(b.ap).toBeGreaterThanOrEqual(1.2 * a.ap);
+    expect(buildA().actions[0]!.name).toBe("Crush");
+    expect(buildB().actions[0]!.name).toBe("Flurry");
   });
 });
