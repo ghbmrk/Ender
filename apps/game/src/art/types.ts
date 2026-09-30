@@ -1,3 +1,5 @@
+import type { HeroLook } from "./look";
+
 export type Pose = "idle" | "strike";
 
 export type FigureProps = {
@@ -5,6 +7,8 @@ export type FigureProps = {
   viewBox?: string;
   className?: string;
   pose?: Pose;
+  /** The player's hero look (hero figures only): colours, headwear, hair, build and emblem. Absent = the default drawing. */
+  look?: HeroLook;
 };
 
 export type FigureMeta = {

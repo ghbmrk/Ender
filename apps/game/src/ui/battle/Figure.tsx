@@ -2,6 +2,7 @@ import { memo } from "react";
 import { figureFor } from "../../art/registry";
 import { paintedFigure } from "../../art/painted";
 import type { Pose } from "../../art/types";
+import type { HeroLook } from "../../art/look";
 
 /** Stage px per viewBox unit, per painted figure. */
 export const FIG_SCALE: Record<string, number> = {
@@ -25,10 +26,11 @@ export function figureBox(figure: string, scale = FIG_SCALE[figure] ?? 1.2) {
 }
 
 /** A painted figure standing with its feet at (x, y) in stage px. Memoised so filters are not re-rasterised needlessly. */
-export const Fig = memo(function Fig({ figure, pose = "idle", scale, className }: { figure: string; pose?: Pose; scale?: number; className?: string }) {
+export const Fig = memo(function Fig({ figure, pose = "idle", scale, className, look }: { figure: string; pose?: Pose; scale?: number; className?: string; look?: HeroLook }) {
   const F = figureFor(figure).default;
   const b = figureBox(figure, scale);
-  const painted = paintedFigure(figure);
+  // The player's own hero is always drawn from their look, never swapped for shared painted art.
+  const painted = look ? undefined : paintedFigure(figure);
   if (painted)
     // A painted cut-out is cropped to its silhouette: stand it on the same feet, as tall as the drawn figure.
     return (
@@ -38,17 +40,17 @@ export const Fig = memo(function Fig({ figure, pose = "idle", scale, className }
     );
   return (
     <div className={className} style={{ position: "absolute", left: -b.feetX, top: -b.feetY, width: b.w, height: b.h }}>
-      <F pose={pose} className="fig-svg" />
+      <F pose={pose} className="fig-svg" look={look} />
     </div>
   );
 });
 
 /** A head crop of a figure, for the timeline and portraits. */
-export const Head = memo(function Head({ figure, size }: { figure: string; size: number }) {
+export const Head = memo(function Head({ figure, size, look }: { figure: string; size: number; look?: HeroLook }) {
   const mod = figureFor(figure);
   const [x, y, s] = mod.meta.head;
   const F = mod.default;
-  const painted = paintedFigure(figure);
+  const painted = look ? undefined : paintedFigure(figure);
   if (painted)
     return (
       <div className="head" style={{ width: size, height: size }}>
@@ -57,7 +59,7 @@ export const Head = memo(function Head({ figure, size }: { figure: string; size:
     );
   return (
     <div className="head" style={{ width: size, height: size }}>
-      <F viewBox={`${x} ${y} ${s} ${s}`} className="fig-svg" />
+      <F viewBox={`${x} ${y} ${s} ${s}`} className="fig-svg" look={look} />
     </div>
   );
 });
