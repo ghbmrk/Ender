@@ -15,6 +15,11 @@ const SHOTS = {
   'realm-gate': 'realm-gate.html',
   crucible: 'crucible.html',
   bazaar: 'bazaar.html',
+  'scene-room': 'scenes/scene.html?shot=room',
+  'scene-boss': 'scenes/scene.html?shot=boss',
+  'scene-shrine': 'scenes/scene.html?shot=shrine',
+  'scene-room-colorblind': 'scenes/scene.html?shot=room&cb=1',
+  'hud-on-scene': 'hud.html?bg=scene',
 };
 
 const server = createServer(async (req, res) => {
@@ -29,7 +34,10 @@ const server = createServer(async (req, res) => {
 }).listen(0);
 const port = server.address().port;
 
-const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+const browser = await chromium.launch({
+  ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
+  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+});
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 const wanted = process.argv.slice(2);
 for (const [name, url] of Object.entries(SHOTS)) {
@@ -39,6 +47,7 @@ for (const [name, url] of Object.entries(SHOTS)) {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${port}/${url}`, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
+  if (url.startsWith('scenes/')) await page.waitForFunction(() => window.__ready, null, { timeout: 120000 });
   await page.waitForTimeout(150);
   await page.screenshot({ path: join(root, 'shots', `${name}.png`) });
   console.log(`${name}.png${errors.length ? `  ERRORS: ${errors.join(' | ')}` : ''}`);

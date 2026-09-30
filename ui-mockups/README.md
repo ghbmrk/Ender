@@ -11,6 +11,18 @@ HTML/CSS reference mockups of Ender's UMG screens, at 1920×1080. They are the v
 
 Rendered PNGs are in `shots/`.
 
+## Combat scene stills
+
+`scenes/scene.html?shot=room|boss|shrine` (add `&cb=1` for the colourblind telegraph hatch) is a three.js stand-in for the in-game look. It is not game code; it exists to judge camera framing, line weights, palette, telegraph readability and the watercolour treatment before the Unreal build runs. `hud.html?bg=scene` lays the HUD over the room still.
+
+- Camera (section 15): 38° vertical FOV, 45° yaw, −52° pitch, 1550 cm arm, 90 cm target offset. Units are metres.
+- Ink outlines (section 80): a class-ID pass stands in for custom stencil (1 player, 2 enemy, 3 elite, 4 boss, 5 interactable, 6 loot). The post shader draws edges from depth, normal and class discontinuities at 2.0 / 1.5 / 2.0 / 2.5 / 0.8 px, in #24212A, #30365A for the player and #543131 for elites.
+- Watercolour (sections 77–79): continuous Lambert-style lighting with roughness 0.82 and no cel bands, then a post pass with ~2 px wet-pigment drift off the ink line, soft bleed, edge pooling capped at 8%, two-octave pigment variation (±5% brightness, ±7% saturation), granulation, and paper fibres at 0.035 / 0.020 amplitude. The paper is screen-space here; in Unreal it must be world-anchored.
+- Telegraphs (section 83): a 25% danger wash with a 2 px ink rim, stepping to 55% with a cream rim when active. Colourblind mode adds a diagonal hatch and a thicker rim.
+- The Hushed, the Binder, the Bound King and the arena are built from primitives. They are placeholders for silhouettes and scale, not models.
+
+`vendor/three.module.min.js` is three.js r170 (MIT, `vendor/THREE_LICENSE`). It is used only by these mockups.
+
 ## What they follow
 
 - Layout at 1080p (section 89): six 58×58 skill icons with a 7 px gap at bottom centre, a 46×46 Evade, health at bottom left with Thread directly below, a 180×180 minimap at top left, and the pinned contract at top right in two lines at most.
@@ -32,6 +44,7 @@ The combat scene behind the HUD is a painted stand-in so the HUD can be judged i
 pnpm install
 # In a cloud workspace, point at the preinstalled Chromium:
 CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome node ui-mockups/render.mjs
+# WebGL scenes render with SwiftShader in headless Chromium (flags are set in render.mjs).
 node ui-mockups/render.mjs hud crucible     # just some screens
 ```
 

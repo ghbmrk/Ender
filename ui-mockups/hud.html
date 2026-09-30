@@ -168,6 +168,7 @@
 import { boot, glyph, load, essChip, cap } from './shared.js';
 const q = boot();
 const bossMode = q.get('boss') === '1';
+const onScene = q.get('bg') === 'scene'; // HUD over the three.js render; world-anchored labels hidden
 const [world, realm] = await load('world', 'realm-ashen-vault');
 const card = realm.card;
 const storm = card.contracts.find((c) => c.essence === 'storm');
@@ -177,6 +178,7 @@ const storm = card.contracts.find((c) => c.essence === 'storm');
    context. Isometric floor wash, pillars, the Binder and a Hushed pack.
    ====================================================================== */
 const S = document.getElementById('scene');
+if (onScene) document.getElementById('root').style.background = 'url(shots/scene-room.png) center/cover';
 const pillars = [
   [380, 330], [1540, 300], [260, 800], [1650, 780], [560, 150], [1330, 140],
 ];
@@ -464,7 +466,8 @@ const boss = bossMode ? `
   <div class="stl">STAGGER</div>
 </div>` : '';
 
-H.innerHTML = mm + contract + vitals + bar + world2 + boss + `
+if (onScene) S.style.display = 'none';
+H.innerHTML = mm + contract + vitals + bar + (onScene ? '' : world2) + boss + `
   <div class="note" style="left:24px;top:4px">minimap 180×180 top-left</div>
   <div class="note" style="right:28px;top:4px">pinned contract, max 2 lines</div>
   <div class="note" style="left:760px;top:966px">6 × 58px, 7px gap · Evade 46px</div>
