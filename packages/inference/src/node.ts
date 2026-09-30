@@ -1,4 +1,4 @@
-// Node-only: the filesystem fixture store. Import from "@weave/inference/node".
+// Node-only: the filesystem fixture store. Import from "@ender/inference/node".
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { FixtureFile, FixtureStore } from "./fixture";

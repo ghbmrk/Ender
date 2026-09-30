@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { ENEMIES } from "@weave/content";
+import { ENEMIES } from "@ender/content";
 
 /** All art is procedural: generated once at boot from Graphics. */
 export function makeTextures(scene: Phaser.Scene) {

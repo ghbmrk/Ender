@@ -1,4 +1,4 @@
-import { MASTERY_DOMAINS, clamp, round, type MasteryDomain, type MasteryState } from "@weave/shared";
+import { MASTERY_DOMAINS, clamp, round, type MasteryDomain, type MasteryState } from "@ender/shared";
 
 export const emptyMastery = (): Record<MasteryDomain, MasteryState> =>
   Object.fromEntries(MASTERY_DOMAINS.map((d) => [d, { successes: 0, failures: 0, opportunities: 0 }])) as Record<

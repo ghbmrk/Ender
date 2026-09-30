@@ -6,7 +6,7 @@ async function offers(page: any, preset: "smith" | "merchant") {
   // 2023-08-04: Storm is dear (≈ ×2), so production costs are high for Storm recipes.
   await newBinder(page, { preset, startDate: "2023-08-04" });
   const form = await post(page, "/api/dev/grant-form", SHARED_FORM);
-  await page.evaluate((id: string) => (window as any).__weave.setState({ panel: "crucible", crucibleFocus: id }), form.id);
+  await page.evaluate((id: string) => (window as any).__ender.setState({ panel: "crucible", crucibleFocus: id }), form.id);
   await page.getByTestId("crucible").getByTestId(`form-${form.id}`).first().click();
   await page.getByTestId("act-temper").click();
   await expect(page.getByTestId("temper-choices")).toBeVisible();

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ESSENCE_IDS, QUALITY_KEYS, type EssenceId, type EvidenceSummary, type FormQualities, type RealmObjective, type SearchPolicy } from "@weave/shared";
+import { ESSENCE_IDS, QUALITY_KEYS, type EssenceId, type EvidenceSummary, type FormQualities, type RealmObjective, type SearchPolicy } from "@ender/shared";
 
 const quality = z.enum(QUALITY_KEYS);
 const essence = z.enum(ESSENCE_IDS);

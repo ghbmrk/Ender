@@ -1,4 +1,4 @@
-// Core shared types for The Weave. Browser-safe: no Node imports here.
+// Core shared types for Ender. Browser-safe: no Node imports here.
 
 export const QUALITY_KEYS = ["burden", "veil", "reach", "knots", "flex", "bond"] as const;
 export type QualityKey = (typeof QUALITY_KEYS)[number];

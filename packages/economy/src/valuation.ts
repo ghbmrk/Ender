@@ -1,5 +1,5 @@
-import { ESSENCE_IDS, clamp, round, type ArtifactEvaluation, type Contract, type EssenceId, type EvidenceTier, type FormQualities, type ProductionRecipe, type RealmObjective } from "@weave/shared";
-import { EVIDENCE_MULTIPLIER, artifactPower, tierRank, technicalScore as scoreOf } from "@weave/domain";
+import { ESSENCE_IDS, clamp, round, type ArtifactEvaluation, type Contract, type EssenceId, type EvidenceTier, type FormQualities, type ProductionRecipe, type RealmObjective } from "@ender/shared";
+import { EVIDENCE_MULTIPLIER, artifactPower, tierRank, technicalScore as scoreOf } from "@ender/domain";
 import { essenceQty, productionCost } from "./recipe";
 
 export type MarketContext = {

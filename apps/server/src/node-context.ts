@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
-import { fsFixtureStore } from "@weave/inference/node";
-import { loadMarketSeed, loadReality } from "@weave/reality/node";
+import { fsFixtureStore } from "@ender/inference/node";
+import { loadMarketSeed, loadReality } from "@ender/reality/node";
 import type { ServerConfig } from "./config";
 import { openDb } from "./db-node";
 import { createContext } from "./services/context";

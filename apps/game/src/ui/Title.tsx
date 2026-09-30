@@ -25,7 +25,7 @@ export function Title() {
   const toggleDev = () => {
     const v = !dev;
     try {
-      localStorage.setItem("weave:dev", v ? "1" : "0");
+      localStorage.setItem("ender:dev", v ? "1" : "0");
     } catch {
       /* private mode */
     }
@@ -35,7 +35,7 @@ export function Title() {
     <div className="title-screen">
       <div className="title-card">
         <div className="sigil">⟁</div>
-        <h1>THE WEAVE</h1>
+        <h1>ENDER</h1>
         <p className="tagline">The world is governed by hidden laws. Bind what you find. Prove what you bind.</p>
         <div className="title-actions">
           <button className="primary" disabled={busy} onClick={() => go(continueGame)} data-testid="continue">

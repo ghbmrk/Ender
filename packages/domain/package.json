@@ -1,10 +1,10 @@
 {
-  "name": "@weave/domain",
+  "name": "@ender/domain",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": { ".": "./src/index.ts" },
-  "dependencies": { "@weave/shared": "workspace:*", "@weave/content": "workspace:*" }
+  "dependencies": { "@ender/shared": "workspace:*", "@ender/content": "workspace:*" }
 }

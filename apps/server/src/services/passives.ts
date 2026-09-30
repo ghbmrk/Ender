@@ -1,5 +1,5 @@
-import { BRANCHES, PASSIVES } from "@weave/content";
-import { canAllocate } from "@weave/domain";
+import { BRANCHES, PASSIVES } from "@ender/content";
+import { canAllocate } from "@ender/domain";
 import { now, run, tx } from "../db";
 import type { Ctx } from "./context";
 import { HttpError, charRow, characterView, passiveIds, policyFor } from "./character";

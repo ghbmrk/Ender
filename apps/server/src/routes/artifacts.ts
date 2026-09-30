@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { GEAR_SLOTS } from "@weave/shared";
+import { GEAR_SLOTS } from "@ender/shared";
 import type { Ctx } from "../services/context";
 import { activeCharacterId, characterView } from "../services/character";
 import { artifactView, getArtifact, heldArtifacts } from "../services/artifacts";

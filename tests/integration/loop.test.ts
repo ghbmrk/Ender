@@ -1,6 +1,6 @@
 // §72 integration tests: each arrow of the core loop, through the real HTTP API.
 import { afterEach, describe, expect, it } from "vitest";
-import { ESSENCE_IDS } from "@weave/shared";
+import { ESSENCE_IDS } from "@ender/shared";
 import { harness } from "./harness";
 
 let h: Awaited<ReturnType<typeof harness>>;

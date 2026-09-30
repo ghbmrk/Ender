@@ -1,6 +1,6 @@
-import { ESSENCE_IDS, clamp, rng, round, type EssenceId, type Rng } from "@weave/shared";
-import { BOSS, CURRENCIES, REALMS, realmById, type CurrencyId, type EliteModifier, type EnemyKind, type RealmTemplate } from "@weave/content";
-import { BASE_FOCUS, masteryEffects, technicalScore } from "@weave/domain";
+import { ESSENCE_IDS, clamp, rng, round, type EssenceId, type Rng } from "@ender/shared";
+import { BOSS, CURRENCIES, REALMS, realmById, type CurrencyId, type EliteModifier, type EnemyKind, type RealmTemplate } from "@ender/content";
+import { BASE_FOCUS, masteryEffects, technicalScore } from "@ender/domain";
 import { all, get, now, run, tx } from "../db";
 import type { Ctx } from "./context";
 import { HttpError, addItem, adjustCrowns, charRow, combatStatsFor, getMastery, passivesFor } from "./character";

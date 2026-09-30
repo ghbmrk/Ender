@@ -1,7 +1,7 @@
-import { ESSENCE_IDS, rng, round, type EssenceId, type GearSlot } from "@weave/shared";
-import { ESSENCES, REALMS, realmById } from "@weave/content";
-import { brierQuality, masteryEffects, revealedQualityKeys, tierRank, technicalScore } from "@weave/domain";
-import { essenceFreeDemand, essencePrices, essenceQty, marketValue, meetsContract, productionRecipe, salvageValue, PRESSURE_PER_UNIT } from "@weave/economy";
+import { ESSENCE_IDS, rng, round, type EssenceId, type GearSlot } from "@ender/shared";
+import { ESSENCES, REALMS, realmById } from "@ender/content";
+import { brierQuality, masteryEffects, revealedQualityKeys, tierRank, technicalScore } from "@ender/domain";
+import { essenceFreeDemand, essencePrices, essenceQty, marketValue, meetsContract, productionRecipe, salvageValue, PRESSURE_PER_UNIT } from "@ender/economy";
 import { all, get, now, run, tx } from "../db";
 import type { Ctx } from "./context";
 import {

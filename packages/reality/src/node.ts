@@ -1,8 +1,8 @@
-// Node-only seed loading from data/seed. Import from "@weave/reality/node".
+// Node-only seed loading from data/seed. Import from "@ender/reality/node".
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { FormRealityData } from "@weave/shared";
-import type { MarketSeed } from "@weave/economy";
+import type { FormRealityData } from "@ender/shared";
+import type { MarketSeed } from "@ender/economy";
 import type { CandidateGraph } from "./graph";
 import type { LoreRecord } from "./adapter";
 import { realityFromSeeds } from "./load";

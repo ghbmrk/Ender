@@ -1,4 +1,4 @@
-import type { SearchPolicy } from "@weave/shared";
+import type { SearchPolicy } from "@ender/shared";
 
 export type PassiveEffects = {
   policy?: Partial<SearchPolicy>;

@@ -1,7 +1,7 @@
-import { percentile, type WorldSnapshot } from "@weave/shared";
-import { basePrices, buildSnapshots, productionCost, type BuiltWorld, type MarketSeed } from "@weave/economy";
-import type { PubChemRealityAdapter } from "@weave/reality";
-import { FixtureInferenceProvider, RuleInferenceProvider, type FixtureStore, type InferenceProvider } from "@weave/inference";
+import { percentile, type WorldSnapshot } from "@ender/shared";
+import { basePrices, buildSnapshots, productionCost, type BuiltWorld, type MarketSeed } from "@ender/economy";
+import type { PubChemRealityAdapter } from "@ender/reality";
+import { FixtureInferenceProvider, RuleInferenceProvider, type FixtureStore, type InferenceProvider } from "@ender/inference";
 import type { Db } from "../db";
 import type { ServerConfig } from "../config";
 

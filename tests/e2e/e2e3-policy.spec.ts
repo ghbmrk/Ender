@@ -7,14 +7,14 @@ test("a Forge passive changes the SearchPolicy sent with the Temper request", as
   await post(page, "/api/dev/grant", { passivePoints: 1 });
   const base = (await api(page, "character")).effectivePolicy;
 
-  await page.evaluate(() => (window as any).__weave.setState({ panel: "passives" }));
+  await page.evaluate(() => (window as any).__ender.setState({ panel: "passives" }));
   await page.getByTestId("node-tempered-purpose").click();
   await expect.poll(async () => (await api(page, "character")).passives).toContain("tempered-purpose");
   const boosted = (await api(page, "character")).effectivePolicy;
   expect(boosted.optimization).toBeCloseTo(base.optimization + 0.2, 3);
 
   const form = await post(page, "/api/dev/grant-form", SHARED_FORM);
-  await page.evaluate(() => (window as any).__weave.setState({ panel: null }));
+  await page.evaluate(() => (window as any).__ender.setState({ panel: null }));
   await temperInUi(page, form.id);
   const recent = (await get(page, "/api/dev/inference/recent")).recent;
   const transform = recent.find((r: any) => r.kind === "transform");

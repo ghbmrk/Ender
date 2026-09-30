@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { api, newBinder, openCrucibleOn, state } from "./helpers";
 
 async function openStation(page: Page, id: string) {
-  await page.evaluate((s) => (window as any).__weave.crossing.teleportTo(s), id);
+  await page.evaluate((s) => (window as any).__ender.crossing.teleportTo(s), id);
   await page.getByTestId("game-canvas").click({ position: { x: 700, y: 450 } });
   await page.waitForTimeout(250);
   await page.keyboard.down("e");
@@ -16,14 +16,14 @@ const crownsShown = async (page: Page) => Number((await page.getByTestId("crowns
 test("inspect scarcity → choose a Realm → fight → craft → sell → the world turns → values shift", async ({ page }) => {
   // 1. Enter the Crossing.
   await newBinder(page, { query: "autoplay=1&god=1&speed=2&dmg=6" });
-  await page.waitForFunction(() => (window as any).__weave.crossing);
+  await page.waitForFunction(() => (window as any).__ender.crossing);
 
   // 2–3. Inspect the Bazaar and observe an expensive Essence.
   await openStation(page, "bazaar");
   await expect(page.getByTestId("essence-table")).toBeVisible();
   await expect(page.getByTestId("essence-storm")).toHaveAttribute("data-status", "dear");
   await expect(page.getByTestId("bazaar-headline")).toContainText("Storm");
-  await page.evaluate(() => (window as any).__weave.setState({ panel: null }));
+  await page.evaluate(() => (window as any).__ender.setState({ panel: null }));
 
   // 4. Choose a Realm because of the market: the Gate shows demand for Storm-free Forms.
   await openStation(page, "gate");
@@ -90,7 +90,7 @@ test("inspect scarcity → choose a Realm → fight → craft → sell → the w
 
   // 11–12. Sell the more profitable one; Crowns increase.
   const pick = [...trialed].sort((x: any, y: any) => y.evaluation.margin - x.evaluation.margin)[0];
-  await page.evaluate(() => (window as any).__weave.setState({ panel: "bazaar" }));
+  await page.evaluate(() => (window as any).__ender.setState({ panel: "bazaar" }));
   await page.getByTestId("tab-forms").click();
   const before = await crownsShown(page);
   await page.getByTestId(`sell-form-${pick.id}`).click();

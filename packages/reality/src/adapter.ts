@@ -1,5 +1,5 @@
-import type { Candidate, EvidenceSummary, FormRealityData, RealmObjective } from "@weave/shared";
-import { scoreObjective, qualityDistance } from "@weave/domain";
+import type { Candidate, EvidenceSummary, FormRealityData, RealmObjective } from "@ender/shared";
+import { scoreObjective, qualityDistance } from "@ender/domain";
 import type { CandidateGraph } from "./graph";
 
 export type SearchContext = { depth?: 1 | 2; limit?: number };

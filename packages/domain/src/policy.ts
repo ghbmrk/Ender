@@ -1,5 +1,5 @@
-import { POLICY_KEYS, clamp, round, type SearchPolicy } from "@weave/shared";
-import { PASSIVES, type PassiveEffects } from "@weave/content";
+import { POLICY_KEYS, clamp, round, type SearchPolicy } from "@ender/shared";
+import { PASSIVES, type PassiveEffects } from "@ender/content";
 
 export const DEFAULT_POLICY: SearchPolicy = {
   exploration: 0.35,

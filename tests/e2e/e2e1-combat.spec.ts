@@ -9,8 +9,8 @@ test("new Binder enters a Realm, fights through it and unbinds the King", async 
   await newBinder(page, { query: "autoplay=1&god=1&speed=2&dmg=6" });
 
   // Walk-free: stand at the Realm Gate and press E, exactly as a player would.
-  await page.waitForFunction(() => (window as any).__weave.crossing);
-  await page.evaluate(() => (window as any).__weave.crossing.teleportTo("gate"));
+  await page.waitForFunction(() => (window as any).__ender.crossing);
+  await page.evaluate(() => (window as any).__ender.crossing.teleportTo("gate"));
   await page.getByTestId("game-canvas").click({ position: { x: 5, y: 5 } });
   await page.keyboard.down("e");
   await page.waitForTimeout(200);
@@ -25,7 +25,7 @@ test("new Binder enters a Realm, fights through it and unbinds the King", async 
     .poll(
       async () => {
         const s = await state(page);
-        const room = await page.evaluate(() => (window as any).__weave.realm?.currentRoom);
+        const room = await page.evaluate(() => (window as any).__ender.realm?.currentRoom);
         if (typeof room === "number") seen.add(room);
         if (!bossBarSeen) bossBarSeen = await page.getByTestId("boss-bar").isVisible();
         if (s.panel === "shrine") await page.getByTestId("leave-shrine").click();

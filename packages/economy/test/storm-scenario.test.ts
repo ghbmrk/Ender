@@ -1,7 +1,7 @@
 // §69 — Required economic scenario: Storm scarcity flips which Form is economically superior.
 import { describe, expect, it } from "vitest";
-import { ESSENCE_IDS, type EssenceId, type WorldSnapshot } from "@weave/shared";
-import { ESSENCES } from "@weave/content";
+import { ESSENCE_IDS, type EssenceId, type WorldSnapshot } from "@ender/shared";
+import { ESSENCES } from "@ender/content";
 import {
   efficiencyScore,
   essenceFreeDemand,

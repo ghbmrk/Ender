@@ -1,5 +1,5 @@
-import { round } from "@weave/shared";
-import { FOCUS_COST } from "@weave/domain";
+import { round } from "@ender/shared";
+import { FOCUS_COST } from "@ender/domain";
 import { all, get } from "../db";
 import type { Ctx } from "./context";
 

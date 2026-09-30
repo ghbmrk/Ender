@@ -1,4 +1,4 @@
-import type { CraftAction } from "@weave/shared";
+import type { CraftAction } from "@ender/shared";
 
 export const LEVEL_CAP = 30;
 

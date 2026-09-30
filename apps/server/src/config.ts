@@ -18,14 +18,14 @@ export type ServerConfig = {
 };
 
 export function configFromEnv(overrides: Partial<ServerConfig> = {}): ServerConfig {
-  const dataDir = process.env.WEAVE_DATA_DIR ?? resolve(REPO_ROOT, "data");
+  const dataDir = process.env.ENDER_DATA_DIR ?? resolve(REPO_ROOT, "data");
   return {
     dataDir,
-    dbPath: process.env.WEAVE_DB ?? resolve(REPO_ROOT, ".local/weave.sqlite"),
-    strictFixtures: process.env.WEAVE_STRICT_FIXTURES === "1",
-    recordMissing: process.env.WEAVE_RECORD_REQUESTS !== "0",
-    startDate: process.env.WEAVE_START_DATE ?? DEFAULT_START_DATE,
-    devRoutes: process.env.WEAVE_DEV_ROUTES !== "0",
+    dbPath: process.env.ENDER_DB ?? resolve(REPO_ROOT, ".local/ender.sqlite"),
+    strictFixtures: process.env.ENDER_STRICT_FIXTURES === "1",
+    recordMissing: process.env.ENDER_RECORD_REQUESTS !== "0",
+    startDate: process.env.ENDER_START_DATE ?? DEFAULT_START_DATE,
+    devRoutes: process.env.ENDER_DEV_ROUTES !== "0",
     ...overrides,
   };
 }

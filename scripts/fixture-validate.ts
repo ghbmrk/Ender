@@ -5,7 +5,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { validateFixture, type InferenceKind } from "@weave/inference";
+import { validateFixture, type InferenceKind } from "@ender/inference";
 import { DATA_DIR } from "./paths";
 
 const KINDS: InferenceKind[] = ["attune", "transform", "critique"];

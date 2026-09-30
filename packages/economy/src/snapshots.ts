@@ -1,5 +1,5 @@
-import { ESSENCE_IDS, round, type EssenceId, type WorldSnapshot } from "@weave/shared";
-import { ESSENCES } from "@weave/content";
+import { ESSENCE_IDS, round, type EssenceId, type WorldSnapshot } from "@ender/shared";
+import { ESSENCES } from "@ender/content";
 import { buildWeekly, scarcityAt, type MarketSeed, type ScarcityBreakdown } from "./scarcity";
 import { worldModifiers } from "./prices";
 

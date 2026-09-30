@@ -1,4 +1,4 @@
-import { clamp, round, type FormQualities, type ObjectiveConstraint, type QualityKey, type RealmObjective } from "@weave/shared";
+import { clamp, round, type FormQualities, type ObjectiveConstraint, type QualityKey, type RealmObjective } from "@ender/shared";
 
 export type Contribution = {
   quality: QualityKey;

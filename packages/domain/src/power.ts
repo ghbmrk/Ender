@@ -1,4 +1,4 @@
-import { clamp, round, type CombatStats, type EvidenceTier, type GearSlot } from "@weave/shared";
+import { clamp, round, type CombatStats, type EvidenceTier, type GearSlot } from "@ender/shared";
 
 export const EVIDENCE_MULTIPLIER: Record<EvidenceTier, number> = {
   veiled: 0.7,

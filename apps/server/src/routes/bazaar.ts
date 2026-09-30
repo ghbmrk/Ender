@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ESSENCE_IDS } from "@weave/shared";
+import { ESSENCE_IDS } from "@ender/shared";
 import type { Ctx } from "../services/context";
 import { activeCharacterId } from "../services/character";
 import {

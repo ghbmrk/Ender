@@ -1,6 +1,6 @@
-import { round, type Candidate, type FormRealityData } from "@weave/shared";
-import { computeBands, qualityDistance, toQualities, type NormalizationBands } from "@weave/domain";
-import { productionRecipe } from "@weave/economy";
+import { round, type Candidate, type FormRealityData } from "@ender/shared";
+import { computeBands, qualityDistance, toQualities, type NormalizationBands } from "@ender/domain";
+import { productionRecipe } from "@ender/economy";
 
 export const NEIGHBOR_COUNT = 16;
 

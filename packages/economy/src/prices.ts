@@ -1,5 +1,5 @@
-import { ESSENCE_IDS, clamp, noise, round, type EssenceId, type RealmModifier, type WorldSnapshot } from "@weave/shared";
-import { ESSENCES, REALMS } from "@weave/content";
+import { ESSENCE_IDS, clamp, noise, round, type EssenceId, type RealmModifier, type WorldSnapshot } from "@ender/shared";
+import { ESSENCES, REALMS } from "@ender/content";
 
 /** Exogenous factor from external scarcity: 50 → ×1, each +35 doubles. */
 export const externalScarcityFactor = (scarcity: number) => round(2 ** ((scarcity - 50) / 35), 4);

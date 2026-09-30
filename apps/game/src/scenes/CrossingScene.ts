@@ -58,7 +58,7 @@ export class CrossingScene extends Phaser.Scene {
     this.player = new PlayerBody(this, W / 2, H / 2 + 150, DEFAULT_STATS);
     this.cameras.main.setBounds(0, 0, W, H).startFollow(this.player.sprite, true, 0.12, 0.12).setBackgroundColor(0x0b0a10);
     bus.emit("scene:ready", { scene: "crossing" });
-    (window as any).__weave.crossing = this;
+    (window as any).__ender.crossing = this;
   }
 
   override update(_t: number, dms: number) {

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { QUALITY_KEYS } from "@weave/shared";
-import { QUALITY_DESCRIPTIONS } from "@weave/content";
+import { QUALITY_KEYS } from "@ender/shared";
+import { QUALITY_DESCRIPTIONS } from "@ender/content";
 import { TIER_LABEL, crowns, essenceColor, essenceGlyph, essenceName, fmt, qualityName } from "../economy/format";
 
 export function QualityRunes({ qualities, highlight }: { qualities: Record<string, { value: number; exact: boolean; uncertainty?: number } | undefined>; highlight?: string[] }) {

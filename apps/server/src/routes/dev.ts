@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { REALMS } from "@weave/content";
+import { REALMS } from "@ender/content";
 import type { Ctx } from "../services/context";
 import { activeCharacterId } from "../services/character";
 import { artifactView, createArtifact, getArtifact, makeReadings } from "../services/artifacts";

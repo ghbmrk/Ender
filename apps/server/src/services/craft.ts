@@ -1,8 +1,8 @@
-import { ESSENCE_IDS, QUALITY_KEYS, percentileRank, round, type EssenceId, type FormQualities, type QualityKey } from "@weave/shared";
-import { ESSENCES, QUALITY_NAMES, realmById } from "@weave/content";
-import { FOCUS_COST, WORK_UNITS, masteryEffects, mirrorObjectives, qualityDistance, readQualities, scoreObjective, technicalScore, weaknesses } from "@weave/domain";
-import { costShare, efficiencyScore, essenceQty, evaluateForm, marketValue, productionCost, productionRecipe } from "@weave/economy";
-import { ruleFantasyName, type AttuneRequest, type CritiqueRequest, type CritiqueResult, type TransformRequest } from "@weave/inference";
+import { ESSENCE_IDS, QUALITY_KEYS, percentileRank, round, type EssenceId, type FormQualities, type QualityKey } from "@ender/shared";
+import { ESSENCES, QUALITY_NAMES, realmById } from "@ender/content";
+import { FOCUS_COST, WORK_UNITS, masteryEffects, mirrorObjectives, qualityDistance, readQualities, scoreObjective, technicalScore, weaknesses } from "@ender/domain";
+import { costShare, efficiencyScore, essenceQty, evaluateForm, marketValue, productionCost, productionRecipe } from "@ender/economy";
+import { ruleFantasyName, type AttuneRequest, type CritiqueRequest, type CritiqueResult, type TransformRequest } from "@ender/inference";
 import { all, get, now, run, tx } from "../db";
 import type { Ctx } from "./context";
 import {

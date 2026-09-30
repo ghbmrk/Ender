@@ -1,5 +1,5 @@
-import type { FormRealityData } from "@weave/shared";
-import { productionRecipe } from "@weave/economy";
+import type { FormRealityData } from "@ender/shared";
+import { productionRecipe } from "@ender/economy";
 import { buildCandidateGraph, type CandidateGraph } from "./graph";
 import { PubChemRealityAdapter, type LoreRecord } from "./adapter";
 

@@ -1,7 +1,7 @@
 // §71 unit tests: recipes, production cost, market value, efficiency, scarcity, local demand, contracts.
 import { describe, expect, it } from "vitest";
-import { ESSENCE_IDS, type EssenceId, type WorldSnapshot } from "@weave/shared";
-import { ESSENCES, RECIPE_DRIVERS } from "@weave/content";
+import { ESSENCE_IDS, type EssenceId, type WorldSnapshot } from "@ender/shared";
+import { ESSENCES, RECIPE_DRIVERS } from "@ender/content";
 import {
   PRESSURE_PER_UNIT,
   efficiencyScore,

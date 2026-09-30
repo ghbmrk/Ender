@@ -1,6 +1,6 @@
 /**
  * Turns the Vite web build (apps/game/dist-web) into single self-contained pages:
- *   dist-web/the-weave.html   full document: open it from disk or host it anywhere
+ *   dist-web/ender.html   full document: open it from disk or host it anywhere
  *   dist-web/artifact.html    the same page as a body fragment, for hosts that supply the document shell
  * No network is needed at runtime: the server, seeds and fixtures are all inside.
  */
@@ -16,15 +16,15 @@ const jsFile = assets.find((f) => f.endsWith(".js"));
 if (!jsFile || assets.filter((f) => f.endsWith(".js")).length !== 1) throw new Error(`expected exactly one JS chunk, got ${assets.join(", ")}`);
 const js = readFileSync(resolve(dist, "assets", jsFile), "utf8").replace(/<\/script/gi, "<\\/script");
 
-const title = html.match(/<title>.*?<\/title>/)?.[0] ?? "<title>The Weave</title>";
+const title = html.match(/<title>.*?<\/title>/)?.[0] ?? "<title>Ender</title>";
 const icon = html.match(/<link rel="icon"[^>]*>/)?.[0] ?? "";
 const style = `<style>\n${css}\n</style>`;
 const script = `<script type="module">\n${js}\n</script>`;
 
 writeFileSync(
-  resolve(dist, "the-weave.html"),
+  resolve(dist, "ender.html"),
   `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="UTF-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1.0" />\n${title}\n${icon}\n${style}\n</head>\n<body>\n<div id="root"></div>\n${script}\n</body>\n</html>\n`,
 );
 writeFileSync(resolve(dist, "artifact.html"), `${title}\n${style}\n<div id="root"></div>\n${script}\n`);
 const mb = (s: string) => (Buffer.byteLength(s) / 1e6).toFixed(2);
-console.log(`the-weave.html + artifact.html written (${mb(js)} MB script, ${mb(css)} MB css)`);
+console.log(`ender.html + artifact.html written (${mb(js)} MB script, ${mb(css)} MB css)`);

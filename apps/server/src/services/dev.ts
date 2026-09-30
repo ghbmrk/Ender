@@ -1,7 +1,7 @@
-import { ESSENCE_IDS, QUALITY_KEYS } from "@weave/shared";
-import { ESSENCE_MARKET_SERIES } from "@weave/content";
-import { rawQualityValues } from "@weave/domain";
-import { essencePrice } from "@weave/economy";
+import { ESSENCE_IDS, QUALITY_KEYS } from "@ender/shared";
+import { ESSENCE_MARKET_SERIES } from "@ender/content";
+import { rawQualityValues } from "@ender/domain";
+import { essencePrice } from "@ender/economy";
 import { all } from "../db";
 import type { Ctx } from "./context";
 import { getArtifact, lineage, trueEvaluation, trueQualities } from "./artifacts";

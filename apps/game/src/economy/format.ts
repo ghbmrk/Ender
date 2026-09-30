@@ -1,4 +1,4 @@
-import { ESSENCES, QUALITY_NAMES } from "@weave/content";
+import { ESSENCES, QUALITY_NAMES } from "@ender/content";
 
 export const fmt = (n: number | null | undefined, dp = 0) => (n === null || n === undefined || Number.isNaN(n) ? "—" : n.toLocaleString(undefined, { maximumFractionDigits: dp, minimumFractionDigits: dp }));
 export const crowns = (n: number | null | undefined) => `${fmt(n)} ◈`;

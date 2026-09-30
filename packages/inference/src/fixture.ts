@@ -1,4 +1,4 @@
-import { canonicalize } from "@weave/shared";
+import { canonicalize } from "@ender/shared";
 import { requestHash } from "./hash";
 import { RuleInferenceProvider } from "./rule";
 import {

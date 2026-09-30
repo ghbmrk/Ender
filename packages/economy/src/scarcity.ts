@@ -1,5 +1,5 @@
-import { ESSENCE_IDS, clamp, mean, percentileRank, round, std, type EssenceId } from "@weave/shared";
-import { ESSENCE_MARKET_SERIES } from "@weave/content";
+import { ESSENCE_IDS, clamp, mean, percentileRank, round, std, type EssenceId } from "@ender/shared";
+import { ESSENCE_MARKET_SERIES } from "@ender/content";
 
 export type SeriesObs = [date: string, value: number];
 export type MarketSeed = { source: string; unit: string; series: Record<string, SeriesObs[]> };

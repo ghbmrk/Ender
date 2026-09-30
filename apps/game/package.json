@@ -1,5 +1,5 @@
 {
-  "name": "@weave/game",
+  "name": "@ender/game",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,13 +11,13 @@
     "build:web": "vite build --mode web --outDir dist-web --base ./"
   },
   "dependencies": {
-    "@weave/content": "workspace:*",
-    "@weave/domain": "workspace:*",
-    "@weave/economy": "workspace:*",
-    "@weave/inference": "workspace:*",
-    "@weave/reality": "workspace:*",
-    "@weave/server": "workspace:*",
-    "@weave/shared": "workspace:*",
+    "@ender/content": "workspace:*",
+    "@ender/domain": "workspace:*",
+    "@ender/economy": "workspace:*",
+    "@ender/inference": "workspace:*",
+    "@ender/reality": "workspace:*",
+    "@ender/server": "workspace:*",
+    "@ender/shared": "workspace:*",
     "phaser": "^4.2.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

@@ -1,4 +1,4 @@
-import { ESSENCE_IDS, MASTERY_DOMAINS, type Character, type EssenceId, type GearSlot, type MasteryDomain, type MasteryState, type SearchPolicy } from "@weave/shared";
+import { ESSENCE_IDS, MASTERY_DOMAINS, type Character, type EssenceId, type GearSlot, type MasteryDomain, type MasteryState, type SearchPolicy } from "@ender/shared";
 import {
   BASE_FOCUS,
   DEFAULT_POLICY,
@@ -14,7 +14,7 @@ import {
   recordMastery,
   xpRequired,
   LEVEL_CAP,
-} from "@weave/domain";
+} from "@ender/domain";
 import { all, get, now, run, tx } from "../db";
 import type { Ctx } from "./context";
 import { currentSnapshot } from "./world";

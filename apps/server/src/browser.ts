@@ -1,9 +1,9 @@
-// The whole Weave server as an in-page module, for the no-install web build.
+// The whole Ender server as an in-page module, for the no-install web build.
 // Same services and routes as Node; only the database (sql.js) and seed loading differ.
 import { ZodError } from "zod";
-import type { MarketSeed } from "@weave/economy";
-import type { FixtureStore } from "@weave/inference";
-import type { PubChemRealityAdapter } from "@weave/reality";
+import type { MarketSeed } from "@ender/economy";
+import type { FixtureStore } from "@ender/inference";
+import type { PubChemRealityAdapter } from "@ender/reality";
 import type { ServerConfig } from "./config";
 import type { Db } from "./db";
 import { createContext } from "./services/context";

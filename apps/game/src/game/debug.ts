@@ -1,4 +1,4 @@
-// Test / developer hooks (exposed on window.__weave). Never used by normal play.
+// Test / developer hooks (exposed on window.__ender). Never used by normal play.
 export const debug = {
   autoplay: false,
   godMode: false,

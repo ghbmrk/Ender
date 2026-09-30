@@ -1,18 +1,18 @@
-// No-install web build: the Weave server runs inside the page. Every /api/* request the
+// No-install web build: the Ender server runs inside the page. Every /api/* request the
 // game makes is answered by the same server code, backed by sql.js and bundled seeds.
 // The database is saved to this browser's IndexedDB, so progress survives a reload.
 import initSqlJs from "sql.js/dist/sql-asm-memory-growth.js";
 import type { Database } from "sql.js";
-import { memoryFixtureStore, type FixtureFile } from "@weave/inference";
-import { realityFromSeeds } from "@weave/reality";
-import { SCHEMA, createInPageServer, type Db } from "@weave/server/browser";
+import { memoryFixtureStore, type FixtureFile } from "@ender/inference";
+import { realityFromSeeds } from "@ender/reality";
+import { SCHEMA, createInPageServer, type Db } from "@ender/server/browser";
 import compounds from "@data/seed/pubchem/compounds.json";
 import graph from "@data/seed/pubchem/candidate-graph.json";
 import marketSeed from "@data/seed/markets/ecb-exr.json";
 
 const fixtureFiles = Object.values(import.meta.glob("@data/inference-fixtures/*/*.json", { eager: true, import: "default" })) as FixtureFile[];
 const START_DATE = "2023-08-04";
-const IDB = { name: "the-weave", store: "db", key: "sqlite" };
+const IDB = { name: "ender", store: "db", key: "sqlite" };
 
 function sqlJsDb(sdb: Database): Db {
   const norm = (ps: unknown[]) => ps.map((p) => (p === undefined ? null : p)) as never[];

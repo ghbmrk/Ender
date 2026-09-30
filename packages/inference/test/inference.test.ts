@@ -3,8 +3,8 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PRESET_POLICIES } from "@weave/domain";
-import { REALMS } from "@weave/content";
+import { PRESET_POLICIES } from "@ender/domain";
+import { REALMS } from "@ender/content";
 import {
   ChatGPTPlanInferenceProvider,
   FixtureInferenceProvider,
@@ -84,12 +84,12 @@ describe("fixture validation", () => {
 
 describe("providers", () => {
   it("strict fixture mode throws FixtureRequired and records the request", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "weave-fx-"));
+    const dir = mkdtempSync(join(tmpdir(), "ender-fx-"));
     const p = new FixtureInferenceProvider({ store: fsFixtureStore(join(dir, "f"), join(dir, "r")), strict: true });
     await expect(p.transform(request())).rejects.toBeInstanceOf(FixtureRequired);
   });
   it("non-strict mode falls back to rules", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "weave-fx-"));
+    const dir = mkdtempSync(join(tmpdir(), "ender-fx-"));
     const p = new FixtureInferenceProvider({ store: fsFixtureStore(join(dir, "f"), join(dir, "r")), recordMissing: false });
     const out = await p.transform(request());
     expect(out.provenance.provider).toBe("rule");

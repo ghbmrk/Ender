@@ -11,11 +11,11 @@ test("play, craft and trade with every external host blocked", async ({ page, co
     return route.abort();
   });
   await newBinder(page, { query: "autoplay=1&god=1&speed=2&dmg=6" });
-  await page.evaluate(() => (window as any).__weave.setState({ panel: "gate" }));
+  await page.evaluate(() => (window as any).__ender.setState({ panel: "gate" }));
   await page.getByTestId("enter-glass-fen").click();
   await expect(page.getByTestId("room")).toBeVisible();
   await page.waitForTimeout(4000); // live combat in the canvas
-  await page.evaluate(() => (window as any).__weave.realm.abandon());
+  await page.evaluate(() => (window as any).__ender.realm.abandon());
   await expect(page.getByTestId("run-summary")).toBeVisible();
 
   const [form] = await formsFromRealm(page, "hollow-keep");

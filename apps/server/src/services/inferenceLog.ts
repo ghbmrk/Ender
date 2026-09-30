@@ -1,6 +1,6 @@
-import type { CraftAction } from "@weave/shared";
-import { WORK_UNITS, xpAwardKey, xpForWorkUnits } from "@weave/domain";
-import type { InferenceEnvelope, InferenceKind } from "@weave/inference";
+import type { CraftAction } from "@ender/shared";
+import { WORK_UNITS, xpAwardKey, xpForWorkUnits } from "@ender/domain";
+import type { InferenceEnvelope, InferenceKind } from "@ender/inference";
 import { now, run } from "../db";
 import type { Ctx } from "./context";
 import { awardXp } from "./character";

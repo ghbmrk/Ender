@@ -6,7 +6,7 @@ import { api } from "./api";
 import "./styles.css";
 
 // Developer / test surface. Gameplay never depends on it.
-(window as any).__weave = { debug, getState, setState, api };
+(window as any).__ender = { debug, getState, setState, api };
 
 async function boot() {
   // The web build carries its own server; the dev build talks to apps/server over /api.

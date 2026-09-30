@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { ENEMIES, type EliteModifier, type EnemyKind } from "@weave/content";
+import { ENEMIES, type EliteModifier, type EnemyKind } from "@ender/content";
 import { angleTo, dist, resolveCircleRect, type Rect } from "../combat/geometry";
 
 export type EnemyState = "spawn" | "chase" | "windup" | "strike" | "lunge" | "recover" | "cast";

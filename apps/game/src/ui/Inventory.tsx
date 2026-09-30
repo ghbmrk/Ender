@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CURRENCIES } from "@weave/content";
+import { CURRENCIES } from "@ender/content";
 import { api } from "../api";
 import { refreshCharacter } from "../game/flow";
 import { setState, toast, useStore } from "../state/store";

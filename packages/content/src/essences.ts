@@ -1,4 +1,4 @@
-import type { EssenceId } from "@weave/shared";
+import type { EssenceId } from "@ender/shared";
 
 export type EssenceDef = { id: EssenceId; name: string; basePrice: number; color: string; glyph: string; flavor: string };
 

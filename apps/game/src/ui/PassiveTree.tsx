@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { POLICY_KEYS } from "@weave/shared";
+import { POLICY_KEYS } from "@ender/shared";
 import { api } from "../api";
 import { refreshCharacter } from "../game/flow";
 import { toast, useStore } from "../state/store";

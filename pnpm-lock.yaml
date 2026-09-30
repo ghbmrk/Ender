@@ -8,30 +8,30 @@ importers:
 
   .:
     devDependencies:
+      '@ender/content':
+        specifier: workspace:*
+        version: link:packages/content
+      '@ender/domain':
+        specifier: workspace:*
+        version: link:packages/domain
+      '@ender/economy':
+        specifier: workspace:*
+        version: link:packages/economy
+      '@ender/inference':
+        specifier: workspace:*
+        version: link:packages/inference
+      '@ender/reality':
+        specifier: workspace:*
+        version: link:packages/reality
+      '@ender/shared':
+        specifier: workspace:*
+        version: link:packages/shared
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
       '@types/node':
         specifier: ^26.6.3
         version: 26.6.3
-      '@weave/content':
-        specifier: workspace:*
-        version: link:packages/content
-      '@weave/domain':
-        specifier: workspace:*
-        version: link:packages/domain
-      '@weave/economy':
-        specifier: workspace:*
-        version: link:packages/economy
-      '@weave/inference':
-        specifier: workspace:*
-        version: link:packages/inference
-      '@weave/reality':
-        specifier: workspace:*
-        version: link:packages/reality
-      '@weave/shared':
-        specifier: workspace:*
-        version: link:packages/shared
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -44,25 +44,25 @@ importers:
 
   apps/game:
     dependencies:
-      '@weave/content':
+      '@ender/content':
         specifier: workspace:*
         version: link:../../packages/content
-      '@weave/domain':
+      '@ender/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@weave/economy':
+      '@ender/economy':
         specifier: workspace:*
         version: link:../../packages/economy
-      '@weave/inference':
+      '@ender/inference':
         specifier: workspace:*
         version: link:../../packages/inference
-      '@weave/reality':
+      '@ender/reality':
         specifier: workspace:*
         version: link:../../packages/reality
-      '@weave/server':
+      '@ender/server':
         specifier: workspace:*
         version: link:../server
-      '@weave/shared':
+      '@ender/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       phaser:
@@ -96,22 +96,22 @@ importers:
 
   apps/server:
     dependencies:
-      '@weave/content':
+      '@ender/content':
         specifier: workspace:*
         version: link:../../packages/content
-      '@weave/domain':
+      '@ender/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@weave/economy':
+      '@ender/economy':
         specifier: workspace:*
         version: link:../../packages/economy
-      '@weave/inference':
+      '@ender/inference':
         specifier: workspace:*
         version: link:../../packages/inference
-      '@weave/reality':
+      '@ender/reality':
         specifier: workspace:*
         version: link:../../packages/reality
-      '@weave/shared':
+      '@ender/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       fastify:
@@ -127,40 +127,40 @@ importers:
 
   packages/content:
     dependencies:
-      '@weave/shared':
+      '@ender/shared':
         specifier: workspace:*
         version: link:../shared
 
   packages/domain:
     dependencies:
-      '@weave/content':
+      '@ender/content':
         specifier: workspace:*
         version: link:../content
-      '@weave/shared':
+      '@ender/shared':
         specifier: workspace:*
         version: link:../shared
 
   packages/economy:
     dependencies:
-      '@weave/content':
+      '@ender/content':
         specifier: workspace:*
         version: link:../content
-      '@weave/domain':
+      '@ender/domain':
         specifier: workspace:*
         version: link:../domain
-      '@weave/shared':
+      '@ender/shared':
         specifier: workspace:*
         version: link:../shared
 
   packages/inference:
     dependencies:
-      '@weave/content':
+      '@ender/content':
         specifier: workspace:*
         version: link:../content
-      '@weave/domain':
+      '@ender/domain':
         specifier: workspace:*
         version: link:../domain
-      '@weave/shared':
+      '@ender/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -169,13 +169,13 @@ importers:
 
   packages/reality:
     dependencies:
-      '@weave/domain':
+      '@ender/domain':
         specifier: workspace:*
         version: link:../domain
-      '@weave/economy':
+      '@ender/economy':
         specifier: workspace:*
         version: link:../economy
-      '@weave/shared':
+      '@ender/shared':
         specifier: workspace:*
         version: link:../shared
 

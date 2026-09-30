@@ -1,7 +1,7 @@
-import { QUALITY_KEYS, hash32, round, type EvidenceTier, type FormQualities, type GearSlot, type QualityKey } from "@weave/shared";
-import { realmById } from "@weave/content";
-import { READING_NOISE, artifactPower, readQualities, revealedQualityKeys, scoreObjective } from "@weave/domain";
-import { evaluateForm, productionCost, productionRecipe } from "@weave/economy";
+import { QUALITY_KEYS, hash32, round, type EvidenceTier, type FormQualities, type GearSlot, type QualityKey } from "@ender/shared";
+import { realmById } from "@ender/content";
+import { READING_NOISE, artifactPower, readQualities, revealedQualityKeys, scoreObjective } from "@ender/domain";
+import { evaluateForm, productionCost, productionRecipe } from "@ender/economy";
 import { all, get, now, run } from "../db";
 import type { Ctx } from "./context";
 import { HttpError, passivesFor } from "./character";
@@ -36,6 +36,7 @@ export type ArtifactRow = {
 
 export type Readings = { qualities: FormQualities; predictedScore: number; noise: number };
 
+// The "weave:" salt predates the rename to Ender; changing it would change every Form ID and fixture hash.
 export const fantasyIdFor = (realityId: string) => `form-${hash32(`weave:${realityId}`).toString(36)}`;
 
 let counter = 0;

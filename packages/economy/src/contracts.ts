@@ -1,6 +1,6 @@
-import { ESSENCE_IDS, clamp, percentile, rng, round, type Candidate, type Contract, type EssenceId, type WorldSnapshot } from "@weave/shared";
-import { ESSENCES, REALMS } from "@weave/content";
-import { technicalScore } from "@weave/domain";
+import { ESSENCE_IDS, clamp, percentile, rng, round, type Candidate, type Contract, type EssenceId, type WorldSnapshot } from "@ender/shared";
+import { ESSENCES, REALMS } from "@ender/content";
+import { technicalScore } from "@ender/domain";
 import { costShare, essenceQty, productionCost } from "./recipe";
 import { efficiencyScore } from "./valuation";
 

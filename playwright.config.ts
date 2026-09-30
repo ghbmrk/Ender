@@ -25,12 +25,12 @@ export default defineConfig({
     {
       command: `node -e "for (const f of ['.local/e2e.sqlite','.local/e2e.sqlite-wal','.local/e2e.sqlite-shm']) require('fs').rmSync(f,{force:true})" && tsx apps/server/src/main.ts`,
       url: `http://127.0.0.1:${API_PORT}/api/health`,
-      env: { PORT: String(API_PORT), WEAVE_DB: ".local/e2e.sqlite", WEAVE_RECORD_REQUESTS: "0" },
+      env: { PORT: String(API_PORT), ENDER_DB: ".local/e2e.sqlite", ENDER_RECORD_REQUESTS: "0" },
       reuseExistingServer: false,
       timeout: 60_000,
     },
     {
-      command: "pnpm --filter @weave/game exec vite",
+      command: "pnpm --filter @ender/game exec vite",
       url: `http://127.0.0.1:${GAME_PORT}`,
       env: { PORT: String(API_PORT), GAME_PORT: String(GAME_PORT) },
       reuseExistingServer: false,

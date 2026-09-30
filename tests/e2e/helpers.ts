@@ -4,17 +4,17 @@ type Preset = "explorer" | "smith" | "inquisitor" | "merchant";
 
 /** Browser-side API client (the game's own). */
 export const api = <T = any>(page: Page, fn: string, ...args: unknown[]): Promise<T> =>
-  page.evaluate(([f, a]) => (window as any).__weave.api[f as string](...(a as unknown[])), [fn, args] as const) as Promise<T>;
+  page.evaluate(([f, a]) => (window as any).__ender.api[f as string](...(a as unknown[])), [fn, args] as const) as Promise<T>;
 
-export const state = (page: Page) => page.evaluate(() => (window as any).__weave.getState());
-export const setPanel = (page: Page, panel: string | null) => page.evaluate((p) => (window as any).__weave.setState({ panel: p }), panel);
+export const state = (page: Page) => page.evaluate(() => (window as any).__ender.getState());
+export const setPanel = (page: Page, panel: string | null) => page.evaluate((p) => (window as any).__ender.setState({ panel: p }), panel);
 
 /** Title → a fresh Binder (optionally a §68 preset) → the Crossing. */
 export async function newBinder(page: Page, opts: { preset?: Preset; query?: string; startDate?: string } = {}) {
   await page.goto(`/${opts.query ? `?${opts.query}` : ""}`);
   await expect(page.getByTestId("new-binder")).toBeVisible();
   if (opts.preset || opts.startDate) {
-    await page.evaluate(([preset, startDate]) => (window as any).__weave.api.reset({ preset, startDate }), [opts.preset, opts.startDate] as const);
+    await page.evaluate(([preset, startDate]) => (window as any).__ender.api.reset({ preset, startDate }), [opts.preset, opts.startDate] as const);
     await page.getByTestId("continue").click();
   } else {
     await page.getByTestId("new-binder").click();
@@ -31,7 +31,7 @@ export async function formsFromRealm(page: Page, realmId = "ashen-vault") {
 }
 
 export async function openCrucibleOn(page: Page, artifactId: string) {
-  await page.evaluate((id) => (window as any).__weave.setState({ panel: "crucible", crucibleFocus: id, crucibleMode: "craft" }), artifactId);
+  await page.evaluate((id) => (window as any).__ender.setState({ panel: "crucible", crucibleFocus: id, crucibleMode: "craft" }), artifactId);
   await expect(page.getByTestId("crucible")).toBeVisible();
   await page.getByTestId("crucible").getByTestId(`form-${artifactId}`).first().click();
 }

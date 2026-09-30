@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { ENEMIES, ESSENCES, realmById, type EnemyKind } from "@weave/content";
+import { ENEMIES, ESSENCES, realmById, type EnemyKind } from "@ender/content";
 import { bus } from "../state/bus";
 import { debug } from "../game/debug";
 import { getState } from "../state/store";
@@ -92,7 +92,7 @@ export class RealmScene extends Phaser.Scene {
     this.particles.setDepth(12);
     this.enterRoom(0);
     bus.emit("scene:ready", { scene: "realm" });
-    (window as any).__weave.realm = this;
+    (window as any).__ender.realm = this;
   }
 
   // ───────────────────────── rooms ─────────────────────────
@@ -357,6 +357,7 @@ export class RealmScene extends Phaser.Scene {
             this.telegraphs.map((t) => ({ x: t.x, y: t.y, r: t.r })),
             this.roomCleared ? (this.pickups.length ? this.pickups[0]! : this.portal ? { x: this.portal.x, y: this.portal.y } : this.shrine ? { x: this.shrine.x, y: this.shrine.y } : null) : null,
             this.player.cd,
+            this.obstacles,
           )
         : human;
     if (debug.autoplay && this.shrine && dist(this.player, this.shrine) < 110 && !this.shrineVisited) intent.interact = true;

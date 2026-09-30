@@ -1,4 +1,4 @@
-import { QUALITY_KEYS, clamp, noise, round, type FormQualities, type QualityKey } from "@weave/shared";
+import { QUALITY_KEYS, clamp, noise, round, type FormQualities, type QualityKey } from "@ender/shared";
 
 /** Base half-width of an Attuned reading's uncertainty. */
 export const READING_NOISE = 9;

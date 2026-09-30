@@ -1,6 +1,6 @@
-import { ESSENCE_IDS, QUALITY_KEYS, hash32, round, type QualityKey, type SearchPolicy } from "@weave/shared";
-import { FORM_NOUNS, NAME_PREFIX, NAME_SUFFIX, QUALITY_NAMES, ESSENCES } from "@weave/content";
-import { normalizePolicy, scoreObjective, weaknesses } from "@weave/domain";
+import { ESSENCE_IDS, QUALITY_KEYS, hash32, round, type QualityKey, type SearchPolicy } from "@ender/shared";
+import { FORM_NOUNS, NAME_PREFIX, NAME_SUFFIX, QUALITY_NAMES, ESSENCES } from "@ender/content";
+import { normalizePolicy, scoreObjective, weaknesses } from "@ender/domain";
 import { requestHash } from "./hash";
 import {
   DEFAULT_WU,

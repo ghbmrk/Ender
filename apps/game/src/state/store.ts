@@ -27,7 +27,7 @@ let state: State = {
   runSummary: null,
   devMode: (() => {
     try {
-      return localStorage.getItem("weave:dev") === "1";
+      return localStorage.getItem("ender:dev") === "1";
     } catch {
       return false;
     }

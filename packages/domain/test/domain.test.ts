@@ -1,6 +1,6 @@
 // §71 unit tests: normalization, objective scoring, power, XP, levels, Mastery, Work Units, forecasts, SearchPolicy.
 import { describe, expect, it } from "vitest";
-import type { FormRealityData, RealmObjective } from "@weave/shared";
+import type { FormRealityData, RealmObjective } from "@ender/shared";
 import {
   FOCUS_COST,
   PRESET_POLICIES,

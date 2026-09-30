@@ -27,7 +27,7 @@ export function App() {
       installed = true;
       installFlowListeners();
     }
-    if (host.current) (window as any).__weave.game = createGame(host.current);
+    if (host.current) (window as any).__ender.game = createGame(host.current);
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target && (target.tagName === "INPUT" || target.tagName === "SELECT")) return;

@@ -1,5 +1,5 @@
-import { ESSENCE_IDS, noise, round, type Contract, type EssenceId, type WorldSnapshot } from "@weave/shared";
-import { ESSENCE_MARKET_SERIES } from "@weave/content";
+import { ESSENCE_IDS, noise, round, type Contract, type EssenceId, type WorldSnapshot } from "@ender/shared";
+import { ESSENCE_MARKET_SERIES } from "@ender/content";
 import {
   essencePrice,
   essencePrices,
@@ -9,7 +9,7 @@ import {
   npcEssenceDemand,
   type LocalDemandState,
   type MarketContext,
-} from "@weave/economy";
+} from "@ender/economy";
 import { all, get, now, run, tx } from "../db";
 import type { Ctx } from "./context";
 

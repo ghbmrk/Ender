@@ -1,4 +1,4 @@
-import { canonicalize, sha256Hex } from "@weave/shared";
+import { canonicalize, sha256Hex } from "@ender/shared";
 import type { InferenceKind } from "./types";
 
 /** request → canonical JSON → SHA-256 (hex). */

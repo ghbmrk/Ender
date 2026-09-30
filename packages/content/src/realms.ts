@@ -1,4 +1,4 @@
-import type { EssenceId, RealmObjective } from "@weave/shared";
+import type { EssenceId, RealmObjective } from "@ender/shared";
 
 export type EnemyKind = "husk" | "wisp" | "hound" | "keeper" | "seer" | "swarm";
 

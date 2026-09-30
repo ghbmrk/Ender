@@ -1,5 +1,5 @@
-import { ESSENCE_IDS, QUALITY_KEYS, round, type EssenceId, type FormQualities, type ProductionRecipe } from "@weave/shared";
-import { RECIPE_DRIVERS } from "@weave/content";
+import { ESSENCE_IDS, QUALITY_KEYS, round, type EssenceId, type FormQualities, type ProductionRecipe } from "@ender/shared";
+import { RECIPE_DRIVERS } from "@ender/content";
 
 /**
  * Deterministic fantasy production recipe from a quality profile.

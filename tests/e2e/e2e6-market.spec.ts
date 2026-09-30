@@ -4,7 +4,7 @@ import { newBinder } from "./helpers";
 
 test("a turning of the world moves Essence prices and rewrites contracts", async ({ page }) => {
   await newBinder(page, { startDate: "2023-08-04" });
-  await page.evaluate(() => (window as any).__weave.setState({ panel: "bazaar" }));
+  await page.evaluate(() => (window as any).__ender.setState({ panel: "bazaar" }));
   await expect(page.getByTestId("essence-table")).toBeVisible();
   await expect(page.getByTestId("bazaar-headline")).toContainText("Storm");
   const prices = () => page.locator("[data-testid^=essence-][data-price]").evaluateAll((els) => els.map((e) => `${e.getAttribute("data-testid")}=${e.getAttribute("data-price")}`).join());

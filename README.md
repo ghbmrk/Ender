@@ -1,4 +1,4 @@
-# The Weave
+# Ender
 
 A top-down dark-fantasy ARPG whose crafting, economy and progression are coupled to real external data. Forms you find are real PubChem compounds wearing fantasy qualities. Essence prices move with real ECB exchange-rate history. The Familiar that reads your Forms costs you Focus and teaches you (XP), but only objectively good decisions earn Mastery.
 
@@ -18,11 +18,11 @@ Requirements: Node 22.13 or newer (for `node:sqlite`) and pnpm 10.
 ### No-install web build
 
 ```bash
-pnpm build:web    # → apps/game/dist-web/the-weave.html (one self-contained file)
+pnpm build:web    # → apps/game/dist-web/ender.html (one self-contained file)
 pnpm dev:web      # the same in-page mode with hot reload
 ```
 
-The web build runs the whole server inside the page. It uses the same services and routes as `apps/server`, with sql.js instead of `node:sqlite` and the seeds and fixtures bundled in. Open `the-weave.html` from disk or host it anywhere; progress is saved to the browser's IndexedDB.
+The web build runs the whole server inside the page. It uses the same services and routes as `apps/server`, with sql.js instead of `node:sqlite` and the seeds and fixtures bundled in. Open `ender.html` from disk or host it anywhere; progress is saved to the browser's IndexedDB.
 
 ### Controls
 
@@ -58,7 +58,7 @@ pnpm fixtures:list              # which requests lack a fixture
 pnpm fixtures:validate          # hash, schema, no invented IDs, no invented numbers
 ```
 
-There are 16 Attune, 6 Transform and 16 Critique fixtures. Prompts for authors (and a future provider) are in `prompts/`. Set `WEAVE_STRICT_FIXTURES=1` to make a missing fixture an error instead of a rule fallback.
+There are 16 Attune, 6 Transform and 16 Critique fixtures. Prompts for authors (and a future provider) are in `prompts/`. Set `ENDER_STRICT_FIXTURES=1` to make a missing fixture an error instead of a rule fallback.
 
 ## Real data
 
@@ -113,9 +113,9 @@ tests            integration, e2e, no-paid-inference
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `WEAVE_DB` | `.local/weave.sqlite` | SQLite file (created automatically) |
-| `WEAVE_START_DATE` | `2023-08-04` | Replay date a new world starts on |
-| `WEAVE_STRICT_FIXTURES` | off | `1`: missing fixture is an error |
-| `WEAVE_RECORD_REQUESTS` | on | `0`: don't write missing requests to `data/inference-requests` |
-| `WEAVE_DEV_ROUTES` | on | `0`: disable `/api/dev/*` (provenance, grants) |
+| `ENDER_DB` | `.local/ender.sqlite` | SQLite file (created automatically) |
+| `ENDER_START_DATE` | `2023-08-04` | Replay date a new world starts on |
+| `ENDER_STRICT_FIXTURES` | off | `1`: missing fixture is an error |
+| `ENDER_RECORD_REQUESTS` | on | `0`: don't write missing requests to `data/inference-requests` |
+| `ENDER_DEV_ROUTES` | on | `0`: disable `/api/dev/*` (provenance, grants) |
 | `PORT` / `GAME_PORT` | 8787 / 5173 | server / client ports |

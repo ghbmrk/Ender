@@ -1,4 +1,4 @@
-import { QUALITY_KEYS, clamp, percentile, round, type FormQualities, type FormRealityData, type QualityKey } from "@weave/shared";
+import { QUALITY_KEYS, clamp, percentile, round, type FormQualities, type FormRealityData, type QualityKey } from "@ender/shared";
 
 /** Raw source value per fantasy quality (game abstraction, not scientific interpretation). */
 export function rawQualityValues(r: FormRealityData): Record<QualityKey, number | undefined> {
