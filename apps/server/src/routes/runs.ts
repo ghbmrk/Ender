@@ -7,6 +7,9 @@ import { realmGateView, resolveDueProphecies, tickRumors } from "../services/mar
 import { advanceWorld, currentSnapshot } from "../services/world";
 import { now, run } from "../db";
 
+/** Forms that actually dropped, chosen by a native client from GET /realm/:id/pool. Absent → the server's own picks. */
+const clientForms = z.array(z.object({ room: z.number().int().min(0).max(7), candidateId: z.string().min(1) })).max(64).optional();
+
 export function registerRunRoutes(app: FastifyInstance, ctx: Ctx) {
   app.post("/api/runs", async (req) => {
     const { realmId } = z.object({ realmId: z.string() }).parse(req.body);
@@ -26,8 +29,8 @@ export function registerRunRoutes(app: FastifyInstance, ctx: Ctx) {
   });
 
   app.post<{ Params: { id: string } }>("/api/runs/:id/checkpoint", async (req) => {
-    const { roomsCleared } = z.object({ roomsCleared: z.array(z.number().int().min(0).max(7)) }).parse(req.body);
-    return checkpointRun(ctx, activeCharacterId(ctx), req.params.id, roomsCleared);
+    const { roomsCleared, forms } = z.object({ roomsCleared: z.array(z.number().int().min(0).max(7)), forms: clientForms }).parse(req.body);
+    return checkpointRun(ctx, activeCharacterId(ctx), req.params.id, roomsCleared, forms);
   });
 
   app.post<{ Params: { id: string } }>("/api/runs/:id/complete", async (req) => {
@@ -41,6 +44,7 @@ export function registerRunRoutes(app: FastifyInstance, ctx: Ctx) {
         bossPhaseMs: z.array(z.number()).optional(),
         wardBreaks: z.number().optional(),
         advanceWorld: z.boolean().default(true),
+        forms: clientForms,
       })
       .parse(req.body);
     const charId = activeCharacterId(ctx);

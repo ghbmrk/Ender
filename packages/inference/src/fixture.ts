@@ -2,7 +2,7 @@ import { canonicalize } from "@ender/shared";
 import { requestHash } from "./hash";
 import { RuleInferenceProvider } from "./rule";
 import {
-  DEFAULT_WU,
+  workUnitsFor,
   RESULT_SCHEMAS,
   type AttuneRequest,
   type CritiqueRequest,
@@ -94,7 +94,7 @@ export class FixtureInferenceProvider implements InferenceProvider {
       this.remember(kind, hash, request, "fixture");
       return {
         result: parsed.data as T,
-        usage: { workUnits: file.usage?.workUnits ?? DEFAULT_WU[kind] },
+        usage: { workUnits: file.usage?.workUnits ?? workUnitsFor(kind, request) },
         provenance: { provider: "fixture", requestHash: hash, fixtureVersion: file.fixtureVersion },
       };
     }

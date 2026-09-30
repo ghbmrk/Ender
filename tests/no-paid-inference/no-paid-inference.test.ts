@@ -7,6 +7,7 @@ import { buildApp } from "../../apps/server/src/app";
 import { selectInferenceProvider } from "../../apps/server/src/services/context";
 import { nodeFixtureStore } from "../../apps/server/src/node-context";
 import { configFromEnv } from "../../apps/server/src/config";
+import { buildRealityService } from "../../reality-service/src/app";
 
 const ROOT = resolve(__dirname, "../..");
 const BANNED_PACKAGES = [
@@ -31,7 +32,7 @@ const BANNED_PACKAGES = [
 const BANNED_ENV = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY", "COHERE_API_KEY", "MISTRAL_API_KEY", "GROQ_API_KEY", "REPLICATE_API_TOKEN", "TOGETHER_API_KEY", "HF_TOKEN"];
 const BANNED_HOSTS = ["api.openai.com", "api.anthropic.com", "generativelanguage.googleapis.com", "aiplatform.googleapis.com", "api.cohere.ai", "api.mistral.ai", "api.groq.com", "api.replicate.com", "api.together.xyz", "api-inference.huggingface.co"];
 
-const SCAN_DIRS = ["apps", "packages", "scripts", "prompts"];
+const SCAN_DIRS = ["apps", "packages", "reality-service", "scripts", "prompts"];
 const SKIP = new Set(["node_modules", "dist", ".vite", "test-results"]);
 function files(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -44,7 +45,12 @@ function files(dir: string, out: string[] = []): string[] {
 }
 
 describe("no paid inference: static", () => {
-  const manifests = [join(ROOT, "package.json"), ...files(join(ROOT, "apps")), ...files(join(ROOT, "packages"))].filter((p) => p.endsWith("package.json"));
+  const manifests = [join(ROOT, "package.json"), ...files(join(ROOT, "apps")), ...files(join(ROOT, "packages")), ...files(join(ROOT, "reality-service"))].filter((p) => p.endsWith("package.json"));
+
+  it("scans the Unreal client's reality service too", () => {
+    expect(manifests).toContain(join(ROOT, "reality-service/package.json"));
+    expect(SCAN_DIRS.flatMap((d) => files(join(ROOT, d)))).toContain(join(ROOT, "reality-service/src/routes.ts"));
+  });
 
   it("no workspace package depends on a commercial AI SDK", () => {
     for (const m of manifests) {
@@ -111,6 +117,23 @@ describe("no paid inference: runtime", () => {
     await call("POST", `/api/artifacts/${ch.artifact.id}/trial`);
     await call("POST", `/api/artifacts/${ch.artifact.id}/fracture`);
     await call("POST", `/api/artifacts/${ch.artifact.id}/mirror`);
+    await app.close();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("the reality service's inference endpoints answer from fixtures/rules with zero network calls", async () => {
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+    const { app, ctx } = await buildRealityService({ dbPath: ":memory:", recordMissing: false });
+    const candidateId = ctx.reality.all()[0]!.id;
+    for (const [url, body] of [
+      ["/attune", { candidateId, realmId: "ashen-vault" }],
+      ["/transform", { candidateId, realmId: "glass-fen" }],
+      ["/critique", { candidateId, realmId: "hollow-keep", mode: "deep" }],
+    ] as const) {
+      const r = await app.inject({ method: "POST", url, payload: body });
+      expect(r.statusCode, `${url}: ${r.body}`).toBe(200);
+      expect(["fixture", "rule"]).toContain(r.json().provenance.provider);
+    }
     await app.close();
     expect(fetchSpy).not.toHaveBeenCalled();
   });

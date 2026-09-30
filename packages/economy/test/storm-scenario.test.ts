@@ -1,4 +1,4 @@
-// §69 — Required economic scenario: Storm scarcity flips which Form is economically superior.
+// §69 / spec §96 — Required economic scenario: Storm scarcity flips which Form is economically superior.
 import { describe, expect, it } from "vitest";
 import { ESSENCE_IDS, type EssenceId, type WorldSnapshot } from "@ender/shared";
 import { ESSENCES } from "@ender/content";

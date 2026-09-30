@@ -1,0 +1,20 @@
+{
+  "_comment": "UEnderLootProfile. Drop rates, bias and candidate choice live in the engine-free rules (Rules/*); the profile holds only presentation and currency amounts. OrdinaryNames name the offline (no service) gear.",
+  "asset": "/Game/Data/DA_LootProfile_Default",
+  "LootDropClass": "/Game/Items/BP_LootDrop",
+  "NativeLootDropClass": "/Script/Ender.EnderLootDrop",
+  "EssenceBundleMin": 2,
+  "EssenceBundleMax": 4,
+  "RoomClearCrowns": 12,
+  "BossCrowns": 60,
+  "ScatterRadius": 140.0,
+  "OrdinaryNames": [
+    "Worn Blade", "Plain Ward", "Faded Sigil", "Tarnished Charm",
+    "Notched Blade", "Patched Ward", "Chipped Sigil", "Knotted Charm"
+  ],
+  "rarity": {
+    "_comment": "Label colour by artifact power (EnderItems::RarityForPower): >=80 high value, >=60 exceptional, >=40 rare.",
+    "HighValue": 80, "Exceptional": 60, "Rare": 40
+  },
+  "customDepthStencil": { "Interactable": 5, "ValuableLoot": 6 }
+}

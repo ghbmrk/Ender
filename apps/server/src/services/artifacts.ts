@@ -39,6 +39,20 @@ export type Readings = { qualities: FormQualities; predictedScore: number; noise
 // The "weave:" salt predates the rename to Ender; changing it would change every Form ID and fixture hash.
 export const fantasyIdFor = (realityId: string) => `form-${hash32(`weave:${realityId}`).toString(36)}`;
 
+const fantasyIndex = new WeakMap<object, Map<string, string>>();
+
+/** Resolve a Form id as a client sends it — the fantasy id (`form-…`) or the reality id — to the reality id. */
+export function realityIdForCandidate(ctx: Ctx, id: string): string | undefined {
+  let map = fantasyIndex.get(ctx.reality);
+  if (!map) fantasyIndex.set(ctx.reality, (map = new Map(ctx.reality.all().map((c) => [fantasyIdFor(c.id), c.id]))));
+  if (id.startsWith("form-")) return map.get(id);
+  try {
+    return ctx.reality.candidateSync(id).id;
+  } catch {
+    return undefined;
+  }
+}
+
 let counter = 0;
 export const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
 

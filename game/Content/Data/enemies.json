@@ -1,0 +1,12 @@
+{
+  "_comment": "Enemy definitions. Numbers come from the engine-free rules (UEnderEnemyDefinition::ApplyRuleDefaults); this file only names assets and wires classes, trees and cues. Paths that do not exist yet are skipped.",
+  "folder": "/Game/Enemies/Data",
+  "enemies": {
+    "Husk":      { "Asset": "DA_Husk",      "Archetype": "Husk",      "EnemyClass": "/Game/Enemies/Husk/BP_Husk",           "NativeClass": "/Script/Ender.EnderEnemyCharacter", "StateTree": "/Game/AI/ST_Hushed" },
+    "Hound":     { "Asset": "DA_Hound",     "Archetype": "Hound",     "EnemyClass": "/Game/Enemies/Hound/BP_Hound",         "NativeClass": "/Script/Ender.EnderEnemyCharacter", "StateTree": "/Game/AI/ST_Hushed" },
+    "Wisp":      { "Asset": "DA_Wisp",      "Archetype": "Wisp",      "EnemyClass": "/Game/Enemies/Wisp/BP_Wisp",           "NativeClass": "/Script/Ender.EnderEnemyCharacter", "StateTree": "/Game/AI/ST_Hushed" },
+    "Keeper":    { "Asset": "DA_Keeper",    "Archetype": "Keeper",    "EnemyClass": "/Game/Enemies/Keeper/BP_Keeper",       "NativeClass": "/Script/Ender.EnderEnemyCharacter", "StateTree": "/Game/AI/ST_Hushed" },
+    "Seer":      { "Asset": "DA_Seer",      "Archetype": "Seer",      "EnemyClass": "/Game/Enemies/Seer/BP_Seer",           "NativeClass": "/Script/Ender.EnderEnemyCharacter", "StateTree": "/Game/AI/ST_Hushed" },
+    "BoundKing": { "Asset": "DA_BoundKing", "Archetype": "BoundKing", "EnemyClass": "/Game/Enemies/BoundKing/BP_BoundKing", "NativeClass": "/Script/Ender.EnderBoundKing",      "StateTree": "/Game/AI/ST_BoundKing" }
+  }
+}

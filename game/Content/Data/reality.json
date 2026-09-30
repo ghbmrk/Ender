@@ -1,0 +1,15 @@
+{
+  "_comment": "Reality service client settings (mirrors UEnderRealitySettings / Config/DefaultGame.ini). The candidate pool for a Realm is crawled from these anchors via GET /candidate/:id/neighbors (depth 2, limit 32).",
+  "ServiceBaseUrl": "http://127.0.0.1:8788",
+  "RequestTimeoutSeconds": 4.0,
+  "bAllowOfflineFallback": true,
+  "bRequestDeveloperProvenance": false,
+  "NeighborsPerAnchor": 32,
+  "PoolAnchors": ["4", "78187", "18725", "6383", "62034", "77207", "12530", "6945", "33800", "8197"],
+  "realms": {
+    "ashen-vault": "/Game/Maps/L_AshenVault",
+    "glass-fen": "/Game/Maps/L_AshenVault",
+    "hollow-keep": "/Game/Maps/L_AshenVault"
+  },
+  "crossing": "/Game/Maps/L_Crossing"
+}
