@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ender HUD mockup</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ---------- scene (placeholder for the 3D view) ---------- */
+  #scene { position: absolute; inset: 0; }
+
+  /* ---------- minimap: top-left, 180×180 (section 89) ---------- */
+  .minimap {
+    position: absolute; left: 24px; top: 24px; width: 180px; height: 180px;
+    border-radius: 6px; overflow: hidden;
+    background: radial-gradient(100% 100% at 50% 45%, rgba(57,54,65,.92), rgba(36,33,42,.95));
+    box-shadow: 0 0 0 1.5px rgba(231,221,198,.3), 0 6px 18px rgba(0,0,0,.45);
+  }
+  .minimap svg { position: absolute; inset: 0; }
+  .realm-line { position: absolute; left: 24px; top: 212px; width: 300px; }
+  .realm-line .name { font-family: var(--display); font-size: 19px; color: var(--paper); }
+  .realm-line .room { font-size: 13px; color: var(--paper-dim); margin-top: 1px; }
+  .focus { display: flex; gap: 4px; white-space: nowrap; margin-top: 8px; align-items: center; }
+  .focus i { width: 8px; height: 8px; transform: rotate(45deg); background: var(--weave); box-shadow: inset 0 0 0 1px rgba(36,33,42,.6); }
+  .focus i.spent { background: transparent; box-shadow: inset 0 0 0 1px rgba(231,221,198,.3); }
+  .focus span { font-size: 12px; color: var(--paper-dim); margin-left: 6px; }
+
+  /* ---------- pinned contract: top-right, max two lines ---------- */
+  .contract {
+    position: absolute; right: 28px; top: 24px; width: 408px;
+    padding: 10px 14px 11px 46px;
+  }
+  .contract .seal {
+    position: absolute; left: 10px; top: 11px; width: 26px; height: 26px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #c09a50, #8a6c34);
+    box-shadow: inset 0 0 0 1.5px rgba(36,33,42,.65);
+    display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 14px; color: var(--ink);
+  }
+  .contract .l1 { font-family: var(--display); font-size: 17px; line-height: 1.25; color: var(--paper); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .contract .l1 b { color: var(--high-value); font-weight: 500; }
+  .contract .l2 { font-size: 14px; line-height: 1.3; color: var(--paper-dim); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+  .contract .l2 .ok { color: var(--interact); }
+
+  /* ---------- health + thread: bottom-left (section 89) ---------- */
+  .vitals { position: absolute; left: 32px; bottom: 30px; display: flex; align-items: flex-end; gap: 14px; }
+  .level {
+    width: 62px; height: 62px; border-radius: 50%; position: relative;
+    background: radial-gradient(circle at 45% 38%, #454058, #24212a 75%);
+    box-shadow: 0 0 0 2px var(--player-edge), 0 0 0 3.5px rgba(231,221,198,.25), 0 4px 12px rgba(0,0,0,.5);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .level .n { font-family: var(--display); font-size: 26px; line-height: 1; }
+  .level .t { font-size: 10px; color: var(--paper-dim); letter-spacing: .1em; }
+  .level svg { position: absolute; inset: -6px; }
+  .bars { width: 340px; }
+  .buffs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .buff { display: flex; align-items: center; gap: 5px; padding: 2px 8px 2px 3px; border-radius: 12px; background: rgba(36,33,42,.82); font-size: 13px; box-shadow: inset 0 0 0 1px rgba(231,221,198,.2); }
+  .buff .ic { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--ink); }
+  .bar { position: relative; border-radius: 2px; overflow: hidden; background: rgba(36,33,42,.9); box-shadow: 0 0 0 1.5px rgba(36,33,42,.95), 0 0 0 2.5px rgba(231,221,198,.18); }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; }
+  .bar .fill::after { content: ''; position: absolute; inset: 0; filter: url(#grain); opacity: .5; mix-blend-mode: multiply; }
+  .bar.hp { height: 22px; }
+  .bar.hp .fill { background: linear-gradient(180deg, #c6605a, #b84f49 45%, #93403b); }
+  .bar.hp .lost { position: absolute; top: 0; bottom: 0; background: rgba(231,221,198,.35); }
+  .barrier-strip { height: 5px; margin-bottom: 3px; position: relative; }
+  .barrier-strip i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 1px;
+    background: repeating-linear-gradient(-45deg, rgba(231,221,198,.95) 0 3px, rgba(231,221,198,.55) 3px 6px); box-shadow: 0 0 0 1px rgba(36,33,42,.9); }
+  .bar.hp .barrier {
+    position: absolute; top: 0; bottom: 0;
+    background: repeating-linear-gradient(-45deg, rgba(231,221,198,.55) 0 3px, rgba(231,221,198,.25) 3px 7px);
+    box-shadow: inset 0 0 0 1px rgba(231,221,198,.7);
+  }
+  .bar .val { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 14px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+  .bar .lab { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-family: var(--display); font-size: 13px; letter-spacing: .08em; color: rgba(231,221,198,.8); text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+  .bar.thread { height: 12px; margin-top: 5px; }
+  .bar.thread .fill { background: linear-gradient(180deg, #7888c6, #6676b8 50%, #4f5c95); }
+  .bar.thread .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(36,33,42,.7); }
+  .bar.thread .val { font-size: 11px; right: 6px; }
+  .draughts { display: flex; gap: 5px; align-items: flex-end; padding-bottom: 1px; }
+  .draught { width: 26px; height: 34px; position: relative; color: rgba(231,221,198,.75); }
+  .draught .liq { position: absolute; left: 5px; right: 5px; bottom: 3px; height: 17px; border-radius: 0 0 9px 9px; background: var(--health); opacity: .9; }
+  .draught.empty .liq { display: none; }
+  .draught.empty { color: rgba(231,221,198,.3); }
+  .draught svg { position: absolute; inset: 0; }
+  .draughts .key { font-size: 11px; color: var(--paper-dim); margin-left: 3px; padding-bottom: 2px; }
+
+  /* ---------- skill bar: bottom-center, 6 × 58px, 7px gap; Evade 46px ---------- */
+  .skillbar { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: flex-end; }
+  .skills { display: flex; gap: 7px; }
+  .skill {
+    width: 58px; height: 58px; position: relative; border-radius: 4px; overflow: visible;
+    background: radial-gradient(90% 90% at 40% 35%, #4a4a6e, #2c2a3a 80%);
+    box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 2.5px rgba(231,221,198,.26), 0 4px 10px rgba(0,0,0,.5);
+    color: #dcd6ea; display: flex; align-items: center; justify-content: center;
+  }
+  .skill .wash { position: absolute; inset: 0; border-radius: 4px; overflow: hidden; }
+  .skill .wash::before { content: ''; position: absolute; inset: 8px; border-radius: 50%; background: var(--c, #6676b8); opacity: .45; filter: url(#washSoft); }
+  .skill .wash::after { content: ''; position: absolute; inset: 0; filter: url(#grain); opacity: .45; mix-blend-mode: multiply; }
+  .skill svg { position: relative; }
+  .skill .key {
+    position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%);
+    min-width: 22px; height: 16px; padding: 0 4px; border-radius: 3px; text-align: center;
+    font: 700 11px/16px var(--body); color: var(--paper);
+    background: var(--ink); box-shadow: 0 0 0 1px rgba(231,221,198,.35);
+  }
+  .skill .cd { position: absolute; inset: 0; border-radius: 4px; background: conic-gradient(rgba(20,18,24,.78) var(--a), transparent 0); }
+  .skill .cdn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 20px var(--body); color: var(--paper); text-shadow: 0 1px 3px #000; }
+  .skill .cost { position: absolute; right: 3px; top: 2px; font: 700 11px var(--body); color: #aeb8e6; text-shadow: 0 1px 2px #000; }
+  .skill.ready-glow { box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 2.5px rgba(192,154,80,.85), 0 0 14px rgba(192,154,80,.35), 0 4px 10px rgba(0,0,0,.5); }
+  .skill.active { box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 2.5px rgba(231,221,198,.9), 0 4px 10px rgba(0,0,0,.5); transform: translateY(-2px); }
+  .skill.evade { width: 46px; height: 46px; margin-left: 14px; }
+  .skill.evade .key { min-width: 38px; }
+  .xp { position: absolute; left: 50%; bottom: 100px; transform: translateX(-50%); width: 383px; height: 3px; background: rgba(36,33,42,.8); border-radius: 2px; box-shadow: 0 0 0 1px rgba(231,221,198,.12); }
+  .xp i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--high-value); opacity: .8; border-radius: 2px; }
+
+  /* ---------- enemy health ---------- */
+  .ehp { position: absolute; width: 64px; height: 5px; transform: translateX(-50%); background: rgba(36,33,42,.85); box-shadow: 0 0 0 1px rgba(36,33,42,.9); }
+  .ehp i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--health); }
+  .ehp.hit i::after { content: ''; position: absolute; right: -10px; width: 10px; top: 0; bottom: 0; background: rgba(231,221,198,.6); }
+  .elite-plate { position: absolute; transform: translateX(-50%); text-align: center; width: 220px; }
+  .elite-plate .nm { font-family: var(--display); font-size: 17px; color: #e3c1b6; text-shadow: 0 1px 3px #000, 0 0 8px rgba(84,49,49,.9); }
+  .elite-plate .mod { font-size: 12px; color: var(--paper-dim); text-shadow: 0 1px 2px #000; margin-top: -1px; }
+  .elite-plate .b { position: relative; margin: 4px auto 0; width: 180px; height: 8px; background: rgba(36,33,42,.9); box-shadow: 0 0 0 1.5px var(--elite), 0 0 0 2.5px rgba(36,33,42,.9); }
+  .elite-plate .b i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(180deg, #c6605a, #93403b); }
+  .elite-plate .st { position: relative; margin: 3px auto 0; width: 180px; height: 3px; background: rgba(36,33,42,.9); }
+  .elite-plate .st i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--paper); opacity: .85; }
+
+  /* ---------- boss bar: top-center ---------- */
+  .boss { position: absolute; left: 50%; top: 30px; transform: translateX(-50%); width: 720px; text-align: center; }
+  .boss .nm { font-family: var(--display); font-size: 26px; letter-spacing: .06em; color: var(--paper); text-shadow: 0 2px 6px #000; }
+  .boss .ph { font-size: 13px; color: var(--paper-dim); letter-spacing: .12em; margin-top: -2px; }
+  .boss .b { position: relative; height: 14px; margin-top: 6px; background: rgba(36,33,42,.92); box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 3px rgba(231,221,198,.25); }
+  .boss .b i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(180deg, #c6605a, #b84f49 50%, #8a3c37); }
+  .boss .b .mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--paper); opacity: .8; }
+  .boss .st { position: relative; height: 5px; margin: 5px auto 0; width: 360px; background: rgba(36,33,42,.9); box-shadow: 0 0 0 1px rgba(231,221,198,.2); }
+  .boss .st i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--paper); }
+  .boss .stl { font-size: 11px; color: var(--paper-dim); letter-spacing: .12em; margin-top: 3px; }
+
+  /* ---------- damage numbers (section 91) ---------- */
+  .dmg { position: absolute; transform: translate(-50%, -50%); font: 700 18px var(--body); color: var(--paper);
+    text-shadow: 0 0 2px var(--ink), 0 1px 0 var(--ink), 1px 0 0 var(--ink), -1px 0 0 var(--ink), 0 -1px 0 var(--ink), 0 2px 4px rgba(0,0,0,.6); }
+  .dmg.crit { font-size: 23px; color: var(--high-value); }
+  .dmg.fade { opacity: .55; }
+  .dmg.player { color: var(--danger); font-size: 18px; }
+
+  /* ---------- loot labels (Alt) ---------- */
+  .loot { position: absolute; transform: translateX(-50%); padding: 3px 10px 4px; border-radius: 2px; font-size: 14px; white-space: nowrap;
+    background: rgba(36,33,42,.88); box-shadow: 0 0 0 1px currentColor; }
+  .loot .sub { font-size: 12px; color: var(--paper-dim); margin-left: 6px; }
+  .loot.form { font-family: var(--display); font-size: 16px; color: #b7a6cc; box-shadow: 0 0 0 1px var(--exceptional), 0 0 12px rgba(134,103,163,.35); }
+  .loot.l-ess { color: var(--paper); box-shadow: 0 0 0 1px rgba(231,221,198,.3); display: flex; align-items: center; gap: 6px; padding-left: 4px; }
+  .loot.l-draught { color: #e0a19c; box-shadow: 0 0 0 1px rgba(184,79,73,.6); }
+  .loot.valuable { color: #e0c68e; box-shadow: 0 0 0 1px var(--high-value), 0 0 12px rgba(192,154,80,.35); font-family: var(--display); font-size: 16px; }
+
+  /* ---------- interact prompt ---------- */
+  .prompt { position: absolute; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font-size: 15px; text-shadow: 0 1px 3px #000; }
+  .prompt kbd { font: 700 13px var(--body); padding: 1px 7px; border-radius: 3px; background: var(--interactable); box-shadow: 0 0 0 1px rgba(231,221,198,.45); color: var(--paper); }
+
+  /* ---------- off-screen threat hint ---------- */
+  .edge-warn { position: absolute; width: 0; height: 0; }
+</style>
+</head>
+<body>
+<div class="screen" id="root">
+  <svg id="scene" viewBox="0 0 1920 1080" width="1920" height="1080"></svg>
+  <div id="hud"></div>
+</div>
+<script type="module">
+import { boot, glyph, load, essChip, cap } from './shared.js';
+const q = boot();
+const bossMode = q.get('boss') === '1';
+const [world, realm] = await load('world', 'realm-ashen-vault');
+const card = realm.card;
+const storm = card.contracts.find((c) => c.essence === 'storm');
+
+/* ======================================================================
+   Scene: a painted stand-in for the 3D view so the HUD can be judged in
+   context. Isometric floor wash, pillars, the Binder and a Hushed pack.
+   ====================================================================== */
+const S = document.getElementById('scene');
+const pillars = [
+  [380, 330], [1540, 300], [260, 800], [1650, 780], [560, 150], [1330, 140],
+];
+function pillar(x, y, h = 260, w = 70) {
+  return `<g>
+    <ellipse cx="${x}" cy="${y + 8}" rx="${w * 0.9}" ry="${w * 0.35}" fill="#24212a" opacity=".45" filter="url(#washSoft)"/>
+    <path d="M${x - w / 2} ${y} L${x - w / 2} ${y - h} L${x + w / 2} ${y - h} L${x + w / 2} ${y} Z" fill="#5a5260" filter="url(#wash)"/>
+    <path d="M${x - w / 2} ${y} L${x - w / 2} ${y - h} L${x - 4} ${y - h} L${x - 4} ${y} Z" fill="#a89a83" opacity=".5" filter="url(#wash)"/>
+    <path d="M${x - w / 2} ${y} L${x - w / 2} ${y - h} M${x + w / 2} ${y} L${x + w / 2} ${y - h}" stroke="#24212a" stroke-width="1.2" opacity=".8" filter="url(#inkline)"/>
+    <rect x="${x - w / 2 - 8}" y="${y - h - 16}" width="${w + 16}" height="18" fill="#393641" stroke="#24212a" stroke-width="1" filter="url(#rough)"/>
+  </g>`;
+}
+// Husk: folded-parchment body, stained cloth, cracked mask.
+function husk(x, y, s = 1, face = 1) {
+  return `<g transform="translate(${x} ${y}) scale(${s * face} ${s})">
+    <ellipse cx="0" cy="2" rx="26" ry="9" fill="#24212a" opacity=".5"/>
+    <path d="M-16 0 L-20 -44 L-6 -62 L10 -58 L20 -40 L14 0 Z" fill="#b9a988" stroke="#24212a" stroke-width="1.5" stroke-linejoin="round" filter="url(#inkline)"/>
+    <path d="M-20 -44 L-2 -38 L10 -58 M-2 -38 L0 0 M-2 -38 L20 -40" fill="none" stroke="#24212a" stroke-width="1" opacity=".55"/>
+    <path d="M-18 -30 L-2 -26 L-4 -8 L-17 -10 Z" fill="#776054" opacity=".55"/>
+    <path d="M18 -44 L34 -30 L30 -26 L16 -36" fill="#a89a83" stroke="#24212a" stroke-width="1.3"/>
+    <ellipse cx="0" cy="-70" rx="10" ry="12" fill="#e7ddc6" stroke="#24212a" stroke-width="1.5"/>
+    <path d="M-5 -72 L-1 -71 M3 -71 L6 -72 M1 -80 L-2 -66" stroke="#24212a" stroke-width="1.4"/>
+  </g>`;
+}
+function hound(x, y, s = 1) {
+  return `<g transform="translate(${x} ${y}) scale(${s})">
+    <ellipse cx="0" cy="2" rx="34" ry="8" fill="#24212a" opacity=".5"/>
+    <path d="M-34 -14 L-18 -26 L10 -28 L30 -34 L40 -26 L30 -18 L20 -18 L22 0 L14 0 L10 -14 L-12 -14 L-14 0 L-22 0 L-22 -12 Z" fill="#a89a83" stroke="#24212a" stroke-width="1.5" stroke-linejoin="round" filter="url(#inkline)"/>
+    <path d="M-34 -14 L-46 -24" stroke="#24212a" stroke-width="2"/>
+    <path d="M32 -32 L38 -28" stroke="#24212a" stroke-width="1.5"/>
+    <path d="M-10 -24 L0 -16 L8 -26" fill="none" stroke="#776054" stroke-width="3" opacity=".6"/>
+  </g>`;
+}
+function wisp(x, y) {
+  return `<g transform="translate(${x} ${y})">
+    <ellipse cx="0" cy="70" rx="16" ry="5" fill="#24212a" opacity=".35"/>
+    <path d="M0 -26 C 16 -20, 16 4, 4 18 C 8 30, 0 40, -4 50 C -6 36, -14 26, -10 16 C -18 4, -14 -20, 0 -26 Z" fill="#cfc3a8" opacity=".85" stroke="#24212a" stroke-width="1.4" filter="url(#inkline)"/>
+    <ellipse cx="0" cy="-8" rx="6" ry="7" fill="#24212a"/>
+    <circle cx="0" cy="-8" r="2" fill="#e16a54"/>
+  </g>`;
+}
+function seer(x, y) {
+  return `<g transform="translate(${x} ${y})">
+    <ellipse cx="0" cy="2" rx="24" ry="8" fill="#24212a" opacity=".5"/>
+    <path d="M-18 0 L-10 -70 L10 -70 L18 0 Z" fill="#65715d" stroke="#24212a" stroke-width="1.5" filter="url(#inkline)"/>
+    <path d="M-10 -70 L-26 -40 M10 -70 L28 -44" stroke="#24212a" stroke-width="2"/>
+    <ellipse cx="0" cy="-80" rx="11" ry="13" fill="#e7ddc6" stroke="#24212a" stroke-width="1.5"/>
+    <circle cx="0" cy="-82" r="3.5" fill="#24212a"/>
+    <path d="M28 -44 L30 -60" stroke="#9a8d42" stroke-width="2.4"/>
+  </g>`;
+}
+function keeper(x, y, s = 1.12) {
+  return `<g transform="translate(${x} ${y}) scale(${s})">
+    <ellipse cx="0" cy="3" rx="48" ry="14" fill="#24212a" opacity=".55"/>
+    <path d="M-30 0 L-38 -70 L-22 -104 L22 -104 L38 -70 L30 0 Z" fill="#8c7e6a" stroke="#543131" stroke-width="3.2" stroke-linejoin="round" filter="url(#inkline)"/>
+    <path d="M-38 -70 L38 -70 M-22 -104 L0 -84 L22 -104 M0 -84 L0 0" fill="none" stroke="#24212a" stroke-width="1.2" opacity=".6"/>
+    <rect x="-66" y="-96" width="30" height="90" rx="3" fill="#777b80" stroke="#543131" stroke-width="3" filter="url(#rough)"/>
+    <path d="M-60 -80 L-42 -80 M-60 -50 L-42 -50 M-60 -22 L-42 -22" stroke="#24212a" stroke-width="1.2" opacity=".6"/>
+    <path d="M36 -92 L62 -58 L54 -52 L30 -80" fill="#a89a83" stroke="#543131" stroke-width="2.4"/>
+    <ellipse cx="0" cy="-118" rx="16" ry="17" fill="#e7ddc6" stroke="#543131" stroke-width="3"/>
+    <path d="M-8 -120 L-2 -118 M4 -118 L9 -120 M2 -134 L-3 -104 M-3 -110 L6 -104" stroke="#24212a" stroke-width="1.6"/>
+    <path d="M-24 -40 L-10 -30 L-18 -10" fill="none" stroke="#b84f49" stroke-width="4" opacity=".5" filter="url(#washSoft)"/>
+  </g>`;
+}
+function binder(x, y) {
+  return `<g transform="translate(${x} ${y})">
+    <ellipse cx="0" cy="3" rx="30" ry="10" fill="#24212a" opacity=".6"/>
+    <path d="M-20 0 L-24 -46 L-12 -80 L12 -80 L22 -44 L26 0 Z" fill="#393641" stroke="#30365a" stroke-width="4" stroke-linejoin="round" filter="url(#inkline)"/>
+    <path d="M-20 0 L-24 -46 L-12 -80 L12 -80 L22 -44 L26 0 Z" fill="none" stroke="#24212a" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M-12 -80 L0 -40 L12 -80" fill="#6676b8" opacity=".55"/>
+    <circle cx="0" cy="-92" r="13" fill="#2c2a3a" stroke="#30365a" stroke-width="4"/>
+    <circle cx="0" cy="-92" r="13" fill="none" stroke="#24212a" stroke-width="1.5"/>
+    <path d="M-6 -94 Q0 -88 6 -94" fill="none" stroke="#e7ddc6" stroke-width="1.5" opacity=".6"/>
+    <path d="M20 -52 L44 -60" stroke="#24212a" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="46" cy="-60" r="5" fill="#6676b8" stroke="#24212a" stroke-width="1.4"/>
+  </g>`;
+}
+
+const px = 930, py = 600; // Binder feet
+S.innerHTML = `
+  <defs>
+    <radialGradient id="vign" cx="50%" cy="52%" r="70%">
+      <stop offset="45%" stop-color="#24212a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#1a181f" stop-opacity=".92"/>
+    </radialGradient>
+    <pattern id="flags" width="120" height="70" patternUnits="userSpaceOnUse" patternTransform="skewX(-38)">
+      <path d="M0 0 H120 M0 0 V70" stroke="#24212a" stroke-width="1.4" opacity=".35" fill="none"/>
+    </pattern>
+    <radialGradient id="warm" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#a89a83" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#776054" stop-opacity=".0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="#2f2c37"/>
+  <!-- floor washes -->
+  <ellipse cx="960" cy="560" rx="900" ry="470" fill="#6b6259" filter="url(#wash)"/>
+  <ellipse cx="930" cy="590" rx="620" ry="330" fill="url(#warm)" filter="url(#wash)"/>
+  <ellipse cx="640" cy="420" rx="260" ry="140" fill="#777b80" opacity=".45" filter="url(#wash)"/>
+  <ellipse cx="1300" cy="700" rx="320" ry="150" fill="#776054" opacity=".5" filter="url(#wash)"/>
+  <ellipse cx="1180" cy="380" rx="200" ry="110" fill="#65715d" opacity=".35" filter="url(#wash)"/>
+  <rect width="1920" height="1080" fill="url(#flags)" filter="url(#inkline)" opacity=".9"/>
+  <path d="M120 900 C 400 760, 700 820, 820 700 M1000 250 C 1150 300, 1300 220, 1500 260" stroke="#24212a" stroke-width="1.6" fill="none" opacity=".5" filter="url(#inkline)"/>
+  <!-- cinders -->
+  ${Array.from({ length: 40 }, (_, i) => {
+    const x = (i * 397) % 1920, y = (i * 211) % 1000 + 40, r = 1 + (i % 3);
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="#c09a50" opacity="${0.15 + (i % 4) * 0.08}"/>`;
+  }).join('')}
+  ${pillars.filter(([, y]) => y < py).map(([x, y]) => pillar(x, y)).join('')}
+
+  <!-- Seer hazard pool: danger telegraph, 2px ink perimeter + 25% wash (section 83) -->
+  <g transform="translate(640 470)">
+    <ellipse rx="150" ry="88" fill="#e16a54" opacity=".25" filter="url(#washSoft)"/>
+    <ellipse rx="150" ry="88" fill="none" stroke="#24212a" stroke-width="2" filter="url(#inkline)"/>
+    <ellipse rx="150" ry="88" fill="none" stroke="#e16a54" stroke-width="1.5" stroke-dasharray="20 8" opacity=".8"/>
+    <ellipse rx="95" ry="56" fill="#e16a54" opacity=".18"/>
+  </g>
+  <!-- Keeper heavy telegraph: cone -->
+  <path d="M1240 486 L1040 548 A 216 216 0 0 0 1150 690 Z" fill="#e16a54" opacity=".25" filter="url(#washSoft)"/>
+  <path d="M1240 486 L1040 548 A 216 216 0 0 0 1150 690 Z" fill="none" stroke="#24212a" stroke-width="2" stroke-linejoin="round" filter="url(#inkline)"/>
+  <!-- Wisp projectile line telegraph -->
+  <path d="M1400 380 L${px + 30} ${py - 60}" stroke="#e16a54" stroke-width="16" opacity=".16" stroke-linecap="round"/>
+  <path d="M1400 380 L${px + 30} ${py - 60}" stroke="#24212a" stroke-width="1.2" stroke-dasharray="8 8" opacity=".7"/>
+
+  <!-- loot on floor -->
+  <g transform="translate(1040 760)">
+    <path d="M0 -150 L0 0" stroke="#8667a3" stroke-width="14" opacity=".18" filter="url(#washSoft)"/>
+    <path d="M0 -150 L0 0" stroke="#b7a6cc" stroke-width="2" opacity=".35"/>
+    <path d="M-12 0 L0 -16 L12 0 L0 8 Z" fill="#8667a3" stroke="#24212a" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(780 780)"><circle r="9" fill="#6f9a97" stroke="#24212a" stroke-width="1.5"/><circle cx="12" cy="4" r="6" fill="#6f9a97" stroke="#24212a" stroke-width="1.2"/></g>
+  <g transform="translate(1310 850)"><path d="M-7 -8 h14 v6 c5 2 7 6 7 10 c0 6-6 9-14 9 s-14-3-14-9 c0-4 2-8 7-10 z" fill="#b84f49" stroke="#24212a" stroke-width="1.5"/></g>
+
+  <!-- the pack -->
+  ${seer(560, 380)}
+  ${wisp(1400, 330)}
+  ${husk(1075, 520, 1)}
+  ${husk(1130, 600, 1.05, -1)}
+  ${husk(820, 470, 0.95)}
+  ${hound(760, 660)}
+  ${keeper(1240, 480)}
+
+  <!-- Thread Lash VFX: wet weave-blue brush arc, <=4% screen -->
+  <path d="M${px + 20} ${py - 70} C ${px + 90} ${py - 130}, ${px + 170} ${py - 110}, ${px + 190} ${py - 60}" fill="none" stroke="#6676b8" stroke-width="12" stroke-linecap="round" opacity=".55" filter="url(#washSoft)"/>
+  <path d="M${px + 20} ${py - 70} C ${px + 90} ${py - 130}, ${px + 170} ${py - 110}, ${px + 190} ${py - 60}" fill="none" stroke="#30365a" stroke-width="2.4" stroke-linecap="round" filter="url(#inkline)"/>
+  ${[0, 1, 2, 3, 4].map((i) => `<circle cx="${px + 150 + i * 9}" cy="${py - 110 + (i % 2) * 14}" r="${2 + (i % 2)}" fill="#24212a" opacity=".8"/>`).join('')}
+
+  ${binder(px, py)}
+  <!-- ink impact on husk -->
+  <g transform="translate(1085 560)">
+    <path d="M-14 -4 L-2 -2 L-8 8 L4 2 L10 12 L10 0 L20 -2 L8 -6 L12 -18 L2 -8 L-4 -20 L-4 -8 Z" fill="#24212a" opacity=".85"/>
+  </g>
+  ${pillars.filter(([, y]) => y >= py).map(([x, y]) => pillar(x, y, 300, 80)).join('')}
+  <rect width="1920" height="1080" fill="url(#vign)"/>
+  <rect width="1920" height="1080" filter="url(#grain)" opacity=".5" style="mix-blend-mode:multiply"/>
+`;
+
+/* ======================================================================
+   HUD
+   ====================================================================== */
+const H = document.getElementById('hud');
+
+// Minimap: Realm path (section 49), current = Room 4 → Elite.
+const nodes = [
+  ['Entry', 36, 150], ['Room 1', 64, 128], ['', 76, 104], ['Room 2', 62, 80], ['Shrine', 84, 62],
+  ['Room 3', 112, 70], ['Room 4', 132, 96], ['Elite', 124, 124], ['Rest', 142, 146], ['Boss', 110, 40],
+];
+const cur = 6;
+const mm = `
+<div class="minimap grain">
+  <svg viewBox="0 0 180 180" width="180" height="180">
+    <path d="M${nodes.map((n) => `${n[1]} ${n[2]}`).join(' L')}" fill="none" stroke="rgba(231,221,198,.22)" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" filter="url(#rough)"/>
+    <path d="M${nodes.slice(0, cur + 1).map((n) => `${n[1]} ${n[2]}`).join(' L')}" fill="none" stroke="rgba(231,221,198,.55)" stroke-width="2" stroke-linejoin="round" stroke-dasharray="3 3"/>
+    ${nodes.map((n, i) => {
+      if (!n[0]) return '';
+      const done = i < cur, here = i === cur;
+      const col = n[0] === 'Shrine' ? '#5b9486' : n[0] === 'Elite' ? '#b86a5f' : n[0] === 'Boss' ? '#b84f49' : done ? 'rgba(231,221,198,.55)' : 'rgba(231,221,198,.25)';
+      const r = n[0] === 'Boss' ? 7 : here ? 7 : 4.5;
+      return `<circle cx="${n[1]}" cy="${n[2]}" r="${r}" fill="${here ? '#6676b8' : col}" stroke="#24212a" stroke-width="1.5"/>`;
+    }).join('')}
+    <circle cx="${nodes[cur][1]}" cy="${nodes[cur][2]}" r="12" fill="none" stroke="#6676b8" stroke-width="1.2" opacity=".7"/>
+    <path d="M110 30 l-5 -8 l5 3 l5 -3 z" fill="#b84f49"/>
+    <!-- room interior blips -->
+    <circle cx="140" cy="92" r="1.8" fill="#e16a54"/><circle cx="136" cy="100" r="1.8" fill="#e16a54"/><circle cx="128" cy="94" r="2.6" fill="#b86a5f"/>
+    <text x="10" y="18" font-family="Alegreya SC" font-size="11" fill="rgba(231,221,198,.55)" letter-spacing="1">N</text>
+  </svg>
+</div>
+<div class="realm-line">
+  <div class="name">${card.name}</div>
+  <div class="room">${bossMode ? 'The Bound King' : 'Room 4 of 4 · 6 Hushed remain'}</div>
+  <div class="focus">${Array.from({ length: 12 }, (_, i) => `<i class="${i >= 9 ? 'spent' : ''}"></i>`).join('')}<span>9 Focus</span></div>
+</div>`;
+
+// Pinned contract, from /realm/ashen-vault card contracts.
+const contract = `
+<div class="contract panel grain">
+  <div class="seal">♛</div>
+  <div class="l1">Royal Demand · Storm-free Form <b>+${storm.bountyPct}%</b></div>
+  <div class="l2">Trialed, Power 61+, no ${essChip('storm', 16)} Storm · <span class="ok">1 candidate held</span></div>
+</div>`;
+
+// Vitals: HP 78/100, Barrier from Warding Sigil (35% max health), Thread 62.
+const hp = 78, barrier = 35, thread = 62;
+const vitals = `
+<div class="vitals">
+  <div class="level">
+    <svg viewBox="0 0 74 74" width="74" height="74"><circle cx="37" cy="37" r="35" fill="none" stroke="rgba(192,154,80,.25)" stroke-width="2.5"/>
+      <circle cx="37" cy="37" r="35" fill="none" stroke="#c09a50" stroke-width="2.5" stroke-dasharray="${2 * Math.PI * 35 * 0.46} 999" transform="rotate(-90 37 37)" stroke-linecap="round"/></svg>
+    <div class="n">4</div><div class="t">BINDER</div>
+  </div>
+  <div class="bars">
+    <div class="buffs">
+      <div class="buff"><span class="ic" style="background:#e7ddc6">${glyph('sigil', 16)}</span>Barrier 2.1s</div>
+      <div class="buff"><span class="ic" style="background:#6676b8;color:#e7ddc6">${glyph('lash', 16)}</span>Lash 2/3</div>
+    </div>
+    <div class="barrier-strip"><i style="width:${barrier}%"></i></div>
+    <div class="bar hp">
+      <div class="fill" style="width:${hp}%"></div>
+      <span class="lab">Health</span><span class="val">${hp} <span style="opacity:.6;font-weight:400">/ 100</span> <span style="color:#e7ddc6">+${barrier}</span></span>
+    </div>
+    <div class="bar thread">
+      <div class="fill" style="width:${thread}%"></div>
+      <div class="tick" style="left:30%"></div><div class="tick" style="left:60%"></div><div class="tick" style="left:90%"></div>
+      <span class="val">${thread}</span>
+    </div>
+  </div>
+  <div class="draughts">
+    ${[1, 1, 1, 0].map((f) => `<div class="draught ${f ? '' : 'empty'}"><div class="liq"></div><svg viewBox="0 0 48 48" width="26" height="34" preserveAspectRatio="none">${'<path d="M19 6 h10 v8 c7 3 11 9 11 16 c0 8-7 13-16 13 s-16-5-16-13 c0-7 4-13 11-16 z" fill="none" stroke="currentColor" stroke-width="2.4"/>'}</svg></div>`).join('')}
+    <span class="key">Q</span>
+  </div>
+</div>`;
+
+// Skill bar. Cooldowns: Bind 11s (4.2 left), Grand Fracture 38s (21 left), Sigil active.
+const skills = [
+  { g: 'lash', key: 'LMB', c: '#6676b8', cls: 'active' },
+  { g: 'sever', key: 'RMB', c: '#8667a3', cost: 30, cls: 'ready-glow' },
+  { g: 'bind', key: '1', c: '#5b9486', cd: 4.2, max: 11 },
+  { g: 'unravel', key: '2', c: '#6676b8' },
+  { g: 'sigil', key: '3', c: '#a89a83', cd: 10.6, max: 14 },
+  { g: 'fracture', key: '4', c: '#c09a50', cd: 21, max: 38 },
+];
+const skillHtml = (s, extra = '') => `
+  <div class="skill ${s.cls || ''} ${extra}" style="--c:${s.c}">
+    <div class="wash"></div>
+    ${glyph(s.g, extra ? 34 : 42)}
+    ${s.cd ? `<div class="cd" style="--a:${(s.cd / s.max) * 360}deg"></div><div class="cdn">${s.cd >= 10 ? Math.round(s.cd) : s.cd.toFixed(1)}</div>` : ''}
+    ${s.cost ? `<span class="cost">${s.cost}</span>` : ''}
+    <span class="key">${s.key}</span>
+  </div>`;
+const bar = `
+<div class="xp"><i style="width:46%"></i></div>
+<div class="skillbar">
+  <div class="skills">${skills.map((s) => skillHtml(s)).join('')}</div>
+  ${skillHtml({ g: 'evade', key: 'Space', c: '#e7ddc6' }, 'evade')}
+</div>`;
+
+// Enemy health, elite plate, damage numbers, loot labels.
+const world2 = `
+  <div class="ehp hit" style="left:1075px;top:432px"><i style="width:38%"></i></div>
+  <div class="ehp" style="left:1130px;top:512px"><i style="width:100%"></i></div>
+  <div class="ehp" style="left:820px;top:388px"><i style="width:72%"></i></div>
+  <div class="ehp" style="left:760px;top:612px"><i style="width:100%"></i></div>
+  <div class="ehp" style="left:1400px;top:286px"><i style="width:55%"></i></div>
+  <div class="ehp" style="left:560px;top:274px"><i style="width:100%"></i></div>
+  ${bossMode ? '' : `<div class="elite-plate" style="left:1240px;top:278px">
+    <div class="nm">Hardened Keeper</div><div class="mod">Elite · Hardened</div>
+    <div class="b"><i style="width:64%"></i></div><div class="st"><i style="width:40%"></i></div>
+  </div>`}
+  <div class="dmg" style="left:1100px;top:470px">32</div>
+  <div class="dmg fade" style="left:1030px;top:500px">32</div>
+  <div class="dmg crit" style="left:1170px;top:540px">48</div>
+  <div class="dmg" style="left:1285px;top:400px">26</div>
+  <div class="dmg player" style="left:${px - 40}px;top:${py - 150}px">−9</div>
+  <div class="loot form" style="left:1040px;top:590px">Veiled Form<span class="sub">Knots-touched</span></div>
+  <div class="loot l-ess" style="left:790px;top:740px">${essChip('glass', 18)} Glass ×4</div>
+  <div class="loot l-draught" style="left:1310px;top:808px">Draught</div>
+`;
+
+// Boss variant: The Bound King, Phase 2, stagger building.
+const boss = bossMode ? `
+<div class="boss">
+  <div class="nm">The Bound King</div>
+  <div class="ph">PHASE II · BOUND CIRCLE</div>
+  <div class="b"><i style="width:58%"></i><div class="mark" style="left:70%"></div><div class="mark" style="left:35%"></div></div>
+  <div class="st"><i style="width:72%"></i></div>
+  <div class="stl">STAGGER</div>
+</div>` : '';
+
+H.innerHTML = mm + contract + vitals + bar + world2 + boss + `
+  <div class="note" style="left:24px;top:4px">minimap 180×180 top-left</div>
+  <div class="note" style="right:28px;top:4px">pinned contract, max 2 lines</div>
+  <div class="note" style="left:760px;top:966px">6 × 58px, 7px gap · Evade 46px</div>
+  <div class="note" style="left:118px;top:960px">health, Thread directly below</div>`;
+</script>
+</body>
+</html>
