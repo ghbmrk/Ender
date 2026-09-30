@@ -13,6 +13,7 @@ import { run } from "../db";
 export function registerDevRoutes(app: FastifyInstance, ctx: Ctx) {
   app.get("/api/dev/inference/missing", async () => ({ missing: missingFixtures(ctx) }));
   app.get<{ Params: { artifactId: string } }>("/api/dev/provenance/:artifactId", async (req) => provenance(ctx, req.params.artifactId));
+  app.get("/api/dev/inference/recent", async () => ({ recent: (ctx.inference as { recent?: unknown[] }).recent ?? [] }));
   app.get("/api/dev/economy", async () => economyDebug(ctx));
   app.get("/api/dev/analytics", async () => analytics(ctx));
   app.get("/api/dev/snapshots", async () => ctx.world.snapshots.map((s) => ({ id: s.id, date: s.date, scarcity: s.essenceScarcity })));

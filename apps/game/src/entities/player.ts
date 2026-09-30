@@ -57,6 +57,8 @@ export class HumanInput {
     const p = this.scene.input.activePointer;
     const cam = this.scene.cameras.main;
     const world = cam.getWorldPoint(p.x, p.y);
+    // While a panel is open, track E so a press that opened (or happened during) the panel never fires on close.
+    if (!enabled) this.interactLatch = !!k.E?.isDown;
     if (!enabled) return { moveX: 0, moveY: 0, aimX: world.x - px, aimY: world.y - py, fire: false, sever: false, slip: false, unravel: false, interact: false };
     const mx = (k.D!.isDown || k.RIGHT!.isDown ? 1 : 0) - (k.A!.isDown || k.LEFT!.isDown ? 1 : 0);
     const my = (k.S!.isDown || k.DOWN!.isDown ? 1 : 0) - (k.W!.isDown || k.UP!.isDown ? 1 : 0);

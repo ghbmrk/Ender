@@ -475,8 +475,9 @@ export class RealmScene extends Phaser.Scene {
       const pull = Math.max(420, 1400 - d);
       const a = angleTo(pk, this.player);
       if (this.roomCleared || d < 160) {
-        pk.x += Math.cos(a) * pull * dt;
-        pk.y += Math.sin(a) * pull * dt;
+        const step = Math.min(d, pull * dt); // never overshoot (low FPS or time scale would orbit the player)
+        pk.x += Math.cos(a) * step;
+        pk.y += Math.sin(a) * step;
         pk.s.setPosition(pk.x, pk.y);
       }
       if (d < 22) {

@@ -54,6 +54,12 @@ export class FixtureInferenceProvider implements InferenceProvider {
   private fallback: InferenceProvider;
   readonly misses: { kind: InferenceKind; hash: string }[] = [];
   readonly hits: { kind: InferenceKind; hash: string }[] = [];
+  /** The most recent requests, for the developer provenance view and E2E checks. */
+  readonly recent: { kind: InferenceKind; hash: string; request: unknown; source: "fixture" | "fallback" }[] = [];
+  private remember(kind: InferenceKind, hash: string, request: unknown, source: "fixture" | "fallback") {
+    this.recent.unshift({ kind, hash, request: JSON.parse(canonicalize(request)), source });
+    this.recent.length = Math.min(this.recent.length, 25);
+  }
 
   constructor(private opts: FixtureProviderOptions) {
     this.fallback = opts.fallback ?? new RuleInferenceProvider();
@@ -74,6 +80,7 @@ export class FixtureInferenceProvider implements InferenceProvider {
       const parsed = RESULT_SCHEMAS[kind].safeParse(file.result);
       if (!parsed.success) throw new Error(`invalid fixture ${kind}/${hash}: ${parsed.error.message}`);
       this.hits.push({ kind, hash });
+      this.remember(kind, hash, request, "fixture");
       return {
         result: parsed.data as T,
         usage: { workUnits: file.usage?.workUnits ?? DEFAULT_WU[kind] },
@@ -82,6 +89,7 @@ export class FixtureInferenceProvider implements InferenceProvider {
     }
     if (this.opts.recordMissing !== false) record();
     this.misses.push({ kind, hash });
+    this.remember(kind, hash, request, "fallback");
     if (this.opts.strict) throw new FixtureRequired(kind, hash, reqPath);
     return fallback();
   }
