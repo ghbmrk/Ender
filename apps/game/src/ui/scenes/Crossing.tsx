@@ -5,6 +5,8 @@ import { setState, toast, useStore } from "../../state/store";
 import { essenceColor, essenceGlyph } from "../../economy/format";
 import { Head } from "../battle/Figure";
 import { useWorldTop } from "../Stage";
+import { Coach } from "../Coach";
+import { finishTutorial } from "../../game/tutorial";
 
 const LABEL: Record<string, { name: string; sub: string }> = {
   gate: { name: "The Gate", sub: "begin an Expedition" },
@@ -19,10 +21,13 @@ const LABEL: Record<string, { name: string; sub: string }> = {
 export function Crossing() {
   const c = useStore((s) => s.character);
   const worldTop = useWorldTop();
+  /** Last prologue step: point at the Gate and keep the other stations quiet. */
+  const lesson = useStore((s) => s.tutorial === "gate");
   const mod = crossingBackdrop();
   const Back = mod?.default;
   const stations = (mod?.STATIONS ?? []) as readonly { id: string; x: number; y: number }[];
   const open = (id: string) => {
+    if (lesson) finishTutorial();
     if (id === "gate") setState({ panel: "gate" });
     else if (id === "bazaar") setState({ panel: "bazaar" });
     else if (id === "crucible") setState({ panel: "crucible", crucibleMode: "craft" });
@@ -38,7 +43,7 @@ export function Crossing() {
       <div className="world" style={{ top: worldTop }}>
         <div className="backdrop">{Back && <Back className="backdrop-svg" />}</div>
         {stations.map((s) => (
-          <button key={s.id} className={`station st-${s.id}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
+          <button key={s.id} className={`station st-${s.id} ${lesson ? (s.id === "gate" ? "coach-pulse" : "muted") : ""}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
             <span className="st-name">{LABEL[s.id]?.name ?? s.id}</span>
             <span className="st-sub">{LABEL[s.id]?.sub}</span>
           </button>
@@ -60,6 +65,7 @@ export function Crossing() {
           ))}
         </div>
       </header>
+      {lesson && <Coach text="Your party is ready. Tap **The Gate** to set out on an Expedition. You can rework the Loom here, or at Shrines along the way." style={{ bottom: 250 }} />}
       <div className="hub-party">
         {PARTY.map((r) => (
           <div key={r} className="hub-hero">

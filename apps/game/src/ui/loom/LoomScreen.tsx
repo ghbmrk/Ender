@@ -26,6 +26,8 @@ import { useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH, ROLE_GLYPH, ROLE_NAME } from "../affinity";
 import { Head } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
+import { goTo } from "../../game/tutorial";
+import { Coach } from "../Coach";
 
 /** Flat-topped hexes on the portrait stage. */
 const HEX = 104;
@@ -50,7 +52,9 @@ export function LoomScreen() {
   const editable = useStore((s) => s.loomEditable) || DEMO;
   const inRun = useStore((s) => !!s.expedition);
   const rank = DEMO ? 9 : (server?.rank ?? 1);
-  const [hero, setHero] = useState<RootId>("iron");
+  /** Prologue: the player places Quick's first Form themselves. */
+  const lesson = useStore((s) => s.tutorial === "form") && !DEMO;
+  const [hero, setHero] = useState<RootId>(lesson ? "quick" : "iron");
   const [layout, setLayout] = useState<Layout>(() => (DEMO ? (DEMO_LOOMS as Layout) : fromServer(server)));
   const [pool, setPool] = useState<LoomNode[]>(() => (DEMO ? [] : (server?.pool ?? [])));
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -178,6 +182,22 @@ export function LoomScreen() {
     else setState({ screen: "crossing" });
   };
 
+  const lessonForm = lesson ? (pool.find((n) => n.role === "action") ?? nodes.find((n) => n.role === "action")) : undefined;
+  const lessonPlaced = !!lessonForm && hero === "quick" && nodes.some((n) => n.id === lessonForm.id);
+  const lessonSkill = lessonPlaced ? compiled.actions.find((a) => a.nodeId === lessonForm!.id) : undefined;
+  const coach = !lesson
+    ? null
+    : hero !== "quick"
+      ? { text: "Open **Quick Root** to place the new Form." }
+      : !lessonPlaced
+        ? { text: "A Form dropped! Forms are the pieces of your skill tree. **Drag it** onto a glowing cell beside Quick's Root." }
+        : !lessonSkill
+          ? { text: "It's **dormant**: a node must touch the Root, or share an Affinity with a neighbour. Drag it beside the Root." }
+          : {
+              text: `**${lessonSkill.name}** is now Quick's skill. Your Loom is your skill tree: move a Form and the skills change.`,
+              action: { label: "Fight", onClick: () => goTo("skill"), testId: "lesson-fight" },
+            };
+
   const cells = boardCells(2);
   const radius = rank >= 8 ? 2 : 1;
   const byCell = new Map(shown.map((n) => [`${n.q},${n.r}`, n]));
@@ -198,13 +218,13 @@ export function LoomScreen() {
             {!editable && <span className="lock"> · locked until a Shrine</span>}
           </div>
         </div>
-        <button className="loom-done" onClick={close} data-testid="loom-done">
+        {!lesson && <button className="loom-done" onClick={close} data-testid="loom-done">
           {inRun && editable ? "Leave Shrine" : "Done"}
-        </button>
+        </button>}
       </header>
       <div className="hero-tabs">
         {PARTY.map((r) => (
-          <button key={r} className={`hero-tab ${r === hero ? "on" : ""}`} onClick={() => (setHero(r), setDiff([]), setSelected(null))} data-testid={`loom-tab-${r}`}>
+          <button key={r} className={`hero-tab ${r === hero ? "on" : ""} ${lesson && r === "quick" && hero !== "quick" ? "coach-pulse" : ""}`} onClick={() => (setHero(r), setDiff([]), setSelected(null))} data-testid={`loom-tab-${r}`}>
             <Head figure={ROOTS[r].hero} size={64} />
             <span>{ROOTS[r].name}</span>
           </button>
@@ -217,7 +237,8 @@ export function LoomScreen() {
           const [x, y] = cellXY(q, r);
           const locked = hexDist(q, r) > radius;
           const hover = drag?.moved && drag.over && drag.over !== "tray" && drag.over.q === q && drag.over.r === r;
-          return <path key={`${q},${r}`} d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""}`} />;
+          const glow = lesson && hero === "quick" && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`);
+          return <path key={`${q},${r}`} d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />;
         })}
         {/* painted links */}
         {shownC.links.map((l) => {
@@ -261,7 +282,7 @@ export function LoomScreen() {
         <div className="tray-row">
           {pool.length === 0 && <div className="tray-empty">No unplaced nodes. Attune a Form, then Inscribe it at the Crucible.</div>}
           {pool.map((n) => (
-            <div key={n.id} className="tray-item" onPointerDown={(e) => down(e, n, "pool")} data-testid={`pool-${n.id}`}>
+            <div key={n.id} className={`tray-item ${lesson && n.id === lessonForm?.id && hero === "quick" ? "coach-pulse" : ""}`} onPointerDown={(e) => down(e, n, "pool")} data-testid={`pool-${n.id}`}>
               <svg viewBox="-80 -80 160 160" width={150} height={150}>
                 <NodeHex n={n} x={0} y={0} small />
               </svg>
@@ -271,6 +292,7 @@ export function LoomScreen() {
         </div>
       </div>
 
+      {coach && !drag?.moved && <Coach text={coach.text} action={coach.action} key={coach.text} style={{ top: 985 }} />}
       <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} />
 
       {drag?.moved && (

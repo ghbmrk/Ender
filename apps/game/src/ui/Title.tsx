@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { continueGame, newBinder } from "../game/flow";
+import { goTo, savedStep, startTutorial, tutorialDone } from "../game/tutorial";
 import { setState, toast, useStore } from "../state/store";
 import { crossingBackdrop } from "../art/registry";
 import { Fig } from "./battle/Figure";
@@ -14,7 +15,7 @@ export function Title() {
   useEffect(() => {
     api
       .character()
-      .then((c) => setHasSave(c.xp > 0 || c.crowns !== 250 || c.level > 1))
+      .then((c) => setHasSave(c.xp > 0 || c.crowns !== 250 || c.level > 1 || !!savedStep() || tutorialDone()))
       .catch(() => setHasSave(false));
   }, []);
   const go = async (fn: () => Promise<void>) => {
@@ -26,6 +27,12 @@ export function Title() {
       toast((e as Error).message, "loss");
       setBusy(false);
     }
+  };
+  /** Continue the save, picking the prologue back up where it was left. */
+  const resume = async () => {
+    await continueGame();
+    const step = savedStep();
+    if (step) goTo(step);
   };
   const toggleDev = () => {
     const v = !dev;
@@ -59,12 +66,20 @@ export function Title() {
         <p className="tagline">You never earn a skill. You make one.</p>
       </div>
       <div className="title-actions">
-        <button className="big primary" disabled={busy} onClick={() => go(continueGame)} data-testid="continue">
-          {hasSave ? "Continue" : "Begin"}
-        </button>
-        <button className="big" disabled={busy} onClick={() => go(() => newBinder())} data-testid="new-binder">
-          New Party
-        </button>
+        {hasSave ? (
+          <>
+            <button className="big primary" disabled={busy} onClick={() => go(resume)} data-testid="continue">
+              Continue
+            </button>
+            <button className="big" disabled={busy} onClick={() => go(() => (tutorialDone() ? newBinder() : startTutorial()))} data-testid="new-binder">
+              New Party
+            </button>
+          </>
+        ) : (
+          <button className="big primary" disabled={busy} onClick={() => go(startTutorial)} data-testid="begin">
+            Begin
+          </button>
+        )}
         <button className={`small ${dev ? "toggled" : "ghost"}`} onClick={toggleDev} data-testid="dev-toggle">
           Developer provenance: {dev ? "on" : "off"}
         </button>

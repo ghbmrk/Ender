@@ -7,6 +7,8 @@ const shots = resolve(root, "art-shots");
 const maxFights = Number(process.argv[2] ?? 3);
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+// The prologue has its own script (play-prologue.mjs); this one starts from the Crossing.
+await page.addInitScript(() => localStorage.setItem("ender:tutorial", "done"));
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));

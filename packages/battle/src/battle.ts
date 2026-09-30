@@ -10,6 +10,8 @@ export type BattleSetup = {
   /** Foes arrive wave by wave (usually one wave of 1–5). */
   waves: FoeKind[][];
   difficulty: number;
+  /** Scales foe HP and attack (the prologue's gentle practice fights). */
+  foeScale?: { hp?: number; atk?: number };
 };
 
 type Dot = { rounds: number; dmg: number };
@@ -214,7 +216,8 @@ export class Battle {
   private makeFoe(kind: FoeKind): Unit {
     const d = FOES[kind];
     const diff = this.setup.difficulty;
-    const maxHp = Math.round(d.hp * (1 + 0.25 * (diff - 1)));
+    const scale = this.setup.foeScale;
+    const maxHp = Math.round(d.hp * (1 + 0.25 * (diff - 1)) * (scale?.hp ?? 1));
     return this.blank({
       id: `${kind}-${++this.seq}`,
       side: "foe",
@@ -224,7 +227,7 @@ export class Battle {
       maxHp,
       hp: maxHp,
       speed: d.speed,
-      power: d.atk * (1 + 0.12 * (diff - 1)),
+      power: d.atk * (1 + 0.12 * (diff - 1)) * (scale?.atk ?? 1),
       breakTaken: d.breakTaken,
       tier: d.tier,
     });

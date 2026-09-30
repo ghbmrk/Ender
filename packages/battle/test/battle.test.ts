@@ -166,6 +166,13 @@ describe("combat rules (§61–72)", () => {
     expect(order[0]!.id).toBe("hound-1"); // 120 beats Quick's 110
     expect(first.actor.id).toBe("hound-1");
   });
+  it("foeScale softens practice foes without touching the party", () => {
+    const full = new Battle({ seed: "fs", party: party(), waves: [["husk"]], difficulty: 1 });
+    const soft = new Battle({ seed: "fs", party: party(), waves: [["husk"]], difficulty: 1, foeScale: { hp: 0.5, atk: 0.4 } });
+    expect(soft.unit("husk-1").maxHp).toBe(Math.round(full.unit("husk-1").maxHp * 0.5));
+    expect(soft.unit("husk-1").power).toBeCloseTo(full.unit("husk-1").power * 0.4);
+    expect(soft.party().map((u) => u.maxHp)).toEqual(full.party().map((u) => u.maxHp));
+  });
   it("AP: start 3, +1 at the start of your turn, Basic +2, max 9", () => {
     const b = new Battle({ seed: "ap", party: party(), waves: [["keeper"]], difficulty: 1 });
     let t = b.nextTurn();

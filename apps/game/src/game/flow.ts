@@ -21,9 +21,10 @@ export async function refreshLoom() {
   return loom;
 }
 
-export async function newBinder(preset?: string) {
-  await api.reset(preset ? { preset } : {});
+export async function newBinder(opts: { preset?: string; quiet?: boolean } = {}) {
+  await api.reset(opts.preset ? { preset: opts.preset } : {});
   await Promise.all([refreshCharacter(), refreshWorld(), refreshLoom()]);
+  if (opts.quiet) return;
   setState({ screen: "crossing", panel: null, expedition: null, loomEditable: true });
   toast("Your party gathers at the Crossing. Weave a Loom, then take the Gate.", "info");
 }

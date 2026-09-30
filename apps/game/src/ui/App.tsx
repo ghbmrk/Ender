@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { ArtDefs } from "../art/defs";
 import { battleSetup, endBattle } from "../game/flow";
 import { demoSetup } from "../game/demo";
+import { LESSONS, lessonEnded, lessonSetup, skipTutorial } from "../game/tutorial";
 import { setState, toast, useStore } from "../state/store";
 import { Stage } from "./Stage";
 import { Title } from "./Title";
@@ -22,7 +23,34 @@ import { LoomScreen } from "./loom/LoomScreen";
 const params = new URLSearchParams(location.search);
 const DEMO = params.get("demo");
 
+/** A prologue practice fight: one lesson, retried on a loss. */
+function LessonHost() {
+  const step = useStore((s) => s.tutorial);
+  const run = useStore((s) => s.tutorialRun);
+  const lesson = step && step in LESSONS ? LESSONS[step as keyof typeof LESSONS] : null;
+  const setup = useMemo(() => (lesson ? lessonSetup(lesson) : null), [step, run]);
+  if (!lesson || !setup) return null;
+  return (
+    <BattleScreen
+      key={`${step}-${run}`}
+      setup={setup}
+      realmId={step === "skill" ? "hollow-keep" : "ashen-vault"}
+      boss={false}
+      title={lesson.title}
+      lesson={lesson}
+      onSkip={() => skipTutorial().catch((e) => toast((e as Error).message, "loss"))}
+      onEnd={(r) => lessonEnded(lesson.step, r.outcome === "victory")}
+    />
+  );
+}
+
 function BattleHost() {
+  const tutorial = useStore((s) => s.tutorial);
+  if (tutorial && !DEMO) return <LessonHost />;
+  return <RunBattleHost />;
+}
+
+function RunBattleHost() {
   const b = useStore((s) => s.battle);
   const ex = useStore((s) => s.expedition);
   const setup = useMemo(() => (DEMO ? demoSetup(DEMO === "boss") : b && ex ? battleSetup() : null), [b?.nodeId]);

@@ -36,6 +36,10 @@ export type State = {
   devMode: boolean;
   toasts: Toast[];
   world: any | null;
+  /** The prologue lesson in progress (null once it is done or skipped). */
+  tutorial: import("../game/tutorial").TutStep | null;
+  /** Bumped each time a practice fight starts, so a retry gets a fresh battle. */
+  tutorialRun?: number;
 };
 
 let state: State = {
@@ -57,6 +61,7 @@ let state: State = {
   })(),
   toasts: [],
   world: null,
+  tutorial: null,
 };
 const listeners = new Set<() => void>();
 

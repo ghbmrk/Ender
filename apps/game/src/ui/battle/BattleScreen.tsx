@@ -25,6 +25,8 @@ import { Fig, Head, figureBox } from "./Figure";
 import { BOSS_ADDS, BOSS_POS, FOE_POS, HERO_POS, PANEL_TOP } from "./layout";
 import { sfx } from "./sfx";
 import { debug } from "../../game/debug";
+import type { CoachKey, Lesson } from "../../game/tutorial";
+import { Coach } from "../Coach";
 
 export type BattleResult = { outcome: "victory" | "defeat"; kills: Record<string, number>; partyHp: Record<RootId, number>; stats: Battle["stats"] };
 
@@ -54,8 +56,10 @@ type AttackSeq = {
   beats: number[];
   tracker: AttackTracker;
   pressed: { t: number; grade: Grade }[];
+  /** Slow-motion factor while a lesson teaches this input (1 = real time). */
+  scale: number;
 };
-type DefendSeq = { k: "defend"; plan: FoePlan; t0: number; impacts: number[]; tracker: DefenseTracker; shown: (Defense | null)[]; landed: boolean[] };
+type DefendSeq = { k: "defend"; scale: number; plan: FoePlan; t0: number; impacts: number[]; tracker: DefenseTracker; shown: (Defense | null)[]; landed: boolean[] };
 type Seq = AttackSeq | DefendSeq;
 
 type Phase =
@@ -80,9 +84,26 @@ const STATUS_GLYPH: Record<string, string> = { marked: "◎", slow: "≋", fract
 
 let uid = 0;
 /** Sequence time in ms (debug ?speed= slows it down for screenshots). */
-const elapsed = (s: { t0: number }) => (performance.now() - s.t0) / debug.timeScale;
+const elapsed = (s: { t0: number; scale: number }) => (performance.now() - s.t0) / (debug.timeScale * s.scale);
 
-export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: BattleSetup; realmId: string; boss: boolean; title?: string; onEnd: (r: BattleResult) => void }) {
+export function BattleScreen({
+  setup,
+  realmId,
+  boss,
+  title,
+  lesson,
+  onSkip,
+  onEnd,
+}: {
+  setup: BattleSetup;
+  realmId: string;
+  boss: boolean;
+  title?: string;
+  /** A prologue lesson: limits the commands and defences shown and coaches the player through them. */
+  lesson?: Lesson;
+  onSkip?: () => void;
+  onEnd: (r: BattleResult) => void;
+}) {
   const battle = useMemo(() => new Battle(setup), [setup]);
   const [, force] = useReducer((n: number) => n + 1, 0);
   const [phase, setPhase] = useState<Phase>({ k: "intro" });
@@ -94,6 +115,17 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
   const [hurt, setHurt] = useState<Record<string, number>>({});
   const [clock, setClock] = useState(0);
   const seq = useRef<Seq | null>(null);
+  const [coach, setCoach] = useState<{ key: CoachKey; text: string } | null>(null);
+  const said = useRef(new Set<CoachKey>());
+  const slowLeft = useRef(lesson?.slow ?? 0);
+  /** Coach the player once per moment (lessons only). */
+  const say = (key: CoachKey) => {
+    const text = lesson?.coach[key];
+    if (!text || said.current.has(key)) return;
+    said.current.add(key);
+    setCoach({ key, text });
+  };
+  const slowScale = () => (slowLeft.current > 0 ? (slowLeft.current--, 2.2) : 1);
   const slots = useRef<Record<string, [number, number]>>({});
   const timers = useRef<number[]>([]);
   const { toStage, h: stageH } = useStage();
@@ -187,6 +219,7 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
           break;
         case "break": {
           const t = battle.unit(e.target);
+          later(d + 200, () => say("broken"));
           float(t, "BROKEN", "broken", d);
           spawnFx("bloom", chest(t), "#ecc56a", d);
           later(d, sfx.brk);
@@ -244,6 +277,7 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
     seq.current = null;
     setCaption(null);
     setPhase({ k: "end", outcome });
+    setCoach(null);
     (outcome === "victory" ? sfx.victory : sfx.defeat)();
   };
 
@@ -263,6 +297,11 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
         sfx.turn();
         setTarget((cur) => (cur && battle.unit(cur).alive ? cur : (battle.living("foe").find((f) => f.tier === "boss") ?? battle.living("foe")[0])?.id ?? null));
         setPhase({ k: "command", actor: u.id });
+        if (lesson?.commands === "all") {
+          const acts = battle.actionsOf(u.id);
+          if (acts.some((a) => battle.costOf(u.id, a.nodeId) <= u.ap)) say("skill");
+          else if (acts.length) say("ap");
+        } else say("command");
       });
     } else {
       const plan = battle.planFoe(u.id);
@@ -331,9 +370,11 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
       beats,
       tracker: new AttackTracker(beats),
       pressed: [],
+      scale: slowScale(),
     };
     seq.current = s;
     setPhase({ k: "attack" });
+    say("attack");
   };
 
   const tickAttack = (s: AttackSeq, t: number) => {
@@ -361,6 +402,7 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
     spawnFx("slash", chest(t), color);
     if (g === "perfect") spawnFx("bloom", chest(t), color);
     (g === "perfect" ? sfx.perfect : g === "good" ? sfx.good : sfx.miss)();
+    say(g);
   };
 
   const pressAttack = (s: AttackSeq, t: number, at?: { x: number; y: number }) => {
@@ -384,6 +426,7 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
     const events = battle.resolveHero({ actor: s.actor, command: s.command, target: s.target, ally: s.ally, grades: s.tracker.result(), weakPoint: !!s.weakHit });
     events.push(...battle.settle());
     const d = play(events);
+    if (s.command === "basic" && lesson?.commands === "basic") later(d + 300, () => say("ap"));
     later(d + 650, advance);
   };
 
@@ -407,13 +450,15 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
     }
     sfx.telegraph();
     const impacts = plan.attack.hits.map((h) => h.t);
-    seq.current = { k: "defend", plan, t0: performance.now() + 150, impacts, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
+    seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + 150, impacts, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
     setPhase({ k: "defend" });
+    say("defend");
   };
 
   const defendFeedback = (s: DefendSeq, i: number, r: Defense) => {
     s.shown[i] = r;
     const victim = battle.unit(s.plan.targets[0]!);
+    say(r === "hit" ? "hit" : r.includes("parry") ? "parried" : "dodged");
     if (r === "hit") return;
     float([chest(victim)[0] + 60, chest(victim)[1] - 120], DEF_LABEL[r], `def ${r}`);
     if (r.includes("parry")) {
@@ -588,14 +633,23 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
         </div>
       )}
 
-      <Hint phase={phase} s={s} b={battle} top={PANEL_TOP + stageH - STAGE_H - 70} />
+      {lesson ? (
+        coach && phase.k !== "end" && <Coach text={coach.text} key={coach.key} style={{ bottom: STAGE_H - PANEL_TOP + 24 }} />
+      ) : (
+        <Hint phase={phase} s={s} b={battle} top={PANEL_TOP + stageH - STAGE_H - 70} />
+      )}
+      {lesson && onSkip && phase.k === "command" && (
+        <button className="skip-tutorial" onPointerDown={(e) => e.stopPropagation()} onClick={onSkip} data-testid="skip-tutorial">
+          Skip tutorial
+        </button>
+      )}
 
       <div className="bpanel" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
         <PartyStrip b={battle} active={active?.side === "party" ? active.id : null} />
-        {(phase.k === "command" || phase.k === "ally") && <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />}
+        {(phase.k === "command" || phase.k === "ally") && <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "command" ? "basic" : coach?.key === "skill" ? "actions" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />}
         {phase.k === "defend" && s?.k === "defend" && (
           <div className="defense">
-            <button className="def-btn dodge" onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "dodge"))} data-testid="dodge">
+            <button className={`def-btn dodge ${lesson?.step === "dodge" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "dodge"))} data-testid="dodge">
               <span className="def-glyph">⤺</span>
               DODGE
               <small>forgiving</small>
@@ -606,11 +660,13 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
                 return <span key={i} className={`pip ${r ?? ""}`} />;
               })}
             </div>
-            <button className="def-btn parry" onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "parry"))} data-testid="parry">
+            {lesson?.defense !== "dodge" && (
+            <button className={`def-btn parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "parry"))} data-testid="parry">
               <span className="def-glyph">⚔</span>
               PARRY
               <small>tight · +1 AP · Break</small>
             </button>
+            )}
           </div>
         )}
         {phase.k === "attack" && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
@@ -618,7 +674,7 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
 
       {phase.k === "end" && (
         <div className={`battle-end ${phase.outcome}`} data-testid="battle-end">
-          <h1>{phase.outcome === "victory" ? "Victory" : "The party falls"}</h1>
+          <h1>{phase.outcome === "victory" ? "Victory" : lesson ? "Not this time" : "The party falls"}</h1>
           <div className="end-stats">
             <span>Break dealt {Math.round(battle.stats.breakDealt)}</span>
             <span>Parries {battle.stats.parries}</span>
@@ -626,7 +682,7 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
             <span>AP shared {battle.stats.apTransferred + battle.stats.apRefunded}</span>
           </div>
           <button className="big" onPointerDown={(e) => e.stopPropagation()} onClick={() => onEnd({ outcome: phase.outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats })} data-testid="battle-continue">
-            Continue
+            {lesson && phase.outcome === "defeat" ? "Try again" : "Continue"}
           </button>
         </div>
       )}
@@ -751,9 +807,25 @@ function PartyStrip({ b, active }: { b: Battle; active: string | null }) {
   );
 }
 
-function Commands({ b, actor, ally, onPick, onCancel }: { b: Battle; actor: string; ally: boolean; onPick: (actor: string, cmd: string) => void; onCancel: () => void }) {
+function Commands({
+  b,
+  actor,
+  ally,
+  basicOnly,
+  pulse,
+  onPick,
+  onCancel,
+}: {
+  b: Battle;
+  actor: string;
+  ally: boolean;
+  basicOnly?: boolean;
+  pulse?: "basic" | "actions" | null;
+  onPick: (actor: string, cmd: string) => void;
+  onCancel: () => void;
+}) {
   const u = b.unit(actor);
-  const actions = b.actionsOf(actor);
+  const actions = basicOnly ? [] : b.actionsOf(actor);
   if (ally)
     return (
       <div className="ally-pick">
@@ -765,7 +837,7 @@ function Commands({ b, actor, ally, onPick, onCancel }: { b: Battle; actor: stri
     );
   return (
     <div className="cards" data-testid="commands">
-      <button className="card basic" onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid="cmd-basic">
+      <button className={`card basic ${pulse === "basic" ? "coach-pulse" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid="cmd-basic">
         <div className="card-top">
           <span className="card-name">Basic</span>
           <span className="card-ap gain">+2 AP</span>
@@ -779,7 +851,7 @@ function Commands({ b, actor, ally, onPick, onCancel }: { b: Battle; actor: stri
         return (
           <button
             key={a.nodeId}
-            className={`card ${can ? "" : "poor"}`}
+            className={`card ${can ? "" : "poor"} ${pulse === "actions" && can ? "coach-pulse" : ""}`}
             style={{ ["--aff" as string]: AFF_COLOR[a.dominant], ["--aff-deep" as string]: AFF_DEEP[a.dominant] }}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => can && onPick(actor, a.nodeId)}
@@ -804,7 +876,7 @@ function Commands({ b, actor, ally, onPick, onCancel }: { b: Battle; actor: stri
           </button>
         );
       })}
-      {actions.length === 0 && <div className="card empty">No Actions woven. Inscribe a Form as an Action and place it on this Loom.</div>}
+      {actions.length === 0 && !basicOnly && <div className="card empty">No Actions woven. Inscribe a Form as an Action and place it on this Loom.</div>}
     </div>
   );
 }
