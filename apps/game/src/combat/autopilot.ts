@@ -31,23 +31,59 @@ function segmentHitsRect(a: Pt, b: Pt, r: Rect): boolean {
   return true;
 }
 
+const pointIn = (p: Pt, r: Rect) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+
 const clear = (a: Pt, b: Pt, obstacles: Rect[], pad: number) => obstacles.every((o) => !segmentHitsRect(a, b, grow(o, pad)));
 
-/** Next point to walk toward: the goal itself, or the best corner around the obstacle in the way. */
-export function waypoint(me: Pt, goal: Pt, obstacles: Rect[], pad = 24): Pt {
-  const blocking = obstacles.filter((o) => segmentHitsRect(me, goal, grow(o, pad)));
-  if (!blocking.length) return goal;
-  const first = blocking.sort((a, b) => Math.hypot(a.x + a.w / 2 - me.x, a.y + a.h / 2 - me.y) - Math.hypot(b.x + b.w / 2 - me.x, b.y + b.h / 2 - me.y))[0]!;
-  const g = grow(first, pad + 6);
-  const corners = [
-    { x: g.x, y: g.y },
-    { x: g.x + g.w, y: g.y },
-    { x: g.x, y: g.y + g.h },
-    { x: g.x + g.w, y: g.y + g.h },
-  ];
-  const reachable = corners.filter((c) => clear(me, c, obstacles, pad - 2));
-  const pool = reachable.length ? reachable : corners;
-  return pool.sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) + Math.hypot(goal.x - a.x, goal.y - a.y) - (Math.hypot(b.x - me.x, b.y - me.y) + Math.hypot(goal.x - b.x, goal.y - b.y)))[0]!;
+/**
+ * Next point to walk toward: shortest path over a visibility graph of padded obstacle corners.
+ * Planning globally (not "nearest corner of the first obstacle") keeps the choice stable from frame
+ * to frame, so the bot cannot orbit a corner or flip between two detours around joined cover.
+ */
+export function waypoint(me: Pt, goal: Pt, obstacles: Rect[], pad = 24, arrive = 48): Pt {
+  // A point hugging cover (an enemy pressed against it, or the player) sits inside the padded rect;
+  // legs touching it are judged against the bare obstacles, or it could never be reached or left.
+  const hugs = (p: Pt) => obstacles.some((o) => pointIn(p, grow(o, pad)));
+  const legClear = (a: Pt, b: Pt) => clear(a, b, obstacles, hugs(a) || hugs(b) ? 0 : pad - 2);
+  if (legClear(me, goal)) return goal;
+
+  const nodes: Pt[] = [me, goal];
+  for (const o of obstacles) {
+    const g = grow(o, pad + 6);
+    for (const c of [
+      { x: g.x, y: g.y },
+      { x: g.x + g.w, y: g.y },
+      { x: g.x, y: g.y + g.h },
+      { x: g.x + g.w, y: g.y + g.h },
+    ])
+      if (!hugs(c)) nodes.push(c);
+  }
+  // Dijkstra from the goal, so dist[i] is the remaining path length from node i.
+  const n = nodes.length;
+  const dist = new Array<number>(n).fill(Infinity);
+  const next = new Array<number>(n).fill(-1);
+  const done = new Array<boolean>(n).fill(false);
+  dist[1] = 0;
+  for (;;) {
+    let u = -1;
+    for (let i = 0; i < n; i++) if (!done[i] && dist[i]! < Infinity && (u < 0 || dist[i]! < dist[u]!)) u = i;
+    if (u < 0 || u === 0) break;
+    done[u] = true;
+    for (let v = 0; v < n; v++) {
+      if (done[v]) continue;
+      const d = dist[u]! + Math.hypot(nodes[u]!.x - nodes[v]!.x, nodes[u]!.y - nodes[v]!.y);
+      if (d < dist[v]! && legClear(nodes[v]!, nodes[u]!)) {
+        dist[v] = d;
+        next[v] = u;
+      }
+    }
+  }
+  if (next[0]! < 0) return goal; // walled off: push straight on and let collision slide us
+  const first = nodes[next[0]!]!;
+  // Already on that corner (within one low-FPS step): aim past it, or we overshoot and circle it.
+  const after = next[next[0]!]!;
+  if (Math.hypot(first.x - me.x, first.y - me.y) <= arrive && after >= 0 && legClear(me, nodes[after]!)) return nodes[after]!;
+  return first;
 }
 
 /**
