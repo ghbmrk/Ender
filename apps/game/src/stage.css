@@ -1170,7 +1170,7 @@ body,
   position: absolute;
   left: 20px;
   right: 20px;
-  top: 1400px;
+  top: 1420px;
   bottom: 24px;
   padding: 14px 22px;
   background: #120f16ee;
@@ -1460,4 +1460,8 @@ body,
 }
 .battle {
   background: linear-gradient(180deg, #0c0b12, #15131b 50%, #0c0a0f);
+}
+.unit .hit {
+  position: absolute;
+  z-index: 2;
 }

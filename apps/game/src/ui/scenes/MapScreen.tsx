@@ -3,6 +3,7 @@ import { backdropFor } from "../../art/registry";
 import { finishExpedition, nodeById, reachable, stepTo } from "../../game/flow";
 import { setState, toast, useStore, type MapNode } from "../../state/store";
 import { Head } from "../battle/Figure";
+import { useStage } from "../Stage";
 
 const KIND: Record<string, { glyph: string; name: string }> = {
   combat: { glyph: "⚔", name: "Fight" },
@@ -16,12 +17,13 @@ const KIND: Record<string, { glyph: string; name: string }> = {
 };
 const REALM_NAME: Record<string, string> = { "ashen-vault": "The Ashen Vault", "glass-fen": "The Glass Fen", "hollow-keep": "The Hollow Keep" };
 
-const TOP = 300;
-const BOTTOM = 1640;
 
 /** The branching Expedition route (§76–77), climbing from the bottom of the screen to the Boss at the top. */
 export function MapScreen() {
   const ex = useStore((s) => s.expedition);
+  const { h } = useStage();
+  const TOP = 330;
+  const BOTTOM = h - 330;
   useStore((s) => s.panel);
   if (!ex) return null;
   const layers = ex.plan.map.layers;
@@ -64,7 +66,7 @@ export function MapScreen() {
           </button>
         </div>
       </header>
-      <svg className="map-svg" viewBox="0 0 1080 1920">
+      <svg className="map-svg" viewBox={`0 0 1080 ${h}`} style={{ height: h }}>
         {layers.flat().flatMap((n) =>
           n.links.map((l) => {
             const m = nodeById(l);

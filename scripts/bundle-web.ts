@@ -17,7 +17,7 @@ if (!jsFile || assets.filter((f) => f.endsWith(".js")).length !== 1) throw new E
 const js = readFileSync(resolve(dist, "assets", jsFile), "utf8").replace(/<\/script/gi, "<\\/script");
 
 const title = html.match(/<title>.*?<\/title>/)?.[0] ?? "<title>Ender</title>";
-const icon = html.match(/<link rel="icon"[^>]*>/)?.[0] ?? "";
+const icon = html.match(/<link rel="icon" href="[^"]*"\s*\/?>/)?.[0] ?? "";
 const style = `<style>\n${css}\n</style>`;
 const script = `<script type="module">\n${js}\n</script>`;
 

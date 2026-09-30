@@ -1,3 +1,4 @@
+import { grantStarterKit } from "./loom";
 import { ESSENCE_IDS, MASTERY_DOMAINS, type Character, type EssenceId, type MasteryDomain, type MasteryState, type SearchPolicy } from "@ender/shared";
 import { boardRadius, capacityForRank } from "@ender/battle";
 import {
@@ -63,6 +64,7 @@ export function createCharacter(ctx: Ctx, opts: { name?: string; preset?: Preset
     for (const d of MASTERY_DOMAINS) run(ctx.db, "INSERT INTO character_mastery VALUES (?, ?, 0, 0, 0)", id, d);
     for (const [e, q] of Object.entries(STARTING_ESSENCES)) addItem(ctx, id, "essence", e, q!);
   });
+  grantStarterKit(ctx, id);
   return getCharacter(ctx, id);
 }
 

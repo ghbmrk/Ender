@@ -1,10 +1,11 @@
 import { ESSENCE_IDS, type EssenceId } from "@ender/shared";
-import { PARTY, boardRadius, capacityForRank, compileLoom, hexDist, keystoneEligible, type LoomNode, type Role, type RootId } from "@ender/battle";
+import { PARTY, affinitiesOf, boardRadius, capacityForRank, compileLoom, hexDist, keystoneEligible, type Affinity, type LoomNode, type Role, type RootId } from "@ender/battle";
 import { productionRecipe } from "@ender/economy";
 import { all, now, run, tx } from "../db";
 import type { Ctx } from "./context";
 import { HttpError, charRow, essences, itemQty, addItem } from "./character";
-import { artifactView, formAffinities, getArtifact, loomScore, trueQualities, type ArtifactRow } from "./artifacts";
+import { ruleFantasyName } from "@ender/inference";
+import { artifactView, createArtifact, makeReadings, formAffinities, getArtifact, loomScore, trueQualities, type ArtifactRow } from "./artifacts";
 
 export const ROLES: Role[] = ["action", "modifier", "reaction", "keystone"];
 /** Cells a node may occupy: the radius-2 board minus the Root. Cells beyond the Rank's radius are accepted but compile dormant. */
@@ -127,5 +128,41 @@ export function inscribe(ctx: Ctx, charId: string, artifactId: string, role: Rol
       now(),
     );
     return { artifact: artifactView(ctx, getArtifact(ctx, a.id)), essences: essences(ctx, charId), spent: Object.fromEntries(cost) };
+  });
+}
+
+/**
+ * A new party starts with a small woven Loom so the first fight already shows what crafted nodes do (Ender default):
+ * per hero one Attuned Action on the first ring and one Modifier beside it, drawn deterministically from the corpus.
+ */
+const STARTER: Record<RootId, { action: Affinity; modifier: Affinity }> = {
+  iron: { action: "burden", modifier: "knots" },
+  bond: { action: "bond", modifier: "bond" },
+  quick: { action: "flex", modifier: "flex" },
+};
+export function grantStarterKit(ctx: Ctx, charId: string) {
+  const corpus = [...ctx.reality.all()].sort((a, b) => a.id.localeCompare(b.id));
+  const used = new Set<string>();
+  const pick = (dominant: Affinity, mid: boolean) => {
+    const pool = corpus.filter((c) => !used.has(c.id) && affinitiesOf(c.qualities as Record<Affinity, number>)[0] === dominant);
+    const c = pool[mid ? Math.floor(pool.length / 2) : Math.floor(pool.length / 3)] ?? corpus.find((x) => !used.has(x.id))!;
+    used.add(c.id);
+    return c;
+  };
+  tx(ctx.db, () => {
+    for (const root of PARTY) {
+      const cells: [Role, Affinity, number, number][] = [
+        ["action", STARTER[root].action, 1, 0],
+        ["modifier", STARTER[root].modifier, 1, -1],
+      ];
+      for (const [role, aff, q, r] of cells) {
+        const c = pick(aff, role === "action");
+        const a = createArtifact(ctx, charId, { realityId: c.id, realmId: "ashen-vault", origin: "seed", tier: "attuned", acquisitionCost: 0 });
+        const readings = makeReadings(ctx, a, 1);
+        const named = ruleFantasyName(c.id, readings.qualities);
+        run(ctx.db, "UPDATE artifacts SET readings = ?, fantasy_name = ?, epithet = ?, revealed = '[]', inscribed_role = ?, bound = 1 WHERE id = ?", JSON.stringify(readings), named.fantasyName, named.epithet, role, a.id);
+        run(ctx.db, "INSERT INTO loom_nodes (character_id, root, artifact_id, q, r) VALUES (?, ?, ?, ?, ?)", charId, root, a.id, q, r);
+      }
+    }
   });
 }

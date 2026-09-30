@@ -4,6 +4,7 @@ import { refreshLoom } from "../../game/flow";
 import { setState, toast, useStore } from "../../state/store";
 import { essenceColor, essenceGlyph } from "../../economy/format";
 import { Head } from "../battle/Figure";
+import { useWorldTop } from "../Stage";
 
 const LABEL: Record<string, { name: string; sub: string }> = {
   gate: { name: "The Gate", sub: "begin an Expedition" },
@@ -17,6 +18,7 @@ const LABEL: Record<string, { name: string; sub: string }> = {
 /** The hub between Expeditions: painted stations you tap. */
 export function Crossing() {
   const c = useStore((s) => s.character);
+  const worldTop = useWorldTop();
   const mod = crossingBackdrop();
   const Back = mod?.default;
   const stations = (mod?.STATIONS ?? []) as readonly { id: string; x: number; y: number }[];
@@ -33,7 +35,15 @@ export function Crossing() {
   };
   return (
     <div className="crossing" data-testid="crossing">
-      <div className="backdrop">{Back && <Back className="backdrop-svg" />}</div>
+      <div className="world" style={{ top: worldTop }}>
+        <div className="backdrop">{Back && <Back className="backdrop-svg" />}</div>
+        {stations.map((s) => (
+          <button key={s.id} className={`station st-${s.id}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
+            <span className="st-name">{LABEL[s.id]?.name ?? s.id}</span>
+            <span className="st-sub">{LABEL[s.id]?.sub}</span>
+          </button>
+        ))}
+      </div>
       <header className="hub-top">
         <div className="hub-name">
           <div className="hub-title">The Crossing</div>
@@ -50,12 +60,6 @@ export function Crossing() {
           ))}
         </div>
       </header>
-      {stations.map((s) => (
-        <button key={s.id} className={`station st-${s.id}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
-          <span className="st-name">{LABEL[s.id]?.name ?? s.id}</span>
-          <span className="st-sub">{LABEL[s.id]?.sub}</span>
-        </button>
-      ))}
       <div className="hub-party">
         {PARTY.map((r) => (
           <div key={r} className="hub-hero">

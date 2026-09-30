@@ -123,14 +123,16 @@ describe("Loom layout (PUT /api/loom/:root)", () => {
     const node = ok.heroes.iron.nodes.find((n: any) => n.id === a.id);
     expect(node).toEqual({ id: a.id, formId: a.id, name: a.name, role: "action", q: 1, r: 0, affinities: a.affinities, technicalScore: a.evaluation.technicalScore, evidence: "attuned" });
     expect(ok.heroes.iron.compiled.dormancy[b.id]).toBe("locked cell"); // radius 2 opens at Rank 8
-    expect(ok.pool).toEqual([]);
+    // (The starter kit's nodes that this layout replaced wait in the pool.)
+    expect(ok.pool.filter((n: any) => [a.id, b.id].includes(n.id))).toEqual([]);
 
     const moved = await h.call("PUT", "/api/loom/bond", { nodes: [{ artifactId: a.id, q: -1, r: 0 }] });
     expect(moved.heroes.bond.nodes.map((n: any) => n.id)).toEqual([a.id]);
     expect(moved.heroes.iron.nodes.map((n: any) => n.id)).toEqual([b.id]);
     const cleared = await h.call("PUT", "/api/loom/iron", { nodes: [] });
-    expect(cleared.pool.map((n: any) => n.id)).toEqual([b.id]);
-    expect(cleared.pool[0]).not.toHaveProperty("q");
+    const bInPool = cleared.pool.find((n: any) => n.id === b.id);
+    expect(bInPool).toBeDefined();
+    expect(bInPool).not.toHaveProperty("q");
     expect((await h.call("GET", `/api/artifacts/${a.id}`)).artifact.loom).toEqual({ root: "bond", q: -1, r: 0 });
   });
 });
@@ -179,7 +181,7 @@ describe("§98 Temper a Reach/Flex Action into Reach/Bond", () => {
     expect(child.loom).toEqual({ root: "quick", q: 1, r: 0 });
     const after = await h.call("GET", "/api/loom");
     expect(after.heroes.quick.nodes.map((n: any) => [n.id, n.q, n.r])).toEqual([[mod.id, 1, -1], [child.id, 1, 0]]);
-    expect(after.pool).toEqual([]);
+    expect(after.pool.filter((n: any) => [mod.id, child.id].includes(n.id))).toEqual([]);
     const cAfter = after.heroes.quick.compiled;
 
     // Secondary Rider changes.

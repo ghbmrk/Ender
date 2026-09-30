@@ -120,7 +120,7 @@ export async function endBattle(r: BattleResult) {
   }
   const out = await api.runNode(ex.plan.runId, { nodeId: b.nodeId, outcome: "victory", kills: r.kills });
   const partyHp = r.partyHp;
-  setState({ expedition: { ...ex, partyHp }, battle: null });
+  setState({ expedition: { ...ex, partyHp }, battle: null, screen: "map" });
   await refreshCharacter();
   if (b.kind === "boss") {
     setState({ rewards: { ...out.rewards, title: "The Boss falls" } });

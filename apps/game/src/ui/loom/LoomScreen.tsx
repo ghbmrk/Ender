@@ -22,7 +22,7 @@ import { api } from "../../api";
 import { leaveShrine, refreshLoom } from "../../game/flow";
 import { DEMO_LOOMS } from "../../game/demo";
 import { getState, setState, toast, useStore } from "../../state/store";
-import { useStage } from "../Stage";
+import { useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH, ROLE_GLYPH, ROLE_NAME } from "../affinity";
 import { Head } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
@@ -30,14 +30,14 @@ import { sfx } from "../battle/sfx";
 /** Flat-topped hexes on the portrait stage. */
 const HEX = 104;
 const CX = 540;
-const CY = 640;
+const CY = 700;
 const cellXY = (q: number, r: number): [number, number] => [CX + HEX * 1.5 * q, CY + HEX * Math.sqrt(3) * (r + q / 2)];
 const hexPath = (x: number, y: number, s: number) =>
   Array.from({ length: 6 }, (_, i) => {
     const a = (Math.PI / 3) * i;
     return `${i ? "L" : "M"}${(x + s * Math.cos(a)).toFixed(1)} ${(y + s * Math.sin(a)).toFixed(1)}`;
   }).join(" ") + " Z";
-const TRAY_TOP = 1130;
+const TRAY_TOP = 1150;
 const TRAY_H = 250;
 
 type Layout = Record<RootId, LoomNode[]>;
@@ -59,7 +59,12 @@ export function LoomScreen() {
   const [diff, setDiff] = useState<string[]>([]);
   const press = useRef<{ id: string; t: number; timer: number; x: number; y: number } | null>(null);
   const lastTap = useRef<{ id: string; t: number } | null>(null);
-  const { toStage } = useStage();
+  const { toStage: rawToStage } = useStage();
+  const worldTop = useWorldTop();
+  const toStage = (x: number, y: number) => {
+    const p = rawToStage(x, y);
+    return { x: p.x, y: p.y - worldTop };
+  };
 
   useEffect(() => {
     if (!DEMO && !server) refreshLoom().catch((e) => toast(e.message, "loss"));
@@ -181,6 +186,7 @@ export function LoomScreen() {
   return (
     <div className="loom-screen" onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid="loom">
       <div className="loom-bg" />
+      <div className="world" style={{ top: worldTop }}>
       <header className="loom-head">
         <div className="loom-title">
           <h1>The Loom</h1>
@@ -272,6 +278,7 @@ export function LoomScreen() {
           <NodeHex n={drag.node} x={drag.x} y={drag.y - 40} lifted />
         </svg>
       )}
+      </div>
       {detail && <NodeDetail n={detail} compiled={compiled} rank={rank} onClose={() => setDetail(null)} onRemove={editable && nodes.some((x) => x.id === detail.id) ? () => (removeToPool(detail), setDetail(null)) : undefined} />}
     </div>
   );

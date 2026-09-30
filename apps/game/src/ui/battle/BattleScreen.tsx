@@ -122,6 +122,11 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
     const b = figureBox(u.figure, figScale(u));
     return [x + (u.side === "party" ? 10 : -10), y - b.h * 0.55];
   };
+  const hitBox = (u: Unit) => {
+    const b = figureBox(u.figure, figScale(u));
+    const w = Math.min(b.w, 260);
+    return { left: -w / 2, top: -b.h * 0.9, width: w, height: b.h * 0.9 };
+  };
   const figScale = (u: Unit) => (u.kind === "ironbound" ? 1.55 : u.kind === "cinder" ? 1.45 : undefined);
 
   // ───────────── feedback ─────────────
@@ -528,6 +533,7 @@ export function BattleScreen({ setup, realmId, boss, title, onEnd }: { setup: Ba
                 data-testid={`unit-${u.id}`}
               >
                 <div className="shadow" />
+                <div className="hit" style={hitBox(u)} />
                 {isTarget && (
                   <div className="reticle">
                     <div />
@@ -852,16 +858,22 @@ function AttackCues({ s, t, at: [cx, cy] }: { s: AttackSeq; t: number; at: [numb
 }
 
 function DefendCues({ s, t, chestOf }: { s: DefendSeq; t: number; chestOf: (id: string) => [number, number] }) {
-  const [x, y] = chestOf(s.plan.targets[0]!);
   return (
     <g className="cues">
-      {s.impacts.map((at, i) => {
-        const dt = at - t;
-        if (dt > IMPACT_LEAD || dt < -120 || s.tracker.resultAt(i)) return null;
-        const r = 70 + Math.max(0, dt / IMPACT_LEAD) * 260;
-        return <circle key={i} cx={x} cy={y} r={r} fill="none" stroke="#c8505a" strokeWidth={12} opacity={0.3 + 0.7 * (1 - Math.max(0, dt) / IMPACT_LEAD)} />;
+      {s.plan.targets.map((id) => {
+        const [x, y] = chestOf(id);
+        return (
+          <g key={id}>
+            {s.impacts.map((at, i) => {
+              const dt = at - t;
+              if (dt > IMPACT_LEAD || dt < -120 || s.tracker.resultAt(i)) return null;
+              const r = 70 + Math.max(0, dt / IMPACT_LEAD) * 260;
+              return <circle key={i} cx={x} cy={y} r={r} fill="none" stroke="#c8505a" strokeWidth={12} opacity={0.3 + 0.7 * (1 - Math.max(0, dt) / IMPACT_LEAD)} />;
+            })}
+            <circle cx={x} cy={y} r={70} fill="none" stroke="#1d1822" strokeWidth={10} opacity={0.8} />
+          </g>
+        );
       })}
-      <circle cx={x} cy={y} r={70} fill="none" stroke="#1d1822" strokeWidth={10} opacity={0.8} />
     </g>
   );
 }

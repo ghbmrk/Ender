@@ -5,6 +5,7 @@ import { setState, toast, useStore } from "../state/store";
 import { crossingBackdrop } from "../art/registry";
 import { Fig } from "./battle/Figure";
 import { sfx } from "./battle/sfx";
+import { useWorldTop } from "./Stage";
 
 export function Title() {
   const dev = useStore((s) => s.devMode);
@@ -36,8 +37,10 @@ export function Title() {
     setState({ devMode: v });
   };
   const Back = crossingBackdrop()?.default;
+  const worldTop = useWorldTop();
   return (
     <div className="title-screen">
+      <div className="world" style={{ top: worldTop }}>
       <div className="backdrop dimmed">{Back && <Back className="backdrop-svg" />}</div>
       <div className="title-party">
         <div style={{ position: "absolute", left: 260, top: 1260 }}>
@@ -49,6 +52,7 @@ export function Title() {
         <div style={{ position: "absolute", left: 540, top: 1360 }}>
           <Fig figure="warden" scale={1.75} />
         </div>
+      </div>
       </div>
       <div className="title-card">
         <h1>ENDER</h1>
