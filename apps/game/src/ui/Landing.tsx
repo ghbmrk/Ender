@@ -7,7 +7,7 @@ import { sfx } from "./battle/sfx";
 import { OpenAIMark } from "./OpenAIMark";
 
 /**
- * The first screen anyone sees: a lone hero facing a wyrm that rises out of the storm, painted in the game's own
+ * The first screen anyone sees: a lone hero on a cliff above a storm-lit canyon, painted in the game's own
  * style and filling the screen, with the title in the sky and Sign in under the thumb. Sign-in is a placeholder;
  * the button simply begins.
  */
@@ -61,9 +61,9 @@ export function Landing() {
   );
 }
 
-/** The painting: a lone hero on a cliff, a wyrm rising out of the storm, with lightning and drifting sparks. */
+/** The painting: a lone hero on a cliff over the canyon, with lightning and drifting sparks. */
 export function CoverPainting() {
-  const art = paintedBackdrop("landing");
+  const art = paintedBackdrop("title");
   const sparks = Array.from({ length: 12 }, (_, i) => i);
   return (
     <div className="ka-paint">

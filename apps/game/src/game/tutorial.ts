@@ -178,8 +178,24 @@ export function lessonSetup(l: Lesson): BattleSetup {
 // Dodge and Parry are one lesson now ("dodge"); a save left on "parry" still goes on to the Loom.
 const NEXT: Record<TutStep, TutStep | "done"> = { strike: "dodge", dodge: "form", parry: "form", form: "skill", skill: "gate", gate: "done" };
 
+/**
+ * The Training Yard: the Dodge and Parry lesson again, any time, without touching tutorial progress. Players who
+ * skipped the prologue had no way to learn the two defences before the first real foe swung.
+ */
+export function practiseDefence() {
+  setState({ tutorial: "dodge", practice: true, screen: "battle", panel: null, tutorialRun: (getState().tutorialRun ?? 0) + 1 });
+}
+/** Back from the Training Yard to the Crossing, tutorial progress as it was. */
+export function leavePractice() {
+  setState({ tutorial: null, practice: false, screen: "crossing", panel: null });
+}
+
 /** After a practice fight: a loss simply retries it, a win moves on. */
 export function lessonEnded(step: TutStep, won: boolean) {
+  if (getState().practice) {
+    if (won) return leavePractice();
+    return setState({ tutorialRun: (getState().tutorialRun ?? 0) + 1 });
+  }
   if (!won) return goTo(step);
   const n = NEXT[step];
   if (n === "done") return finishTutorial();

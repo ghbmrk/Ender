@@ -58,6 +58,6 @@ export function predecode(urls: (string | undefined)[]) {
 export function preloadAllArt() {
   const first = ["bg-ashen-vault", "husk", "wisp", "tex-parchment", "tex-bronze", "tex-slate", "bg-crossing"];
   const cards = Object.keys(byId).filter((k) => k.startsWith("card-"));
-  const rest = Object.keys(byId).filter((k) => !first.includes(k) && !cards.includes(k) && k !== "bg-landing" && k !== "bg-title");
+  const rest = Object.keys(byId).filter((k) => !first.includes(k) && !cards.includes(k) && k !== "bg-title");
   predecode([...first, ...cards, ...rest].map((k) => byId[k]));
 }

@@ -50,6 +50,8 @@ export type State = {
   tutorial: import("../game/tutorial").TutStep | null;
   /** Bumped each time a practice fight starts, so a retry gets a fresh battle. */
   tutorialRun?: number;
+  /** In the Training Yard: a lesson replayed on its own, which never moves tutorial progress. */
+  practice?: boolean;
   /** The player's own hero (made in the prologue); null for saves from before heroes were made. */
   hero: import("../art/look").Hero | null;
 };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import {
   AttackTracker,
   Battle,
@@ -141,6 +141,7 @@ export function BattleScreen({
   title,
   lesson,
   onSkip,
+  practice,
   onEnd,
 }: {
   setup: BattleSetup;
@@ -150,6 +151,8 @@ export function BattleScreen({
   /** A prologue lesson: limits the commands and defences shown and coaches the player through them. */
   lesson?: Lesson;
   onSkip?: () => void;
+  /** The Training Yard: a lesson replayed on its own, so no lesson count, and skipping just leaves. */
+  practice?: boolean;
   onEnd: (r: BattleResult) => void;
 }) {
   const battle = useMemo(() => new Battle(withDebug(setup)), [setup]);
@@ -169,7 +172,6 @@ export function BattleScreen({
   const [phase, setPhase] = useState<Phase>({ k: "intro" });
   const [target, setTarget] = useState<string | null>(null);
   /** AP the card under the thumb would spend (negative: gain), shown on the AP bar before the tap lands. */
-  const [aim, setAim] = useState(0);
   const [floaters, setFloaters] = useState<Floater[]>([]);
   const [fx, setFx] = useState<Fx[]>([]);
   const [banner, setBanner] = useState<{ id: number; text: string; sub?: string; ms: number; lore?: string } | null>(null);
@@ -195,7 +197,6 @@ export function BattleScreen({
   /** Juice (sparks, camera, coach lines) waits one frame, so the judgement itself paints first. */
   const soon = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
   const [coach, setCoach] = useState<{ key: CoachKey; text: string } | null>(null);
-  const [skipArmed, setSkipArmed] = useState(false);
   const said = useRef(new Set<CoachKey>());
   const slowLeft = useRef(lesson?.slow ?? 0);
   /** A defence lesson holding time at the point of contact until the player presses. */
@@ -332,7 +333,6 @@ export function BattleScreen({
   /** Turn engine events into numbers, words and paint. */
   const play = (events: BattleEvent[]) => {
     let d = 0;
-    let waveShown = false;
     for (const e of events) {
       switch (e.type) {
         case "damage": {
@@ -449,12 +449,11 @@ export function BattleScreen({
         case "wave": {
           // A new foe stepping in is named, and holds the screen over the round banner, so a swap never reads as the old foe changing.
           const next = battle.living("foe")[0];
-          waveShown = true;
           later(d, () => showBanner(next ? `${next.name} steps in` : `Wave ${e.index + 1}`, `foe ${e.index + 1} of this fight`, 1400));
           break;
         }
         case "round":
-          if (!waveShown) later(d, () => showBanner(`Round ${e.round}`, undefined, 650));
+          // No round banner: a round count isn't progress, and "Round 1" over a fresh foe read as the fight restarting.
           break;
         case "skip":
           float(battle.unit(e.unit), "Staggered", "fl-status", d);
@@ -494,11 +493,14 @@ export function BattleScreen({
   /** Off the end overlay, back to the run with the fight's outcome. */
   const leave = (outcome: "victory" | "defeat") => onEnd({ outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats, foe: lastFoe(battle) });
 
+  const lastActor = useRef<string | null>(null);
   const advance = () => {
     if (battle.outcome !== "ongoing") return finish(battle.outcome);
     if (battle.reactions.length) return startDefend(battle.reactions.shift()!);
     const t = battle.nextTurn();
     const d = play(t.events);
+    const again = t.actor && t.actor.side === "foe" && lastActor.current === t.actor.id;
+    if (t.actor) lastActor.current = t.actor.id;
     if (battle.outcome !== "ongoing") return later(d + 450, () => finish(battle.outcome as "victory" | "defeat"));
     const u = t.actor;
     if (t.skipped) {
@@ -525,7 +527,9 @@ export function BattleScreen({
       const plan = battle.planFoe(u.id);
       sideRef.current = "foe";
       setPhase({ k: "wait" });
-      later(d + 40, () => startDefend(plan));
+      // A faster foe sometimes goes twice in a row (end of one round, start of the next): say why before it swings.
+      if (again) float(u, "Faster than you: acts again", "reaction", d);
+      later(d + (again ? 520 : 40), () => startDefend(plan));
     }
   };
 
@@ -1091,18 +1095,14 @@ export function BattleScreen({
       {lesson && LESSON_NO[lesson.step] && (
         // Kept mounted so it pops in once per lesson; it fades while a foe's move card holds that corner.
         <div className={`lesson-chip ${phase.k === "command" ? "" : "away"}`} data-testid="lesson-chip">
-          Lesson {LESSON_NO[lesson.step]} of 3 · {LESSON_NAME[lesson.step]}
+          {practice ? "Training Yard" : `Lesson ${LESSON_NO[lesson.step]} of 3`} · {LESSON_NAME[lesson.step]}
         </div>
       )}
       {lesson && onSkip && phase.k === "command" && (
-        // Skipping loses every lesson, so it asks once more; a stray tap only arms it.
-        <button
-          className={`skip-tutorial ${skipArmed ? "armed" : ""}`}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => (skipArmed ? onSkip() : setSkipArmed(true))}
-          data-testid="skip-tutorial"
-        >
-          {skipArmed ? "Tap again to skip" : "Skip tutorial"}
+        // One tap skips: a second confirming tap was friction, and the Training Yard on the Crossing replays the
+        // Dodge and Parry lesson any time.
+        <button className="skip-tutorial" onPointerDown={(e) => e.stopPropagation()} onClick={() => onSkip()} data-testid="skip-tutorial">
+          {practice ? "Leave practice" : "Skip tutorial"}
         </button>
       )}
 
@@ -1152,17 +1152,30 @@ export function BattleScreen({
         );
       })()}
       <div className="bpanel arc" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
-        {battle.living("party")[0] && <ApBar u={phase.k === "command" || phase.k === "ally" ? battle.unit(phase.actor) : battle.living("party")[0]!} aim={phase.k === "command" ? aim : 0} max={lesson?.commands === "basic" ? 3 : undefined} />}
+        {battle.living("party")[0] && <ApBar u={phase.k === "command" || phase.k === "ally" ? battle.unit(phase.actor) : battle.living("party")[0]!} live={phase.k === "command"} max={lesson?.commands === "basic" ? 3 : undefined} />}
         {phase.k === "attack" && !(lesson && coach) && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
-        {(phase.k === "command" || phase.k === "ally") && (
-          <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : null} onAim={setAim} onPick={(a, c) => { setAim(0); chooseCommand(a, c); }} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />
-        )}
-        {/* Outside your turn the cards stay in place, dimmed, so the row never empties and the thumb knows where to go. */}
-        {phase.k !== "command" && phase.k !== "ally" && battle.living("party")[0] && (
-          <div className="cards-idle" aria-hidden>
-            <Commands b={battle} actor={battle.living("party")[0]!.id} ally={false} basicOnly={lesson?.commands === "basic"} onPick={() => {}} onCancel={() => {}} idle />
-          </div>
-        )}
+        {/* Outside your turn the cards stay in place, dimmed, so the row never empties and the thumb knows where to go.
+            One row, kept mounted across turns: only its dimming changes, so a pick shows the swing within a frame. */}
+        {battle.living("party")[0] &&
+          (() => {
+            const mine = phase.k === "command" || phase.k === "ally";
+            const who = mine ? phase.actor : battle.living("party")[0]!.id;
+            return (
+              <div className={`cards-wrap ${mine ? "" : "cards-idle"}`} aria-hidden={!mine}>
+                <Commands
+                  b={battle}
+                  actor={who}
+                  ally={phase.k === "ally"}
+                  basicOnly={lesson?.commands === "basic"}
+                  pulse={!mine ? null : coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : null}
+                  onAim={mine ? setAim : undefined}
+                  onPick={mine ? (a, c) => { setAim(0); chooseCommand(a, c); } : () => {}}
+                  onCancel={mine ? () => setPhase({ k: "command", actor: phase.actor }) : () => {}}
+                  idle={!mine}
+                />
+              </div>
+            );
+          })()}
       </div>
 
       {phase.k === "end" && phase.outcome === "victory" && <VictoryBeat praise={praise(battle)} onDone={() => leave("victory")} />}
@@ -1355,7 +1368,28 @@ function Timeline({ b, tl, artOf }: { b: Battle; tl: { round: number; ids: strin
  * AP as gems. Before the player has a skill (the prologue's Basic-only fights), only the three a first skill costs
  * show, and full reads "ready": AP fills toward something rather than to a ceiling it can't use.
  */
-function ApBar({ u, aim, max = RULES.apMax }: { u: Unit; aim: number; max?: number }) {
+/**
+ * The AP a pressed card would spend or gain, shown on the gem bar. Kept outside BattleScreen so pressing a card
+ * re-renders only the bar, not the whole fight: the press has to show within a frame.
+ */
+const aimStore = (() => {
+  let v = 0;
+  const subs = new Set<() => void>();
+  return {
+    get: () => v,
+    set: (n: number) => {
+      if (n === v) return;
+      v = n;
+      subs.forEach((f) => f());
+    },
+    sub: (f: () => void) => (subs.add(f), () => void subs.delete(f)),
+  };
+})();
+const setAim = aimStore.set;
+
+function ApBar({ u, live, max = RULES.apMax }: { u: Unit; live: boolean; max?: number }) {
+  const aimNow = useSyncExternalStore(aimStore.sub, aimStore.get);
+  const aim = live ? aimNow : 0;
   const prev = useRef(u.ap);
   const [flash, setFlash] = useState<"gain" | "spend" | null>(null);
   useEffect(() => {

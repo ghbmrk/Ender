@@ -12,7 +12,7 @@
   position: absolute;
   inset: 0;
 }
-/* On taller phones the painting crops at the sides: keep the hero (left third) and the wyrm's head in frame. */
+/* On taller phones the painting crops at the sides: keep the hero (left third) in frame. */
 .ka-bg {
   position: absolute;
   inset: 0;
