@@ -6,9 +6,9 @@ import { sfx } from "./battle/sfx";
 import { OpenAIMark } from "./OpenAIMark";
 
 /**
- * The first screen anyone sees: the title and the button over a full-bleed painting in the spirit of
- * classic fantasy cover art (a torchlit temple, an idol, a small party at the foot of the stair). The painting is alive: braziers flicker and embers rise. Dark bands keep the title and the
- * button legible. Sign-in is a placeholder; the button simply begins.
+ * The first screen anyone sees, laid out like a fantasy rulebook cover: a tooled-leather cover with the title on
+ * top, the painting (a lone hero before a towering monster) in a gilt window, and the sign-in seal below. The
+ * painting is alive: firelight flickers and embers rise. Sign-in is a placeholder; the button simply begins.
  */
 export function Landing() {
   const [busy, setBusy] = useState(false);
@@ -34,25 +34,29 @@ export function Landing() {
     setBusy(false);
     going.current = false;
   };
+  // One composition, like a book cover: the title on its own band, the painting in a gilt window, the sign-in
+  // seal on the band below. Nothing sits over the painting.
   return (
-    <div className="landing painted" data-testid="landing" onClick={begin}>
-      {/* The painting fills the whole screen, cropping its sides on taller phones, so no dark band shows. */}
-      <div className="cover-fill">
-        <CoverPainting />
-      </div>
-      <div className="landing-fade top" />
-      <div className="landing-fade bottom" />
-      <div className="title-card landing-card">
-        <h1>ENDER</h1>
-        <p className="tagline">You never earn a skill. You make one.</p>
-      </div>
-      <p className="landing-tap">Tap to begin</p>
-      <div className="title-actions landing-actions">
-        {/* The mark is the button; "Sign in" sits in its heart. It names ChatGPT for screen readers. */}
-        <button className="landing-signin" disabled={busy} onClick={begin} aria-label="Sign in with ChatGPT" data-testid="sign-in">
-          <OpenAIMark size={330} className="signin-mark" />
-          <span className="signin-text">{busy ? "Entering" : "Sign in"}</span>
-        </button>
+    <div className="landing cover-book" data-testid="landing" onClick={begin}>
+      <div className="cb-frame">
+        <header className="cb-head">
+          <h1 className="cb-title">ENDER</h1>
+          <p className="cb-tagline">You never earn a skill. You make one.</p>
+        </header>
+        <div className="cb-art">
+          <CoverPainting />
+        </div>
+        <footer className="cb-foot">
+          {/* The mark is the button, set like a seal; "Sign in" sits in its heart. It names ChatGPT for screen readers. */}
+          <button className="cb-seal" disabled={busy} onClick={begin} aria-label="Sign in with ChatGPT" data-testid="sign-in">
+            <OpenAIMark size={250} className="cb-mark" />
+            <span className="cb-signin">{busy ? "Entering" : "Sign in"}</span>
+          </button>
+        </footer>
+        <i className="cb-corner tl" />
+        <i className="cb-corner tr" />
+        <i className="cb-corner bl" />
+        <i className="cb-corner br" />
       </div>
     </div>
   );

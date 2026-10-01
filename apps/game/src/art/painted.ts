@@ -49,3 +49,15 @@ export function predecode(urls: (string | undefined)[]) {
   const idle = (f: () => void) => ("requestIdleCallback" in window ? requestIdleCallback(() => f(), { timeout: 1500 }) : setTimeout(f, 200));
   idle(next);
 }
+
+/**
+ * Everything painted, in the order a player meets it: the first fight (the prologue's vault and its foes), the
+ * card art and textures, the Crossing, then every other realm, boss room and foe. Started once the game has
+ * loaded, so no later screen waits on an image.
+ */
+export function preloadAllArt() {
+  const first = ["bg-ashen-vault", "husk", "wisp", "tex-parchment", "tex-bronze", "tex-slate", "bg-crossing"];
+  const cards = Object.keys(byId).filter((k) => k.startsWith("card-"));
+  const rest = Object.keys(byId).filter((k) => !first.includes(k) && !cards.includes(k) && k !== "bg-cover" && k !== "bg-title");
+  predecode([...first, ...cards, ...rest].map((k) => byId[k]));
+}
