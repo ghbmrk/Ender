@@ -25,6 +25,7 @@ import { getState, setState, toast, useStore } from "../../state/store";
 import { useStage } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH, ROLE_GLYPH, ROLE_NAME } from "../affinity";
 import { Head } from "../battle/Figure";
+import { HeroHead } from "../battle/ArtHeads";
 import { sfx } from "../battle/sfx";
 import { goTo } from "../../game/tutorial";
 import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
@@ -354,7 +355,7 @@ export function LoomScreen() {
       {roots.length > 1 && <div className="hero-tabs">
         {roots.map((r) => (
           <button key={r} className={`hero-tab ${r === hero ? "on" : ""} ${lesson && r === mine && hero !== mine ? "coach-pulse" : ""}`} onClick={() => (setHero(r), setDiff([]), setSelected(null))} data-testid={`loom-tab-${r}`}>
-            <Head figure={heroFigure(r)} size={64} look={lookFor(r)} />
+            {lookFor(r) ? <HeroHead size={64} /> : <Head figure={heroFigure(r)} size={64} />}
             <span>{rootLabel(r)}</span>
           </button>
         ))}
@@ -403,7 +404,7 @@ export function LoomScreen() {
         {hexDist(0, 0) === 0 && <circle cx={CX} cy={CY - 10} r={0} />}
       </svg>
       <div className="root-head" style={{ left: CX - 50, top: CY - 70 }}>
-        <Head figure={heroFigure(hero)} size={100} look={lookFor(hero)} />
+        {lookFor(hero) ? <HeroHead size={100} /> : <Head figure={heroFigure(hero)} size={100} />}
       </div>
       {placing &&
         [...openCells]

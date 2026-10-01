@@ -2,7 +2,8 @@ import type { StatusId } from "./defs";
 
 /**
  * Six normal archetypes, two elites and two bosses (§96). Hits land at `t` ms after the wind-up starts; each hit is
- * defended on its own (§70).
+ * defended on its own (§70). Normal foes strike once per attack, so the first fights teach one blow at a time;
+ * elites and bosses chain several blows in a rhythm.
  */
 export type FoeHit = { t: number; power: number; status?: StatusId };
 export type FoeAttack = {
@@ -47,9 +48,9 @@ export const FOES: Record<FoeKind, FoeDef> = {
   husk: {
     kind: "husk", figure: "husk", name: "Husk", hp: 190, atk: 16, speed: 80, breakTaken: 1, tier: "normal", blurb: "Slow, heavy-handed. Its lurch comes late.",
     attacks: [
-      { id: "rake", name: "Rake", tell: "draws back its claws", target: "one", hits: h([900, 0.7], [1250, 0.7]), weight: 3 },
+      { id: "rake", name: "Rake", tell: "draws back its claws", target: "one", hits: h([900, 1.05]), weight: 3 },
       { id: "lurch", name: "Lurch", tell: "sways… then lurches", target: "one", hits: h([1500, 1.3]), weight: 2 },
-      { id: "frenzy", name: "Frenzy", tell: "shrieks and flails", target: "one", hits: h([600, 0.6], [800, 0.6], [1700, 1.0]), weight: 4, rage: true },
+      { id: "frenzy", name: "Frenzy", tell: "shrieks and flails", target: "one", hits: h([1700, 1.65]), weight: 4, rage: true },
     ],
   },
   wisp: {
@@ -64,8 +65,8 @@ export const FOES: Record<FoeKind, FoeDef> = {
     kind: "hound", figure: "hound", name: "Hound", hp: 160, atk: 15, speed: 120, breakTaken: 1, tier: "normal", blurb: "Fast. Its pounce comes early.",
     attacks: [
       { id: "pounce", name: "Pounce", tell: "crouches low", target: "one", hits: h([700, 1.2]), weight: 3 },
-      { id: "savage", name: "Savage", tell: "snarls and circles", target: "one", hits: h([850, 0.55], [1050, 0.55], [1370, 0.6]), weight: 2 },
-      { id: "bloodfrenzy", name: "Blood Frenzy", tell: "foams at the mouth", target: "one", hits: h([500, 0.45], [650, 0.45], [800, 0.45], [1450, 0.8]), weight: 4, rage: true },
+      { id: "savage", name: "Savage", tell: "snarls and circles", target: "one", hits: h([850, 1.28]), weight: 2 },
+      { id: "bloodfrenzy", name: "Blood Frenzy", tell: "foams at the mouth", target: "one", hits: h([1450, 1.61]), weight: 4, rage: true },
     ],
   },
   keeper: {
@@ -73,23 +74,23 @@ export const FOES: Record<FoeKind, FoeDef> = {
     attacks: [
       { id: "slam", name: "Maul Slam", tell: "raises the maul high", target: "all", hits: h([1800, 1.1]), weight: 2 },
       { id: "shove", name: "Shield Shove", tell: "sets its shield", target: "one", hits: h([900, 0.9]), weight: 3 },
-      { id: "berserk", name: "Berserk", tell: "throws its shield aside", target: "one", hits: h([700, 1.0], [1900, 1.3]), weight: 4, rage: true },
+      { id: "berserk", name: "Berserk", tell: "throws its shield aside", target: "one", hits: h([1900, 1.72]), weight: 4, rage: true },
     ],
   },
   seer: {
     kind: "seer", figure: "seer", name: "Seer", hp: 170, atk: 13, speed: 90, breakTaken: 1.1, tier: "normal", blurb: "Hexes in an uneven rhythm; mends its allies.",
     attacks: [
-      { id: "hex", name: "Lantern Hex", tell: "lifts the lantern", target: "one", hits: h([800, 0.6], [1150, 0.6], [1800, 0.7, "burn"]), weight: 3 },
+      { id: "hex", name: "Lantern Hex", tell: "lifts the lantern", target: "one", hits: h([800, 1.42, "burn"]), weight: 3 },
       { id: "kindle", name: "Kindle", tell: "whispers to the flame", target: "one", hits: [], weight: 2, healAlly: 0.2 },
-      { id: "wildfire", name: "Wildfire", tell: "the lantern cracks", target: "one", hits: h([900, 0.6, "burn"], [1050, 0.6], [1950, 0.9, "burn"]), weight: 4, rage: true },
+      { id: "wildfire", name: "Wildfire", tell: "the lantern cracks", target: "one", hits: h([1950, 1.58, "burn"]), weight: 4, rage: true },
     ],
   },
   swarm: {
     kind: "swarm", figure: "swarm", name: "Swarm", hp: 200, atk: 10, speed: 115, breakTaken: 1.2, tier: "normal", blurb: "Many small stings in a steady beat.",
     attacks: [
-      { id: "sting", name: "Sting Storm", tell: "the wings rise as one", target: "one", hits: h([900, 0.45], [1160, 0.45], [1420, 0.45], [1680, 0.5, "poison"]), weight: 3 },
+      { id: "sting", name: "Sting Storm", tell: "the wings rise as one", target: "one", hits: h([900, 1.39, "poison"]), weight: 3 },
       { id: "scatter", name: "Scatter", tell: "the swarm splits apart", target: "all", hits: h([1000, 0.7]), weight: 2 },
-      { id: "blackcloud", name: "Black Cloud", tell: "the swarm darkens", target: "one", hits: h([600, 0.4], [750, 0.4], [900, 0.4], [1550, 0.4], [1700, 0.6, "poison"]), weight: 4, rage: true },
+      { id: "blackcloud", name: "Black Cloud", tell: "the swarm darkens", target: "one", hits: h([1700, 1.65, "poison"]), weight: 4, rage: true },
     ],
   },
   ironbound: {
