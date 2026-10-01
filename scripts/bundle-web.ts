@@ -21,10 +21,12 @@ const icon = html.match(/<link rel="icon" href="[^"]*"\s*\/?>/)?.[0] ?? "";
 const style = `<style>\n${css}\n</style>`;
 const script = `<script type="module">\n${js}\n</script>`;
 
+// Shown until the game draws its first screen (the script is large), so a slow phone never sees a blank page.
+const root = `<div id="root"><div style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0910;color:#c3ccd7;font:600 18px system-ui,sans-serif;letter-spacing:.2em">LOADING ENDER</div></div>`;
 writeFileSync(
   resolve(dist, "ender.html"),
-  `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="UTF-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1.0" />\n${title}\n${icon}\n${style}\n</head>\n<body>\n<div id="root"></div>\n${script}\n</body>\n</html>\n`,
+  `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="UTF-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1.0" />\n${title}\n${icon}\n${style}\n</head>\n<body>\n${root}\n${script}\n</body>\n</html>\n`,
 );
-writeFileSync(resolve(dist, "artifact.html"), `${title}\n${style}\n<div id="root"></div>\n${script}\n`);
+writeFileSync(resolve(dist, "artifact.html"), `${title}\n${style}\n${root}\n${script}\n`);
 const mb = (s: string) => (Buffer.byteLength(s) / 1e6).toFixed(2);
 console.log(`ender.html + artifact.html written (${mb(js)} MB script, ${mb(css)} MB css)`);

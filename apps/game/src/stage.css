@@ -1468,3 +1468,11 @@ body,
 .tint-matron {
   filter: hue-rotate(25deg) saturate(1.3) brightness(1.05) drop-shadow(0 0 16px #ffd36a);
 }
+.fig-baked {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.fig-unbaked [filter] {
+  filter: none;
+}

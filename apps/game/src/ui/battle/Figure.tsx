@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { figureFor } from "../../art/registry";
 import { paintedFigure } from "../../art/painted";
 import type { Pose } from "../../art/types";
@@ -72,8 +72,12 @@ export const Head = memo(function Head({ figure, size, look }: { figure: string;
  * So in fights each pose is drawn once, filter and all, into a bitmap, and the bitmap is what moves.
  */
 const POSES: Pose[] = ["idle", "strike"];
-const bakedUrls = new Map<string, string>();
-const baking = new Map<string, Promise<string>>();
+/** A baked pose: a canvas holding the drawn figure (copied onto each figure that shows it), or, if a canvas
+ *  can't be made, the figure's SVG as an image URL. Never PNG-encoded: toBlob took seconds on phones. */
+type Baked = HTMLCanvasElement | string;
+const BAKE_MAX = 640;
+const bakedUrls = new Map<string, Baked>();
+const baking = new Map<string, Promise<Baked>>();
 
 /** The shared <defs> a figure's markup points at (filters, gradients), copied in so it renders on its own. */
 function defsFor(markup: string): string {
@@ -94,11 +98,13 @@ function defsFor(markup: string): string {
   return out.join("");
 }
 
-function bakeSvg(svg: SVGSVGElement, w: number, h: number, flip: boolean): Promise<string> {
+function bakeSvg(svg: SVGSVGElement, w: number, h: number, flip: boolean): Promise<Baked> {
   let markup = svg.outerHTML;
   // Mirrored figures keep the plain wash (see .flip in frame.css), since page CSS can't reach inside an image.
   if (flip) markup = markup.replaceAll('filter="url(#fig)"', 'filter="url(#wc)"');
-  const res = Math.min(2, Math.max(0.75, (window.innerWidth / 1080) * (window.devicePixelRatio || 1)));
+  // The watercolour filter costs per pixel, so every pose is baked once at BAKE_MAX px on its long side, whatever
+  // size it shows at, and scaled on screen: the texture hides the softness, and one bake serves every screen.
+  const res = BAKE_MAX / Math.max(w, h);
   const W = Math.round(w * res);
   const H = Math.round(h * res);
   markup = markup
@@ -112,27 +118,64 @@ function bakeSvg(svg: SVGSVGElement, w: number, h: number, flip: boolean): Promi
   return img
     .decode()
     .then(
-      () =>
-        new Promise<string>((done) => {
-          try {
-            const c = document.createElement("canvas");
-            c.width = W;
-            c.height = H;
-            c.getContext("2d")!.drawImage(img, 0, 0, W, H);
-            c.toBlob((blob) => done(blob ? URL.createObjectURL(blob) : url), "image/png");
-          } catch {
-            done(url);
-          }
-        }),
+      (): Baked => {
+        try {
+          const c = document.createElement("canvas");
+          c.width = W;
+          c.height = H;
+          const g = c.getContext("2d")!;
+          g.drawImage(img, 0, 0, W, H);
+          // Pay for the filter now, inside the bake, rather than on the first frame that shows the figure.
+          g.getImageData(0, 0, 1, 1);
+          return c;
+        } catch {
+          return url;
+        }
+      },
     )
     .catch(() => url);
+}
+
+/** Bakes run one at a time in idle moments, so a burst of new figures never blocks a tap for long. */
+let bakeChain: Promise<unknown> = Promise.resolve();
+const idle = () =>
+  new Promise<void>((r) => ("requestIdleCallback" in window ? requestIdleCallback(() => r(), { timeout: 400 }) : setTimeout(r, 16)));
+function queueBake<T>(job: () => Promise<T>): Promise<T> {
+  const run = bakeChain.then(idle).then(job);
+  bakeChain = run.catch(() => undefined);
+  return run;
+}
+
+/** Bakes these figures ahead of need (hidden), e.g. the foes waiting on the map, so their fight opens instantly. */
+export function Prebake({ figures }: { figures: { figure: string; look?: HeroLook; flip?: boolean }[] }) {
+  return (
+    <div className="fig-prebake" style={{ display: "none" }} aria-hidden>
+      {figures.map((f, i) => (
+        <BakedFig key={`${f.figure}${i}`} figure={f.figure} scale={1} className={f.flip ? "flip" : undefined} look={f.look} />
+      ))}
+    </div>
+  );
+}
+
+/** Shows a baked pose: a canvas copy (one fast draw), or the image fallback. */
+function BakedImage({ baked }: { baked: Baked }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useLayoutEffect(() => {
+    const c = ref.current;
+    if (!c || typeof baked === "string") return;
+    c.width = baked.width;
+    c.height = baked.height;
+    c.getContext("2d")?.drawImage(baked, 0, 0);
+  }, [baked]);
+  if (typeof baked === "string") return <img src={baked} className="fig-svg fig-baked" alt="" draggable={false} />;
+  return <canvas ref={ref} className="fig-svg fig-baked" />;
 }
 
 function BakedFig({ figure, pose = "idle", scale, className, look }: { figure: string; pose?: Pose; scale?: number; className?: string; look?: HeroLook }) {
   const F = figureFor(figure).default;
   const b = figureBox(figure, scale);
   const flip = /\bflip\b/.test(className ?? "");
-  const keyOf = (p: Pose) => `${figure}|${p}|${Math.round(b.w)}|${flip}|${look ? JSON.stringify(look) : ""}`;
+  const keyOf = (p: Pose) => `${figure}|${p}|${flip}|${look ? JSON.stringify(look) : ""}`;
   const [, setTick] = useState(0);
   const src = useRef<HTMLDivElement>(null);
   const missing = POSES.filter((p) => !bakedUrls.has(keyOf(p)));
@@ -142,7 +185,8 @@ function BakedFig({ figure, pose = "idle", scale, className, look }: { figure: s
       const k = keyOf(p);
       const svg = src.current?.querySelector<SVGSVGElement>(`[data-pose-wrap="${p}"] > svg`);
       if (!svg || baking.has(k)) continue;
-      const job = bakeSvg(svg, b.w, b.h, flip).then((u) => {
+      const base = figureBox(figure, 1);
+      const job = queueBake(() => bakeSvg(svg, base.w, base.h, flip)).then((u) => {
         bakedUrls.set(k, u);
         baking.delete(k);
         return u;
@@ -155,10 +199,11 @@ function BakedFig({ figure, pose = "idle", scale, className, look }: { figure: s
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [missing.join()]);
-  const url = bakedUrls.get(keyOf(pose));
+  const baked = bakedUrls.get(keyOf(pose));
   return (
     <div className={className} style={{ position: "absolute", left: -b.feetX, top: -b.feetY, width: b.w, height: b.h }}>
-      {url ? <img src={url} className="fig-svg fig-baked" alt="" draggable={false} /> : <F pose={pose} className="fig-svg" look={look} />}
+      {/* Until the bake lands, the figure shows without its costly filter (fig-unbaked), so the first frame is quick. */}
+      {baked ? <BakedImage baked={baked} /> : <F pose={pose} className="fig-svg fig-unbaked" look={look} />}
       {missing.length > 0 && (
         // Off-screen sources for the bake: display:none, so they cost nothing to draw.
         <div ref={src} className="fig-bake-src" style={{ display: "none" }}>

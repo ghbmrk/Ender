@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HeroPrebake } from "../battle/HeroPrebake";
 import { PARTY, ROOTS } from "@ender/battle";
 import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { crossingBackdrop } from "../../art/registry";
@@ -129,6 +130,7 @@ export function Crossing() {
           </button>
         ))}
       </div>
+      <HeroPrebake />
       <header className="hub-top">
         {/* Back out of the game to hero select, where a new hero is made. Never on the way in. */}
         <button className="hub-back" onClick={() => setState({ screen: "title", panel: null })} aria-label="Heroes" data-testid="to-heroes">

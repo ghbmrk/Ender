@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HeroPrebake } from "../battle/HeroPrebake";
 import { sfx } from "../battle/sfx";
 import { FOES, PARTY, ROOTS, type FoeKind, type RootId } from "@ender/battle";
 import { rootLabel, heroFigure, lookFor, partyRoots } from "../../game/hero";
@@ -104,6 +105,7 @@ export function MapScreen() {
       <div className="backdrop dimmed">
         <SceneBackdrop id={ex.plan.realmId} Drawn={Back} />
       </div>
+      <HeroPrebake />
       <header className="map-head">
         <div>
           <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>

@@ -50,6 +50,10 @@ function sqlJsDb(sdb: Database): Db {
   };
 }
 
+/** IndexedDB can hang without ever answering (seen in embedded pages on phones); a read gives up after this. */
+const IDB_READ_MS = 2500;
+const TIMED_OUT = Symbol("timed out");
+
 function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T | undefined> {
   return new Promise((resolve) => {
     try {
@@ -69,7 +73,14 @@ function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<
 
 export async function installInPageServer() {
   const SQL = await initSqlJs();
-  const saved = await idb<Uint8Array>("readonly", (s) => s.get(IDB.key) as IDBRequest<Uint8Array>);
+  const read = await Promise.race([
+    idb<Uint8Array>("readonly", (s) => s.get(IDB.key) as IDBRequest<Uint8Array>),
+    new Promise<typeof TIMED_OUT>((r) => setTimeout(() => r(TIMED_OUT), IDB_READ_MS)),
+  ]);
+  // If the save couldn't be read, play on without one, and never write over it: the old save stays intact.
+  const canSave = read !== TIMED_OUT;
+  if (!canSave) (window as { __enderNoSave?: boolean }).__enderNoSave = true;
+  const saved = read === TIMED_OUT ? undefined : read;
   const sdb = saved ? new SQL.Database(saved) : new SQL.Database();
   sdb.exec(SCHEMA);
   const server = createInPageServer({
@@ -82,6 +93,7 @@ export async function installInPageServer() {
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   const save = () => {
+    if (!canSave) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => void idb("readwrite", (s) => s.put(sdb.export(), IDB.key)), 400);
   };

@@ -419,8 +419,9 @@ export function BattleScreen({
     const lead = foes.find((f) => f.tier === "boss") ?? foes[0];
     const lore = !lesson && lead && meetFoe(lead.kind) ? FOES[lead.kind as FoeKind]?.blurb.replace(/^Boss\.\s*/, "") : undefined;
     const sub = boss ? "a Boss bars the way" : lore ? "New foe" : undefined;
-    showBanner(title ?? (names.length > 2 ? `${names[0]} and ${names.length - 1} more` : names.join(" & ")), sub, lore ? 1900 : 850, lore);
-    later(lore ? 1750 : 800, advance);
+    showBanner(title ?? (names.length > 2 ? `${names[0]} and ${names.length - 1} more` : names.join(" & ")), sub, lore ? 1550 : 600, lore);
+    // Into the fight fast: the name card overlaps the first turn rather than holding it up.
+    later(lore ? 1400 : 420, advance);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
