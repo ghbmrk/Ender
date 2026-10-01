@@ -120,6 +120,11 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
     await page.waitForTimeout(400);
     continue;
   }
+  if (await visible(`${tid("mystery-card")}:not(.open)`)) {
+    await page.click(tid("mystery-card"));
+    await page.waitForTimeout(1500);
+    continue;
+  }
   if (await visible(tid("map"))) {
     const next = await page.$(".map-node.next");
     if (!next) {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { sfx } from "../battle/sfx";
 import { FOES, PARTY, ROOTS, type FoeKind, type RootId } from "@ender/battle";
 import { rootLabel, heroFigure, lookFor, partyRoots } from "../../game/hero";
@@ -38,6 +39,7 @@ export function MapScreen() {
   const TOP = 290;
   const BOTTOM = h - 370;
   useStore((s) => s.panel);
+  const [reveal, setReveal] = useState<{ node: MapNode; open: boolean } | null>(null);
   if (!ex) return null;
   const layers = ex.plan.map.layers;
   // The route scrolls as you climb: where you stand sits at the bottom, so the next choice is always under
@@ -56,8 +58,10 @@ export function MapScreen() {
   const next = new Set(reachable().map((n) => n.id));
   const Back = backdropFor(ex.plan.realmId, false)?.default;
   const go = (n: MapNode) => {
-    if (!next.has(n.id)) return;
+    if (!next.has(n.id) || reveal) return;
     sfx.step();
+    // A Mystery is a moment: a sealed card you turn over before finding out what it holds.
+    if (n.kind === "mystery") return setReveal({ node: n, open: false });
     stepTo(n).catch((e) => toast((e as Error).message, "loss"));
   };
   const here = ex.at ? nodeById(ex.at) : null;
@@ -111,7 +115,7 @@ export function MapScreen() {
             data-kind={n.kind}
           >
             {/* The choices in front of you show what they hold: the foe you'd face, or what you'd find. */}
-            {next.has(n.id) && n.encounter ? (
+            {next.has(n.id) && n.encounter && n.kind !== "mystery" ? (
               <span className="mn-foe">
                 <span className="mn-face">
                   <Head figure={FOES[n.encounter.waves.flat()[0] as FoeKind]?.figure ?? n.encounter.waves.flat()[0]!} size={124} />
@@ -123,8 +127,8 @@ export function MapScreen() {
             )}
             <span className="mn-name">
               {n.label ?? k.name}
-              {next.has(n.id) && !n.encounter && PEEK[n.kind] && <small className="mn-peek">{PEEK[n.kind]}</small>}
-              {next.has(n.id) && n.encounter && <small className="mn-peek">{FOES[n.encounter.waves.flat()[0] as FoeKind]?.name ?? "foes"}</small>}
+              {next.has(n.id) && (!n.encounter || n.kind === "mystery") && PEEK[n.kind] && <small className="mn-peek">{PEEK[n.kind]}</small>}
+              {next.has(n.id) && n.encounter && n.kind !== "mystery" && <small className="mn-peek">{FOES[n.encounter.waves.flat()[0] as FoeKind]?.name ?? "foes"}</small>}
             </span>
           </button>
         );
@@ -132,6 +136,45 @@ export function MapScreen() {
       {here && (
         <div className="map-marker" style={{ left: pos(here)[0], top: pos(here)[1] }}>
           <Head figure={heroFigure(getStoreState().hero?.root ?? "iron")} look={getStoreState().hero?.look} size={70} />
+        </div>
+      )}
+      {reveal && (
+        <div className="mystery-veil" data-testid="mystery">
+          <button
+            className={`mystery-card ${reveal.open ? "open" : ""} ${reveal.node.encounter ? "ambush" : "cache"}`}
+            data-testid="mystery-card"
+            onClick={() => {
+              if (reveal.open) return;
+              setReveal({ ...reveal, open: true });
+              if (reveal.node.encounter) sfx.telegraph();
+              else sfx.loot(3);
+              const n = reveal.node;
+              setTimeout(() => {
+                setReveal(null);
+                stepTo(n).catch((e) => toast((e as Error).message, "loss"));
+              }, n.encounter ? 1300 : 900);
+            }}
+          >
+            <span className="mc-back">
+              <b>?</b>
+              <small>Tap to turn it over</small>
+            </span>
+            <span className="mc-face">
+              {reveal.node.encounter ? (
+                <>
+                  <Head figure={FOES[reveal.node.encounter.waves.flat()[0] as FoeKind]?.figure ?? "husk"} size={220} />
+                  <b>Ambush!</b>
+                  <small>{withArticle(FOES[reveal.node.encounter.waves.flat()[0] as FoeKind]?.name ?? "Something")} springs out</small>
+                </>
+              ) : (
+                <>
+                  <i className="mc-glow">◈</i>
+                  <b>A hidden cache</b>
+                  <small>Yours to take</small>
+                </>
+              )}
+            </span>
+          </button>
         </div>
       )}
       {/* Thumb-zone dock: your health on the left, the Loom on the right. */}
@@ -160,3 +203,6 @@ export function MapScreen() {
     </div>
   );
 }
+
+/** "A Keeper", "An Ironbound Keeper", "The Bound King". */
+const withArticle = (name: string) => (/^The /.test(name) || name === "Something" ? name : `${/^[AEIOU]/.test(name) ? "An" : "A"} ${name}`);
