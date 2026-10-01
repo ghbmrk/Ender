@@ -16,16 +16,21 @@ export class Cues {
     private geo: RingGeo,
   ) {}
 
-  /** The ring for cue `i`: it starts closing at real time `start` (performance.now() ms) and takes `lead` ms (scaled) to reach the mark. */
-  ensure(i: number, at: [number, number], start: number, k: number, color: string) {
+  /**
+   * The ring for cue `i`: it starts closing at real time `start` (performance.now() ms) and takes `lead` ms (scaled)
+   * to reach the mark. Every ring closes at the same speed, so a longer lead is a bigger ring: a heavy blow or a
+   * finisher shows as a wide ring, a quick jab as a small one, and the rhythm reads from their sizes.
+   */
+  ensure(i: number, at: [number, number], start: number, k: number, color: string, lead = this.geo.lead) {
     if (this.rings.has(i)) return;
-    const { from, mark, lead, tail } = this.geo;
+    const { mark, tail } = this.geo;
+    const v = (this.geo.from - mark) / this.geo.lead;
+    const from = mark + v * lead;
     const el = document.createElement("div");
     el.className = "cue-ring";
     const outer = from + STROKE / 2;
     el.style.cssText = `left:${at[0] - outer}px;top:${at[1] - outer}px;width:${outer * 2}px;height:${outer * 2}px;border:${STROKE}px solid ${color}`;
     this.box.appendChild(el);
-    const v = (from - mark) / lead;
     const end = Math.max(0.04, (mark - v * tail) / from);
     const total = (lead + tail) * k;
     const anim = el.animate(
@@ -40,6 +45,11 @@ export class Cues {
     anim.startTime = start;
     anim.finished.then(() => this.drop(i)).catch(() => undefined);
     this.rings.set(i, { el, anim });
+  }
+
+  /** Ring `i` is the one the next tap answers: it shows solid, and the rings queued behind it show dashed. */
+  focus(i: number) {
+    for (const [j, r] of this.rings) r.el.classList.toggle("queued", j !== i);
   }
 
   /** Takes ring `i` away (it was answered), with a quick pop rather than a cut. */
