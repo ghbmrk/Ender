@@ -47,12 +47,14 @@ const hexPath = (x: number, y: number, s: number) =>
     return `${i ? "L" : "M"}${(x + s * Math.cos(a)).toFixed(1)} ${(y + s * Math.sin(a)).toFixed(1)}`;
   }).join(" ") + " Z";
 let TRAY_TOP = 1150;
-function fitLoom(stageH: number, tabs: boolean) {
+function fitLoom(stageH: number, tabs: boolean, emptyTray = false) {
   // The lower block (Forms tray + skills summary, ~600) sits on the Continue bar; the board fills and centres in
-  // what is left above it. A radius-2 board is 8.66 hexes tall and 8 wide.
+  // what is left above it. A radius-2 board is 8.66 hexes tall and 8 wide. With no Forms to place, the tray
+  // shrinks to one line rather than leaving an empty box.
   const head = tabs ? 290 : 170;
-  TRAY_TOP = stageH - 178 - 600;
-  HEX = Math.round(Math.min(130, (TRAY_TOP - head - 30) / 8.66));
+  TRAY_TOP = stageH - 178 - (emptyTray ? 420 : 600);
+  // Up to 150: on a tall phone the locked outer ring may bleed off the sides so the cells you use are bigger.
+  HEX = Math.round(Math.min(150, (TRAY_TOP - head - 30) / 8.66));
   CY = Math.round((head + TRAY_TOP - 10) / 2);
 }
 
@@ -84,7 +86,6 @@ export function LoomScreen() {
   const { toStage: rawToStage, h: stageH } = useStage();
   // The Loom is laid out from the stage's top edge, not centred like the painted scenes.
   const worldTop = 0;
-  fitLoom(stageH, roots.length > 1);
   const toStage = (x: number, y: number) => {
     const p = rawToStage(x, y);
     return { x: p.x, y: p.y - worldTop };
@@ -98,6 +99,7 @@ export function LoomScreen() {
   const afterFight = useStore((s) => s.afterFight) && !DEMO;
   const spoils = useStore((s) => s.rewards);
   const [raw, setRaw] = useState<any[]>([]);
+  fitLoom(stageH, roots.length > 1, !pool.length && !raw.length && !lesson);
   const [weaving, setWeaving] = useState<any | null>(null);
   /** A pool node (by Form id) waiting for the player to tap a cell. */
   const [placing, setPlacing] = useState<string | null>(null);
@@ -365,7 +367,7 @@ export function LoomScreen() {
       })}
 
       <div className="loom-lower" style={{ top: TRAY_TOP }}>
-      <div className={`tray ${drag?.moved && drag.over === "tray" ? "hover" : ""}`}>
+      <div className={`tray ${!pool.length && !raw.length ? "empty" : ""} ${drag?.moved && drag.over === "tray" ? "hover" : ""}`}>
         <div className="tray-label">
           Forms {(raw.length > 0 || pool.length > 0) && <span className="dim">· {raw.length ? "tap a new Form to weave it" : placing ? "tap a glowing cell" : "tap or drag onto the Loom"}</span>}
         </div>

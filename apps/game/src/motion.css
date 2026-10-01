@@ -1292,3 +1292,8 @@
 @media (prefers-reduced-motion: reduce) {
   .battle .unit.foe.enraged::after { animation: none; opacity: 0.8; }
 }
+
+/* With nothing to place, the Forms tray is one line and the board gets the room. */
+.loom-screen .loom-lower .tray.empty .tray-empty {
+  padding: 8px 4px;
+}
