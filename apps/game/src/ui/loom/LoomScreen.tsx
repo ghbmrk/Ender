@@ -47,15 +47,18 @@ const hexPath = (x: number, y: number, s: number) =>
     return `${i ? "L" : "M"}${(x + s * Math.cos(a)).toFixed(1)} ${(y + s * Math.sin(a)).toFixed(1)}`;
   }).join(" ") + " Z";
 let TRAY_TOP = 1150;
-function fitLoom(stageH: number, tabs: boolean, emptyTray = false) {
+/** Room kept above the Forms tray for the lesson's tip, so it never covers the board or the tray. */
+const COACH_ROOM = 250;
+function fitLoom(stageH: number, tabs: boolean, emptyTray = false, coach = false) {
   // The lower block (Forms tray + skills summary, ~600) sits on the Continue bar; the board fills and centres in
   // what is left above it. A radius-2 board is 8.66 hexes tall and 8 wide. With no Forms to place, the tray
   // shrinks to one line rather than leaving an empty box.
   const head = tabs ? 290 : 170;
   TRAY_TOP = stageH - 178 - (emptyTray ? 420 : 600);
   // Up to 150: on a tall phone the locked outer ring may bleed off the sides so the cells you use are bigger.
-  HEX = Math.round(Math.min(150, (TRAY_TOP - head - 30) / 8.66));
-  CY = Math.round((head + TRAY_TOP - 10) / 2);
+  const foot = TRAY_TOP - (coach ? COACH_ROOM : 0);
+  HEX = Math.round(Math.min(150, (foot - head - 30) / 8.66));
+  CY = Math.round((head + foot - 10) / 2);
 }
 
 type Layout = Record<RootId, LoomNode[]>;
@@ -99,7 +102,7 @@ export function LoomScreen() {
   const afterFight = useStore((s) => s.afterFight) && !DEMO;
   const spoils = useStore((s) => s.rewards);
   const [raw, setRaw] = useState<any[]>([]);
-  fitLoom(stageH, roots.length > 1, !pool.length && !raw.length && !lesson);
+  fitLoom(stageH, roots.length > 1, !pool.length && !raw.length && !lesson, !!lesson);
   const [weaving, setWeaving] = useState<any | null>(null);
   /** A pool node (by Form id) waiting for the player to tap a cell. */
   const [placing, setPlacing] = useState<string | null>(null);
@@ -404,7 +407,7 @@ export function LoomScreen() {
 
       <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} power={ROOTS[hero].basic} />
       </div>
-      {coach && !drag?.moved && !weaving && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: TRAY_TOP - 175 }} />}
+      {coach && !drag?.moved && !weaving && <Coach text={coach.text} action={coach.action} key={coach.text} style={{ bottom: 1920 - TRAY_TOP + 16 }} />}
 
       {drag?.moved && (
         <svg className="drag-ghost" viewBox="0 0 1080 1920">
