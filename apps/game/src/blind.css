@@ -28,3 +28,11 @@
 .stage .coach.tappable:active {
   transform: scale(0.97);
 }
+
+/* Loom: the empty cells that take the Form in hand carry a big plus. */
+.loom-board .cell-plus {
+  fill: #ffd67a;
+  font: 700 120px Georgia, serif;
+  pointer-events: none;
+  opacity: 0.9;
+}
