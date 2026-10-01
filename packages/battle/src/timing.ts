@@ -64,6 +64,8 @@ export class DefenseTracker {
     const index = this.results.findIndex((r) => r === null);
     if (index < 0) return null;
     const dt = t - this.impacts[index]!;
+    // A press well before any window is ignored rather than spending the defence, so an eager tap is not punished.
+    if (dt < (RULES.dodge[0] - 200) * this.scale) return null;
     let result: Defense = "hit";
     if (kind === "parry") result = within(dt, RULES.perfectParry, this.scale) ? "perfect-parry" : within(dt, RULES.parry, this.scale) ? "parry" : "hit";
     else result = within(dt, RULES.perfectDodge, this.scale) ? "perfect-dodge" : within(dt, RULES.dodge, this.scale) ? "dodge" : "hit";

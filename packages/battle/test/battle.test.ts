@@ -56,8 +56,13 @@ describe("timing (§64, §67–69)", () => {
     const d = new DefenseTracker([1000, 1600]);
     expect(d.press(700, "parry")).toEqual({ index: 0, result: "hit" });
     // The next press goes to the next impact, not back to the first.
-    expect(d.press(1000, "parry")).toEqual({ index: 1, result: "hit" });
+    expect(d.press(1300, "parry")).toEqual({ index: 1, result: "hit" });
     expect(d.result()).toEqual(["hit", "hit"]);
+  });
+  it("a tap long before any window is ignored rather than spending the defence", () => {
+    const d = new DefenseTracker([1000]);
+    expect(d.press(500, "dodge")).toBeNull();
+    expect(d.press(1000, "parry")).toEqual({ index: 0, result: "perfect-parry" });
   });
 });
 

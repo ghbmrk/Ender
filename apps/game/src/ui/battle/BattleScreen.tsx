@@ -35,8 +35,15 @@ export type BattleResult = { outcome: "victory" | "defeat"; kills: Record<string
 /** Basic attack: one timed press. */
 const BASIC_BEATS = [600];
 /** How long a contracting ring takes to close on its marker. */
-const RING_LEAD = 560;
-const IMPACT_LEAD = 760;
+/** How long a timing ring takes to close on its mark. Always the same, so the rhythm is learnable. */
+const RING_LEAD = 900;
+const IMPACT_LEAD = 900;
+/** Rings close from this radius to the mark's radius at a constant speed, then keep closing past it. */
+const RING_FROM = 330;
+const MARK_R = 70;
+const RING_V = (RING_FROM - MARK_R) / RING_LEAD;
+/** A ring's radius when `left` ms remain until its beat or impact (negative once past). */
+const ringR = (left: number) => Math.max(14, MARK_R + RING_V * left);
 
 type Floater = { id: number; x: number; y: number; text: string; cls: string; delay: number };
 type Fx = { id: number; kind: "slash" | "splat" | "spark" | "bloom" | "whoosh"; x: number; y: number; color: string; delay: number };
@@ -119,6 +126,7 @@ export function BattleScreen({
   const [caption, setCaption] = useState<{ name: string; tell: string; foe: string } | null>(null);
   const [hurt, setHurt] = useState<Record<string, number>>({});
   const [clock, setClock] = useState(0);
+  const lastPose = useRef("");
   const seq = useRef<Seq | null>(null);
   const [coach, setCoach] = useState<{ key: CoachKey; text: string } | null>(null);
   const said = useRef(new Set<CoachKey>());
@@ -366,7 +374,12 @@ export function BattleScreen({
       const t = elapsed(s);
       if (s.k === "attack") tickAttack(s, t);
       else tickDefend(s, t);
-      setClock(t);
+      // The rings draw themselves every frame (CueRings); React re-renders only when a pose changes.
+      const key = poseKey(s, t);
+      if (key !== lastPose.current) {
+        lastPose.current = key;
+        setClock(t);
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -401,7 +414,7 @@ export function BattleScreen({
       action,
       target: foe,
       ally,
-      t0: performance.now() + 150,
+      t0: performance.now() + Math.max(150, weak ? 150 : RING_LEAD - (beats[0] ?? RING_LEAD)),
       weakMs,
       weakPts,
       weakHit: weak ? null : false,
@@ -509,7 +522,7 @@ export function BattleScreen({
       return;
     }
     const impacts = plan.attack.hits.map((h) => h.t);
-    seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + 150, impacts, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
+    seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + Math.max(150, IMPACT_LEAD - impacts[0]!), impacts, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
     setPhase({ k: "defend" });
     say("defend");
   };
@@ -679,8 +692,7 @@ export function BattleScreen({
         {fx.map((f) => (
           <FxMark key={f.id} f={f} />
         ))}
-        {s?.k === "attack" && <AttackCues s={s} t={clock} at={chest(battle.unit(s.target))} />}
-        {s?.k === "defend" && <DefendCues s={s} t={clock} chestOf={(id) => chest(battle.unit(id))} />}
+        {s && <CueRings seq={seq} at={s.k === "attack" ? chest(battle.unit(s.target)) : chest(battle.unit(s.plan.targets[0]!))} />}
       </svg>
       {s?.k === "attack" &&
         s.weakHit === null &&
@@ -997,55 +1009,87 @@ function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq 
   );
 }
 
-function AttackCues({ s, t, at: [cx, cy] }: { s: AttackSeq; t: number; at: [number, number] }) {
-  if (s.weakHit === null) {
-    const left = Math.max(0, 1 - t / s.weakMs);
-    return (
-      <g>
-        <rect x="140" y="1340" width={800 * left} height="10" rx="5" fill="#86c6f2" opacity="0.8" />
-      </g>
-    );
+/** Which poses show at time t; the screen re-renders only when this changes. */
+function poseKey(s: Seq, t: number) {
+  if (s.k === "attack") {
+    const bt = t - s.beatsAt;
+    return `a${s.weakHit === null ? "w" : ""}${s.beats.some((b) => bt > b - 90 && bt < b + 160) ? "s" : ""}`;
   }
-  const bt = t - s.beatsAt;
-  const res = s.tracker.result();
-  // All cues centre on the target's marker.
-  return (
-    <g className="cues">
-      {s.beats.map((beat, i) => {
-        const graded = s.pressed.length > i;
-        if (graded || res[i] !== "miss") return null;
-        const dt = beat - bt;
-        if (dt > RING_LEAD || dt < -RULES.timing.good) return null;
-        const r = 64 + Math.max(0, dt / RING_LEAD) * 250;
-        return (
-          <g key={i} data-cue="ring">
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#efe3c8" strokeWidth={10} opacity={0.35 + 0.65 * (1 - Math.max(0, dt) / RING_LEAD)} filter="url(#wc)" />
-          </g>
-        );
-      })}
-      <circle cx={cx} cy={cy} r={64} fill="none" stroke="#1d1822" strokeWidth={14} />
-      <circle cx={cx} cy={cy} r={64} fill="none" stroke="#ecc56a" strokeWidth={4} strokeDasharray="10 8" />
-    </g>
-  );
+  const lunge = s.impacts.some((at) => t > at - 140 && t < at + 100);
+  const wind = !lunge && s.impacts.some((at) => t > at - 520 && t <= at - 140);
+  return `d${lunge ? "l" : ""}${wind ? "w" : ""}`;
 }
 
-function DefendCues({ s, t, chestOf }: { s: DefendSeq; t: number; chestOf: (id: string) => [number, number] }) {
+/**
+ * The timing rings, drawn straight to the SVG on every animation frame (no React re-render), so they close
+ * smoothly at one constant speed. The mark shows the scoring window: the gold band is where a press counts,
+ * the bright rim is Perfect (attacks) or Parry (defence), and the ring keeps closing past it so lateness shows.
+ */
+function CueRings({ seq, at: [cx, cy] }: { seq: React.MutableRefObject<Seq | null>; at: [number, number] }) {
+  const g = useRef<SVGGElement>(null);
+  const bar = useRef<SVGRectElement>(null);
+  const kind = seq.current?.k;
+  useEffect(() => {
+    let raf = 0;
+    const draw = () => {
+      const s = seq.current;
+      const rings = g.current ? (Array.from(g.current.querySelectorAll("circle.ring")) as SVGCircleElement[]) : [];
+      let n = 0;
+      const put = (left: number, fade: number) => {
+        const c = rings[n++];
+        if (!c) return;
+        c.setAttribute("r", ringR(left).toFixed(1));
+        c.setAttribute("opacity", fade.toFixed(2));
+        c.style.display = "";
+      };
+      if (s) {
+        const t = elapsed(s);
+        if (s.k === "attack") {
+          if (bar.current) bar.current.setAttribute("width", s.weakHit === null ? String(800 * Math.max(0, 1 - t / s.weakMs)) : "0");
+          if (s.weakHit !== null) {
+            const bt = t - s.beatsAt;
+            const res = s.tracker.result();
+            s.beats.forEach((beat, i) => {
+              if (s.pressed.length > i || res[i] !== "miss") return;
+              const left = beat - bt;
+              if (left > RING_LEAD || left < -RULES.timing.good) return;
+              put(left, Math.min(1, 0.4 + 0.6 * (1 - left / RING_LEAD)));
+            });
+          }
+        } else {
+          s.impacts.forEach((imp, i) => {
+            const left = imp - t;
+            if (left > IMPACT_LEAD || left < -140 || s.tracker.resultAt(i)) return;
+            put(left, Math.min(1, 0.4 + 0.6 * (1 - left / IMPACT_LEAD)));
+          });
+        }
+      }
+      for (; n < rings.length; n++) rings[n]!.style.display = "none";
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [seq]);
+  const attack = kind === "attack";
+  // Scoring bands, as radii: a press counts while the ring is inside the outer band.
+  const band = attack
+    ? { outer: [ringR(RULES.timing.good), ringR(-RULES.timing.good)], inner: [ringR(RULES.timing.perfect), ringR(-RULES.timing.perfect)] }
+    : { outer: [ringR(-RULES.dodge[0]), ringR(-RULES.dodge[1])], inner: [ringR(-RULES.parry[0]), ringR(-RULES.parry[1])] };
+  const mid = (b: number[]) => (b[0]! + b[1]!) / 2;
+  const wid = (b: number[]) => b[0]! - b[1]!;
+  const color = attack ? "#efe3c8" : "#ff6b6b";
   return (
     <g className="cues">
-      {s.plan.targets.map((id) => {
-        const [x, y] = chestOf(id);
-        return (
-          <g key={id}>
-            {s.impacts.map((at, i) => {
-              const dt = at - t;
-              if (dt > IMPACT_LEAD || dt < -120 || s.tracker.resultAt(i)) return null;
-              const r = 70 + Math.max(0, dt / IMPACT_LEAD) * 260;
-              return <circle key={i} cx={x} cy={y} r={r} fill="none" stroke="#c8505a" strokeWidth={12} opacity={0.3 + 0.7 * (1 - Math.max(0, dt) / IMPACT_LEAD)} />;
-            })}
-            <circle cx={x} cy={y} r={70} fill="none" stroke="#1d1822" strokeWidth={10} opacity={0.8} />
-          </g>
-        );
-      })}
+      {attack && <rect ref={bar} x="140" y="1340" width="0" height="10" rx="5" fill="#86c6f2" opacity="0.8" />}
+      <circle cx={cx} cy={cy} r={mid(band.outer)} fill="none" stroke={attack ? "#ecc56a" : "#86c6f2"} strokeWidth={wid(band.outer)} opacity={0.16} />
+      <circle cx={cx} cy={cy} r={mid(band.inner)} fill="none" stroke="#ecc56a" strokeWidth={wid(band.inner)} opacity={0.3} />
+      <circle cx={cx} cy={cy} r={MARK_R} fill="none" stroke="#1d1822" strokeWidth={12} opacity={0.85} />
+      <circle cx={cx} cy={cy} r={MARK_R} fill="none" stroke="#ecc56a" strokeWidth={4} />
+      <g ref={g}>
+        {[0, 1, 2, 3].map((i) => (
+          <circle key={i} className="ring" cx={cx} cy={cy} r={RING_FROM} fill="none" stroke={color} strokeWidth={10} style={{ display: "none" }} />
+        ))}
+      </g>
     </g>
   );
 }
