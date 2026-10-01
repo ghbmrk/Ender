@@ -4,14 +4,16 @@
 // time only moves during `wait` and for a short reaction gap after each tap.
 import { chromium } from "@playwright/test";
 import { createServer } from "node:http";
-import { mkdirSync, appendFileSync, readFileSync } from "node:fs";
+import { mkdirSync, appendFileSync, readFileSync, existsSync } from "node:fs";
 import { extname, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../..");
 const out = resolve(process.argv[2] ?? "/tmp/blind");
 const port = Number(process.argv[3] ?? 7777);
 mkdirSync(out, { recursive: true });
 const log = (s) => appendFileSync(`${out}/actions.log`, `${new Date().toISOString()} ${s}\n`);
-const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+// The cloud box's preinstalled Chromium, unless CHROMIUM_PATH names another: Playwright's own build may not be downloaded.
+const exe = process.env.CHROMIUM_PATH ?? (existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
+const browser = await chromium.launch(exe ? { executablePath: exe } : {});
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
 const page = await ctx.newPage();
 const errors = [];
