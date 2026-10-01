@@ -9,70 +9,81 @@ const FEEDBACK = Number(process.env.FEEDBACK ?? 100);
 const READY = Number(process.env.READY ?? 300);
 const RATE = Number(process.env.RATE ?? 4);
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+const RUNS = Number(process.env.RUNS ?? 3);
 const errors = [];
-page.on("pageerror", (e) => errors.push(e.message));
-await page.addInitScript(() => {
-  localStorage.setItem("ender:tutorial", "done");
-  const w = window;
-  // On each tap: when the page first changes, the frame that shows it, and when the awaited element appears.
-  w.__tap = null;
-  // feedback: the first frame after the tap (the pressed button shows); ready: the frame showing the next screen.
-  addEventListener("pointerdown", (e) => {
-    const t = (w.__tap = { t0: e.timeStamp, paint: 0, ready: 0, want: w.__want });
-    requestAnimationFrame(() => requestAnimationFrame((p) => (t.paint = p)));
-  }, true);
-  const poll = (now) => { const t = w.__tap; if (t && !t.ready && t.want && document.querySelector(t.want)) requestAnimationFrame((p) => (t.ready = p)); requestAnimationFrame(poll); };
-  requestAnimationFrame(poll);
-  // Every fight phase change, to see where time goes between states.
-  w.__phases = [];
-  const ph = () => { const p = document.querySelector("[data-phase]")?.getAttribute("data-phase") ?? null; if (p !== w.__lp) { w.__phases.push([Math.round(performance.now()), p]); w.__lp = p; } requestAnimationFrame(ph); };
-  requestAnimationFrame(ph);
-});
-const cdp = await page.context().newCDPSession(page);
-await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html"));
-await page.waitForSelector('[data-testid="sign-in"]', { timeout: 60000 });
-await page.waitForTimeout(800);
-await cdp.send("Emulation.setCPUThrottlingRate", { rate: RATE });
-const rows = [];
-async function step(name, sel, want, budget = READY) {
-  await page.evaluate((w) => (window.__want = w), want);
-  await page.waitForSelector(sel, { timeout: 30000 });
-  await page.tap(sel);
-  await page.waitForSelector(want, { timeout: 30000 });
-  await page.waitForTimeout(250);
-  const t = await page.evaluate(() => window.__tap);
-  const r = { name, feedback: Math.round(t.paint - t.t0), ready: Math.round(Math.max(t.ready, t.paint) - t.t0), budget };
-  rows.push(r);
-  await page.waitForTimeout(400);
-}
-const tid = (t) => `[data-testid="${t}"]`;
-// Steps that load or create a save on the in-page server get SERVER ms; plain screen changes get READY ms.
-const SERVER = Number(process.env.SERVER ?? 600);
-await step("sign in → Crossing", tid("sign-in"), tid("crossing"), SERVER);
-await step("Crossing → Loom", tid("station-loom"), tid("loom"));
-await step("Loom → Crossing", tid("loom-done"), tid("crossing"));
-await step("Set out → Realm Gate", tid("hub-gate"), '[data-testid^="enter-"]');
-await step("Gate → Map", '[data-testid^="enter-"]', tid("map"), SERVER);
-await step("Map → fight", ".map-node.next", "[data-phase]");
-{
-  const t = await page.evaluate(() => ({ t0: window.__tap.t0, ph: window.__phases }));
-  console.log("fight opening (ms after tap → phase):", t.ph.map(([at, p]) => `${Math.round(at - t.t0)}:${p}`).join(" "));
-}
-await page.waitForSelector('[data-phase="command"]', { timeout: 30000 });
-await step("Basic attack → swing", tid("cmd-basic"), '[data-phase]:not([data-phase="command"])');
-// Time from the hero's action ending to the next point the player can act again.
-const gaps = await page.evaluate(async () => {
-  const out = []; let last = document.querySelector("[data-phase]")?.getAttribute("data-phase"); let t = performance.now();
-  const end = performance.now() + 12000;
-  while (performance.now() < end) {
-    await new Promise((r) => requestAnimationFrame(r));
-    const p = document.querySelector("[data-phase]")?.getAttribute("data-phase");
-    if (p !== last) { out.push([p, Math.round(performance.now() - t)]); last = p; t = performance.now(); if (p === "command") break; }
+// One full pass through the game; the check uses the median of RUNS passes, so one noisy frame can't fail it.
+async function pass() {
+  const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => {
+    localStorage.setItem("ender:tutorial", "done");
+    const w = window;
+    // On each tap: when the page first changes, the frame that shows it, and when the awaited element appears.
+    w.__tap = null;
+    // feedback: the first frame after the tap (the pressed button shows); ready: the frame showing the next screen.
+    addEventListener("pointerdown", (e) => {
+      const t = (w.__tap = { t0: e.timeStamp, paint: 0, ready: 0, want: w.__want });
+      requestAnimationFrame(() => requestAnimationFrame((p) => (t.paint = p)));
+    }, true);
+    const poll = (now) => { const t = w.__tap; if (t && !t.ready && t.want && document.querySelector(t.want)) requestAnimationFrame((p) => (t.ready = p)); requestAnimationFrame(poll); };
+    requestAnimationFrame(poll);
+    // Every fight phase change, to see where time goes between states.
+    w.__phases = [];
+    const ph = () => { const p = document.querySelector("[data-phase]")?.getAttribute("data-phase") ?? null; if (p !== w.__lp) { w.__phases.push([Math.round(performance.now()), p]); w.__lp = p; } requestAnimationFrame(ph); };
+    requestAnimationFrame(ph);
+  });
+  const cdp = await page.context().newCDPSession(page);
+  await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html"));
+  await page.waitForSelector('[data-testid="sign-in"]', { timeout: 60000 });
+  await page.waitForTimeout(800);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: RATE });
+  const rows = [];
+  async function step(name, sel, want, budget = READY) {
+    await page.evaluate((w) => (window.__want = w), want);
+    await page.waitForSelector(sel, { timeout: 30000 });
+    await page.tap(sel);
+    await page.waitForSelector(want, { timeout: 30000 });
+    await page.waitForTimeout(250);
+    const t = await page.evaluate(() => window.__tap);
+    const r = { name, feedback: Math.round(t.paint - t.t0), ready: Math.round(Math.max(t.ready, t.paint) - t.t0), budget };
+    rows.push(r);
+    await page.waitForTimeout(400);
   }
-  return out;
-});
-console.log("fight phases after the swing (phase entered, ms spent in the one before):", JSON.stringify(gaps));
+  const tid = (t) => `[data-testid="${t}"]`;
+  // Steps that load or create a save on the in-page server get SERVER ms; plain screen changes get READY ms.
+  const SERVER = Number(process.env.SERVER ?? 600);
+  await step("sign in → Crossing", tid("sign-in"), tid("crossing"), SERVER);
+  await step("Crossing → Loom", tid("station-loom"), tid("loom"));
+  await step("Loom → Crossing", tid("loom-done"), tid("crossing"));
+  await step("Set out → Realm Gate", tid("hub-gate"), '[data-testid^="enter-"]');
+  await step("Gate → Map", '[data-testid^="enter-"]', tid("map"), SERVER);
+  await step("Map → fight", ".map-node.next", "[data-phase]");
+  {
+    const t = await page.evaluate(() => ({ t0: window.__tap.t0, ph: window.__phases }));
+    console.log("fight opening (ms after tap → phase):", t.ph.map(([at, p]) => `${Math.round(at - t.t0)}:${p}`).join(" "));
+  }
+  await page.waitForSelector('[data-phase="command"]', { timeout: 30000 });
+  await step("Basic attack → swing", tid("cmd-basic"), '[data-phase]:not([data-phase="command"])');
+  // Time from the hero's action ending to the next point the player can act again.
+  const gaps = await page.evaluate(async () => {
+    const out = []; let last = document.querySelector("[data-phase]")?.getAttribute("data-phase"); let t = performance.now();
+    const end = performance.now() + 12000;
+    while (performance.now() < end) {
+      await new Promise((r) => requestAnimationFrame(r));
+      const p = document.querySelector("[data-phase]")?.getAttribute("data-phase");
+      if (p !== last) { out.push([p, Math.round(performance.now() - t)]); last = p; t = performance.now(); if (p === "command") break; }
+    }
+    return out;
+  });
+  console.log("fight phases after the swing (phase entered, ms spent in the one before):", JSON.stringify(gaps));
+  await page.close();
+  return rows;
+}
+const passes = [];
+for (let i = 0; i < RUNS; i++) passes.push(await pass());
+const med = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+const rows = passes[0].map((r, i) => ({ ...r, feedback: med(passes.map((p) => p[i].feedback)), ready: med(passes.map((p) => p[i].ready)) }));
+console.log(`median of ${RUNS} passes:`);
 console.table(rows);
 const bad = rows.filter((r) => r.feedback > FEEDBACK || r.ready > r.budget);
 if (errors.length) console.log("errors", errors.slice(0, 5));
