@@ -9,6 +9,8 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 sha="$(git -C "$root" rev-parse --short HEAD)"
 pages="${PAGES_DIR:-${TMPDIR:-/tmp}/ender-hero-painter}"
 (cd "$root/apps/game" && pnpm -s build:pages >/dev/null 2>&1)
+# Guard: this build must carry the painter (the game paints its characters on device only when it does).
+grep -q '\./model/' "$root/apps/game/dist-pages/assets/"index-*.js || { echo "publish-pages: build has no painter path (VITE_PAINTER_BASE); not publishing" >&2; exit 1; }
 if [ -d "$pages/.git" ]; then git -C "$pages" fetch -q origin main && git -C "$pages" reset -q --hard origin/main
 else git clone -q --depth 1 https://github.com/ghbmrk/ender-hero-painter.git "$pages"; fi
 # Replace everything but the model, the readme and the Pages marker with the fresh build.
@@ -22,6 +24,7 @@ HTML
 # The painter speed test (a page that times each engine variant on the phone).
 mkdir -p "$pages/bench" && cp "$root/apps/hero-painter/bench/index.html" "$root/apps/hero-painter/engine.js" "$pages/bench/"
 touch "$pages/.nojekyll"
+[ -f "$pages/model/manifest.json" ] || { echo "publish-pages: model/manifest.json missing in the Pages repo; not publishing" >&2; exit 1; }
 git -C "$pages" add -A
 if git -C "$pages" diff --cached --quiet; then echo "already matches $sha"; exit 0; fi
 git -C "$pages" commit -q -m "Ender $sha${TRAILER:+

@@ -28,6 +28,28 @@ function wanted(): boolean {
 }
 /** True where on-device painting can run (a WebGPU browser, on a build that ships the model). */
 export const onDeviceArt = wanted();
+
+/** What the painter is doing, for the `?art=status` overlay (nothing shows without it). */
+export const artStatus: { phase: string; progress: number; painted: number; lastS?: number; gpu?: string; error?: string } = {
+  phase: !BASE ? "off in this build" : typeof navigator !== "undefined" && "gpu" in navigator ? (onDeviceArt ? "waiting to start" : "turned off") : "no WebGPU in this browser",
+  progress: 0,
+  painted: 0,
+};
+try {
+  if (new URLSearchParams(location.search).get("art") === "status") {
+    const el = document.createElement("div");
+    el.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;padding:8px 10px;border-radius:10px;background:rgba(10,8,6,.85);color:#f2e6cf;font:13px/1.35 system-ui,sans-serif;pointer-events:none;white-space:pre-wrap";
+    const draw = () => {
+      const s = artStatus;
+      el.textContent = `Painter: ${s.phase}${s.progress > 0 && s.progress < 1 ? ` (${Math.round(s.progress * 100)}% downloaded)` : ""}\nPainted: ${s.painted}${s.lastS ? ` · last took ${s.lastS} s` : ""} · waiting: ${queue.length}${s.gpu ? `\nGPU: ${s.gpu}` : ""}${s.error ? `\nError: ${s.error}` : ""}`;
+    };
+    addEventListener("DOMContentLoaded", () => document.body.appendChild(el));
+    if (document.body) document.body.appendChild(el);
+    setInterval(draw, 500);
+  }
+} catch {
+  /* no overlay */
+}
 export const painterBase = () => BASE!;
 
 const done = new Map<string, Art>();
