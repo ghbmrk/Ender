@@ -1,0 +1,180 @@
+/* ═════════════ Landing: one book-cover composition ═════════════
+   A tooled-leather cover: the title on its own band at the top, the painting inside a gilt window, and the
+   sign-in seal on the band below. Nothing is laid over the painting. */
+.landing.cover-book {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Sizes scale with the cover's height, so a short phone gives the painting the room, not the bands. */
+  container-type: size;
+  padding: calc(26px + env(safe-area-inset-top, 0px) * 2.6) 26px calc(26px + var(--safe-b, 0px));
+  background:
+    radial-gradient(ellipse at 50% 18%, #4a1c1455, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, #3a120c66, transparent 50%),
+    var(--leather);
+}
+/* The tooled border: a gilt rule with a dark inner line, a hand's width in from the cover's edge. */
+.cover-book .cb-frame {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 8px solid #c9953a;
+  border-color: #f4d58c #8f6420 #6b4a18 #deb45c;
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 4px #120d12,
+    inset 0 0 0 10px #8f642055,
+    0 0 0 4px #120d12;
+  padding: 40px 34px 0;
+}
+.cover-book .cb-corner {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  background: var(--metal);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  box-shadow: 0 0 0 3px #120d12;
+  pointer-events: none;
+}
+.cover-book .cb-corner.tl { left: -36px; top: -36px; }
+.cover-book .cb-corner.tr { right: -36px; top: -36px; }
+.cover-book .cb-corner.bl { left: -36px; bottom: -36px; }
+.cover-book .cb-corner.br { right: -36px; bottom: -36px; }
+
+/* Title band: the chrome wordmark and the line under it, on the leather. */
+.cover-book .cb-head {
+  flex: none;
+  text-align: center;
+  padding: 10px 0 34px;
+}
+.cover-book .cb-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: min(220px, 9cqh);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: transparent;
+  background: linear-gradient(180deg, #ffffff 0%, #dfe5ec 30%, #8d97a5 47%, #22262e 50%, #c3ccd7 53%, #f4f7fa 70%, #6b7584 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-stroke: 3px #0b0910;
+  filter: drop-shadow(0 4px 0 #0b0910) drop-shadow(0 0 18px #ff3a1aaa);
+}
+.cover-book .cb-tagline {
+  margin: 14px 0 0;
+  padding-top: 22px;
+  background: linear-gradient(90deg, transparent, #c3ccd7 20%, #ffffff 50%, #c3ccd7 80%, transparent) top center / 720px 6px no-repeat;
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-size: 46px;
+  color: #e6d6c8;
+  text-shadow: 0 2px 6px #000;
+}
+
+/* The painting's window: it takes whatever height the two bands leave, framed in gilt with a dark lip. */
+.cover-book .cb-art {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 8px solid transparent;
+  border-radius: 8px;
+  background: linear-gradient(#120c08, #120c08) padding-box, var(--metal) border-box;
+  box-shadow: 0 0 0 4px #120d12, inset 0 0 40px #000, 0 18px 40px #000c;
+  overflow: hidden;
+}
+.cover-book .cb-art .cv-paint {
+  position: absolute;
+  inset: 0;
+}
+/* When the window is shorter than the painting, crop from the top: the lone knight at the monster's feet stays. */
+.cover-book .cb-art .cv-bg {
+  object-position: 50% 68%;
+}
+
+/* Seal band: the sign-in mark set into the cover like a struck medallion. */
+.cover-book .cb-foot {
+  flex: none;
+  height: min(400px, 17cqh);
+  display: grid;
+  place-items: center;
+}
+.stage .cover-book button.cb-seal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(330px, 14.5cqh);
+  height: min(330px, 14.5cqh);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 10px solid transparent;
+  background:
+    radial-gradient(circle at 50% 38%, #3a2422, #150d10 70%) padding-box,
+    var(--metal) border-box;
+  box-shadow:
+    0 0 0 4px #120d12,
+    0 0 0 12px #8f642055,
+    inset 0 0 0 4px #120d12,
+    inset 0 0 30px #000,
+    0 14px 30px #000c;
+  color: #e9c675;
+  isolation: isolate;
+}
+/* The seal's breathing glow is its own layer fading in and out (opacity runs on the compositor; an animated
+   box-shadow would repaint the button every frame and slow the tap). */
+.stage .cover-book button.cb-seal::before {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff3a1a66 40%, transparent 70%);
+  z-index: -1;
+  animation: cb-seal-glow 2.6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.stage .cover-book button.cb-seal:active {
+  transform: scale(0.95);
+}
+.cover-book .cb-mark {
+  grid-area: 1 / 1;
+  filter: drop-shadow(0 2px 0 #120d12) drop-shadow(0 0 10px #ffb34766);
+}
+.cover-book .cb-signin {
+  grid-area: 1 / 1;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #2a1a18, #120c0e);
+  box-shadow: 0 0 0 5px #120d12, 0 0 0 9px #c9953a;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1;
+  color: #fbe8b0;
+  white-space: nowrap;
+}
+.stage .cover-book button.cb-seal:disabled .cb-mark {
+  animation: signin-wait 0.9s ease-in-out infinite alternate;
+}
+@keyframes cb-seal-glow {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+.cover-book .cb-mark {
+  width: 76%;
+  height: 76%;
+}
+.cover-book .cb-signin {
+  width: 46%;
+  height: 46%;
+}
