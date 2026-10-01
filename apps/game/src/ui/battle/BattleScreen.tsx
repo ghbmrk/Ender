@@ -72,7 +72,7 @@ const RECOVER_MS = 140;
 const ringR = (left: number) => Math.max(14, MARK_R + RING_V * left);
 
 type Floater = { id: number; x: number; y: number; text: string; cls: string; delay: number };
-type Fx = { id: number; kind: "slash" | "claw" | "splat" | "spark" | "bloom" | "whoosh"; x: number; y: number; color: string; delay: number };
+type Fx = { id: number; kind: "slash" | "claw" | "splat" | "spark" | "bloom" | "whoosh" | "shards"; x: number; y: number; color: string; delay: number };
 
 type AttackSeq = {
   k: "attack";
@@ -305,6 +305,20 @@ export function BattleScreen({
       setFlash({ id, at, color });
       later(220, () => setFlash((f) => (f?.id === id ? null : f)));
     });
+
+  /**
+   * The moment a blow connects: everything holds for a few frames (hit-stop), one high-contrast impact frame,
+   * shards burst from the point of contact and the camera kicks. Heavy blows hold longer and shake harder.
+   */
+  const [stop, setStop] = useState(0);
+  const impact = (at: [number, number], color: string, heavy: boolean) => {
+    const n = ++uid;
+    setStop(n);
+    later(heavy ? 110 : 70, () => setStop((v) => (v === n ? 0 : v)));
+    spawnFx("shards", at, color);
+    flashAt(at, heavy ? "#fff4dc" : color);
+    kick(heavy ? "big" : "shake", at);
+  };
 
   /** Turn engine events into numbers, words and paint. */
   const play = (events: BattleEvent[]) => {
@@ -609,10 +623,10 @@ export function BattleScreen({
     const color = s.action ? AFF_COLOR[s.action.dominant] : "#efe3c8";
     soon(() => {
       spawnFx("slash", chest(t), color);
+      if (g !== "miss") impact(chest(t), color, g === "perfect");
       if (g === "perfect") {
         spawnFx("bloom", chest(t), color);
-        flashAt(chest(t), "#fff4dc");
-        kick("punch", chest(t));
+        kick("punch", chest(t), 110);
       }
       bumpStreak(g !== "miss");
       say(g);
@@ -753,7 +767,7 @@ export function BattleScreen({
           spawnFx("claw", chest(battle.unit(id)), "#ff5a4a");
           spawnFx("splat", chest(battle.unit(id)), "#6b1a28", 40);
         }
-        kick("big", chest(battle.unit(s.plan.targets[0]!)));
+        impact(chest(battle.unit(s.plan.targets[0]!)), "#ff5a4a", true);
         sfx.hurt();
       }
     });
@@ -834,6 +848,9 @@ export function BattleScreen({
   // The hero coils just before each beat, then strikes on it: anticipation, then the blow.
   const coilHero = !strikeHero && s?.k === "attack" && s.weakHit !== null && s.beats.some((b) => clock - s.beatsAt > b - 300 && clock - s.beatsAt <= b - 90) ? s.actor : null;
   const pose = s?.k === "defend" ? foePose(s, clock) : null;
+  // The camera leans in on whoever is about to be hit while the blow builds, and eases back after.
+  const dollyAt: [number, number] | null =
+    s?.k === "defend" && (pose === "windup" || pose === "lunge" || pose === "rewind") ? chest(battle.unit(s.plan.targets[0]!)) : s?.k === "attack" && s.weakHit !== null && (coilHero || strikeHero) ? chest(battle.unit(s.target)) : null;
   const lungingFoe = s?.k === "defend" && pose === "lunge" ? s.plan.actor : null;
   // The foe draws back before each blow, so the timing reads in its body as well as the ring.
   const windingFoe = s?.k === "defend" && pose === "windup" ? s.plan.actor : null;
@@ -874,7 +891,7 @@ export function BattleScreen({
   const bossUnit = battle.foes().find((f) => f.tier === "boss");
 
   return (
-    <div className={`battle phase-${phase.k} ${finale ? "finale" : ""} ${frozen ? "frozen" : ""}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
+    <div className={`battle phase-${phase.k} ${finale ? "finale" : ""} ${frozen ? "frozen" : ""} ${stop ? "hitstop" : ""} ${dollyAt ? "dolly" : ""}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
       {/* Whose turn it is, felt at the screen's edges: gold for yours, red for the foe's, cross-fading so the
           handoff is a breath rather than a cut. Opacity only. */}
       <div className="turn-tint" aria-hidden>
@@ -883,7 +900,7 @@ export function BattleScreen({
       </div>
       <div
         className="world"
-        style={{ top: worldTop, transformOrigin: cam ? `${cam.at[0]}px ${cam.at[1]}px` : undefined, animation: cam ? `cam-${cam.k}-${cam.n % 2} ${CAM_MS[cam.k]}ms ease-out` : undefined }}
+        style={{ top: worldTop, transformOrigin: cam ? `${cam.at[0]}px ${cam.at[1]}px` : dollyAt ? `${dollyAt[0]}px ${dollyAt[1]}px` : undefined, animation: cam ? `cam-${cam.k}-${cam.n % 2} ${CAM_MS[cam.k]}ms ease-out` : undefined }}
       >
       {/* In a duel the painting's ground is lined up with the foe's feet, so the foe stands on the floor. */}
       <div className={`backdrop ${duel ? "grounded-box" : ""}`}>
@@ -1535,6 +1552,17 @@ function FxMark({ f }: { f: Fx }) {
   switch (f.kind) {
     case "slash":
       return <path className="fx slash" style={style} d={`M${f.x - 150} ${f.y - 110} C${f.x - 40} ${f.y - 40} ${f.x + 40} ${f.y + 10} ${f.x + 160} ${f.y + 100}`} stroke={f.color} strokeWidth={22} strokeLinecap="round" fill="none" />;
+    case "shards":
+      // Shards of the blow, flung out from the point of contact (each flies along its own --dx/--dy).
+      return (
+        <g className="fx shards" style={style}>
+          {Array.from({ length: 14 }, (_, i) => {
+            const a = i * 2.39996 + 0.4;
+            const r = 140 + ((i * 53) % 120);
+            return <rect key={i} x={f.x - 5} y={f.y - 14} width={10} height={28} rx={4} fill={i % 3 ? f.color : "#fff4dc"} style={{ ["--dx" as string]: `${Math.round(Math.cos(a) * r)}px`, ["--dy" as string]: `${Math.round(Math.sin(a) * r)}px`, ["--rot" as string]: `${Math.round((a * 180) / Math.PI)}deg`, transformOrigin: `${f.x}px ${f.y}px` }} />;
+          })}
+        </g>
+      );
     case "claw":
       // Three raking strokes, top-right to bottom-left: the way a foe's blow comes in.
       return (
