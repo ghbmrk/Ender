@@ -1393,3 +1393,37 @@
   align-items: baseline;
   white-space: nowrap;
 }
+
+/* Your best climb sits on each Realm's painting, and a run that beats it says so. */
+.realm-card .realm-head {
+  position: relative;
+}
+.realm-best {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--serif-body);
+  font-size: 14px;
+  color: #f4e6c4;
+  background: #120c10cc;
+  border: 1px solid #d9a44188;
+}
+.realm-best.cleared {
+  color: #1d1408;
+  background: linear-gradient(180deg, #f4d58c, #c8963a);
+  border-color: #fff3c8;
+  font-weight: 700;
+}
+.sum-best {
+  margin-left: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 15px;
+  color: #1d1408;
+  background: linear-gradient(180deg, #f4d58c, #c8963a);
+  animation: loot-in 380ms 300ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+  display: inline-block;
+}

@@ -4,6 +4,7 @@ import { getState, setState, toast, type MapNode } from "../state/store";
 import { DUEL_FIELD_CAP, DUEL_HP, heroFigure, partyRoots, saveHero } from "./hero";
 import { lookFromSeed, newSeed, randomName } from "../art/look";
 import type { BattleResult } from "../ui/battle/BattleScreen";
+import { noteRun } from "./records";
 
 export async function refreshCharacter() {
   const character = await api.character();
@@ -180,7 +181,8 @@ export async function finishExpedition(outcome: "victory" | "death" | "abandon")
   }
   const totals = out.totals ?? (runStart ? { crowns: Math.max(0, (c?.crowns ?? 0) - runStart.crowns), essences, forms: runForms } : undefined);
   const reached = { step: ex.visited.length, of: ex.plan.map.layers.length };
-  setState({ runSummary: { ...out, totals, outcome, reached, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
+  const newBest = noteRun(ex.plan.realmId, { ...reached, cleared: outcome === "victory" });
+  setState({ runSummary: { ...out, totals, outcome, reached, newBest, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
 }
 
 export function returnToCrossing() {

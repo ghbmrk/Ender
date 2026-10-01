@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { startExpedition, refreshWorld } from "../game/flow";
 import { toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
+import { bests } from "../game/records";
 import { crowns, essenceColor, essenceGlyph } from "../economy/format";
 
 export function RealmGate() {
@@ -14,6 +15,7 @@ export function RealmGate() {
   useEffect(() => {
     refreshWorld().catch((e) => toast(e.message, "loss"));
   }, []);
+  const best = bests();
   if (!world) return <Panel title="Realm Gate">Listening to the Gate…</Panel>;
   const go = async (id: string) => {
     setBusy(true);
@@ -32,6 +34,11 @@ export function RealmGate() {
             <div className={`realm-head ${paintedBackdrop(r.id) ? "has-art" : ""}`} style={paintedBackdrop(r.id) ? { ["--realm-art" as string]: `url(${paintedBackdrop(r.id)})` } : undefined}>
               <h3>{r.name}</h3>
               <span className="diff">Difficulty {r.difficultyLabel}</span>
+              {best[r.id] && (
+                <span className={`realm-best ${best[r.id]!.cleared ? "cleared" : ""}`}>
+                  {best[r.id]!.cleared ? "♚ Cleared" : `Best: step ${best[r.id]!.step} of ${best[r.id]!.of}`}
+                </span>
+              )}
             </div>
             <p className="dim">{r.tagline}</p>
             <div className="realm-chips">

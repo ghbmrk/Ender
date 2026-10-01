@@ -14,6 +14,7 @@ export function RunSummary() {
           <div className="sum-reach">
             <span>
               You reached step <b>{s.reached.step}</b> of {s.reached.of}
+              {s.newBest && <em className="sum-best">New best</em>}
             </span>
             <div className="sum-track">
               {Array.from({ length: s.reached.of }, (_, i) => (

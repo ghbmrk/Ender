@@ -8,7 +8,11 @@ const maxFights = Number(process.argv[2] ?? 3);
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 // The prologue has its own script (play-prologue.mjs); this one starts from the Crossing.
-await page.addInitScript(() => localStorage.setItem("ender:tutorial", "done"));
+// LS='{"key":"value"}' seeds extra localStorage entries before the page loads.
+await page.addInitScript((extra) => {
+  localStorage.setItem("ender:tutorial", "done");
+  for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, v);
+}, JSON.parse(process.env.LS ?? "{}"));
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
