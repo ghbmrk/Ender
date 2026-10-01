@@ -617,7 +617,8 @@ export function BattleScreen({
     // Instant: the word, the ring, the mark and the sound, all without a React render.
     const c = cues();
     c?.drop(s.pressed.length - 1, g !== "miss");
-    c?.judge(g === "perfect" ? "PERFECT" : g === "good" ? "GOOD" : "MISS", `grade ${g}`, [chest(t)[0], chest(t)[1] - 140]);
+    // Perfect and Good must read apart at a glance: Perfect is bigger, gold and says what it adds.
+    c?.judge(g === "perfect" ? `PERFECT +${Math.round((RULES.gradeMult.perfect - 1) * 100)}%` : g === "good" ? "Good" : "MISS", `grade ${g}`, [chest(t)[0], chest(t)[1] - 140]);
     c?.pulse(markEl.current, g);
     (g === "perfect" ? sfx.perfect : g === "good" ? sfx.good : sfx.miss)();
     const color = s.action ? AFF_COLOR[s.action.dominant] : "#efe3c8";
@@ -1225,6 +1226,8 @@ function FoeTag({ u, h, x, count }: { u: Unit; h: number; x: number; count?: str
         {Math.max(0, Math.ceil(u.hp))} / {u.maxHp}
       </div>
       <Bar v={u.broken ? 100 : u.breakVal} max={100} cls={`brk ${u.broken ? "full" : ""}`} />
+      {/* The bar the cards' "Break" numbers fill, named, with what filling it does. */}
+      <div className={`brk-label ${u.broken ? "full" : ""}`}>{u.broken ? "Broken: skips a turn" : "Break: stuns at full"}</div>
       <Statuses u={u} />
     </div>
   );

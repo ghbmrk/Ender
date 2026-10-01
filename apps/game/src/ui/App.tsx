@@ -1,5 +1,5 @@
 import { sfx } from "./battle/sfx";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArtDefs } from "../art/defs";
 import { battleSetup, endBattle } from "../game/flow";
 import { demoSetup } from "../game/demo";
@@ -109,6 +109,7 @@ export function App() {
         {screen === "map" && <SpoilsStrip />}
         {screen === "battle" && <BattleHost />}
         {screen === "loom" && <LoomScreen />}
+        {screen === "crossing" && <LoomWarm />}
       </Stage>
       {panel === "gate" && <RealmGate />}
       {panel === "crucible" && <Crucible />}
@@ -121,4 +122,29 @@ export function App() {
       <Toasts />
     </div>
   );
+}
+
+/** The Loom's first opening paid for its code and text layout on the tap; this lays it out once, unseen, while the
+ * player looks at the Crossing, then lets it go, so the real first visit opens as fast as a second one. */
+let loomWarmed = false;
+function LoomWarm() {
+  const [on, setOn] = useState(false);
+  const lesson = useStore((s) => !!s.tutorial);
+  const ready = useStore((s) => !!s.loom);
+  useEffect(() => {
+    if (loomWarmed || lesson || !ready) return;
+    const idle = (window as any).requestIdleCallback ?? ((f: () => void) => setTimeout(f, 300));
+    const cancel = (window as any).cancelIdleCallback ?? clearTimeout;
+    const id = idle(() => {
+      loomWarmed = true;
+      setOn(true);
+      requestAnimationFrame(() => requestAnimationFrame(() => setOn(false)));
+    }, { timeout: 1500 });
+    return () => cancel(id);
+  }, [lesson, ready]);
+  return on ? (
+    <div className="loom-warm" aria-hidden>
+      <LoomScreen ghost />
+    </div>
+  ) : null;
 }

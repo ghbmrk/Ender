@@ -167,13 +167,15 @@ describe("§99 reality progression: outcome quality produces power", () => {
 });
 
 describe("combat rules (§61–72)", () => {
-  it("turn order sorts by speed each round; ties go to the party, then by id", () => {
+  it("a fresh foe's first round opens with the party; after that, turn order sorts by speed, ties to the party", () => {
     const b = new Battle({ seed: "o", party: party(), waves: [["hound", "keeper"]], difficulty: 1 });
     const first = b.nextTurn();
-    const order = b.order.map((id) => b.unit(id));
-    for (let i = 1; i < order.length; i++) expect(b.effectiveSpeed(order[i - 1]!)).toBeGreaterThanOrEqual(b.effectiveSpeed(order[i]!));
-    expect(order[0]!.id).toBe("hound-1"); // 120 beats Quick's 110
-    expect(first.actor.id).toBe("hound-1");
+    expect(first.actor.side).toBe("party");
+    const opening = b.order.map((id) => b.unit(id));
+    expect(opening.findIndex((u) => u.side === "foe")).toBe(b.party().length);
+    const next = b.timeline()[1]!.ids.map((id) => b.unit(id));
+    for (let i = 1; i < next.length; i++) expect(b.effectiveSpeed(next[i - 1]!)).toBeGreaterThanOrEqual(b.effectiveSpeed(next[i]!));
+    expect(next[0]!.id).toBe("hound-1"); // 120 beats Quick's 110
   });
   it("foeScale softens practice foes without touching the party", () => {
     const full = new Battle({ seed: "fs", party: party(), waves: [["husk"]], difficulty: 1 });
