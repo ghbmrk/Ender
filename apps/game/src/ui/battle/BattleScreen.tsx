@@ -302,6 +302,14 @@ export function BattleScreen({
           } else d += 120;
           break;
         }
+        case "enrage": {
+          const u = battle.unit(e.target);
+          float(u, "ENRAGED", "enrage", d);
+          flashAt(chest(u), "#e0402f", d);
+          later(d, sfx.telegraph);
+          d += 260;
+          break;
+        }
         case "full-parry":
           float(battle.unit(e.target), "FULL PARRY", "full", d);
           d += 120;
@@ -687,7 +695,7 @@ export function BattleScreen({
             return (
               <div
                 key={u.id}
-                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe ? "windup" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
+                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${u.enraged && u.alive ? "enraged" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe ? "windup" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
                 style={{ left: x, top: y, zIndex: Math.round(y), ...lungeVec(u) }}
                 onPointerDown={(e) => {
                   if (seq.current) return;

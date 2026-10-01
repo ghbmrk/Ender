@@ -67,7 +67,10 @@ export function MapScreen() {
       <header className="map-head">
         <div>
           <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
-          <div className="map-sub">Choose your path.</div>
+          <div className="map-sub">
+            {ex.at ? `Step ${anchor + 1} of ${layers.length}. ` : ""}
+            {layers.length - 1 - anchor <= 1 && ex.at ? "The Boss is next." : "Choose your path."}
+          </div>
         </div>
         {/* Withdrawing is rare and final, so it sits up top, out of the thumb's way. */}
       <button

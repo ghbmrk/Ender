@@ -1264,3 +1264,21 @@
   width: 164px;
   height: 164px;
 }
+
+/* Loop 18: a foe below a third of its health enrages: it hits harder, and it glows red and shakes with it. */
+.battle .unit.foe.enraged .bob {
+  animation: enraged 700ms ease-in-out infinite alternate;
+}
+@keyframes enraged {
+  from { filter: drop-shadow(0 0 0 #e0402f00); }
+  to { filter: drop-shadow(0 0 22px #e0402fcc) saturate(1.25); }
+}
+.battle .floater.enrage {
+  color: #ff6b4a;
+  font-size: 64px;
+  letter-spacing: 0.06em;
+  text-shadow: 0 4px 0 #3a0a06, 0 0 24px #e0402f;
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .unit.foe.enraged .bob { animation: none; filter: drop-shadow(0 0 16px #e0402fcc); }
+}

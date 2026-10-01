@@ -43,6 +43,8 @@ export type Unit = {
   initFromKeystone: number;
   alive: boolean;
   phase: number;
+  /** A foe below a third of its health fights harder, once per fight. */
+  enraged?: boolean;
   // hero state
   loom?: CompiledLoom;
   pattern: number;
@@ -55,6 +57,9 @@ export type Unit = {
   hiddenEdgeMarks: boolean;
 };
 
+const ENRAGE_AT = 1 / 3;
+const ENRAGE_POWER = 1.2;
+
 export type BattleEvent =
   | { type: "damage"; source: string; target: string; amount: number; crit: boolean; grade?: Grade; weakPoint?: boolean; absorbed?: number; dot?: StatusId }
   | { type: "heal"; source: string; target: string; amount: number }
@@ -63,6 +68,7 @@ export type BattleEvent =
   | { type: "break"; target: string }
   | { type: "recover"; target: string }
   | { type: "ko"; target: string }
+  | { type: "enrage"; target: string }
   | { type: "defend"; target: string; result: Defense; hit: number }
   | { type: "full-parry"; target: string }
   | { type: "counter"; source: string; target: string }
@@ -705,6 +711,12 @@ export class Battle {
         this.units.push(...spawned);
         if (spawned.length) events.push({ type: "summon", units: spawned.map((s) => s.id) });
       }
+    }
+    // A cornered foe turns desperate: below a third of its health it hits a fifth harder, once.
+    for (const f of this.living("foe").filter((x) => x.tier !== "boss" && !x.enraged && x.hp < x.maxHp * ENRAGE_AT)) {
+      f.enraged = true;
+      f.power *= ENRAGE_POWER;
+      events.push({ type: "enrage", target: f.id });
     }
     if (!this.living("party").length) {
       this.outcome = "defeat";
