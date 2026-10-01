@@ -2171,7 +2171,7 @@
 .stage .battle .bpanel.arc::after {
   display: none;
 }
-.stage .battle .bpanel.arc .cards-idle {
+.stage .battle .bpanel.arc .cards-wrap {
   display: block;
   height: 100%;
 }

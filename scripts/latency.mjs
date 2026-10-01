@@ -41,7 +41,10 @@ async function pass() {
   async function step(name, sel, want, budget = READY) {
     await page.evaluate((w) => (window.__want = w), want);
     await page.waitForSelector(sel, { timeout: 30000 });
-    await page.tap(sel);
+    // A raw touch at the element's centre: page.tap() runs its own hit-target checks inside the page during the
+    // tap (elementsFromPoint and listeners), which a player's phone doesn't, and they were counted as the game's time.
+    const bx = await page.locator(sel).first().boundingBox();
+    await page.touchscreen.tap(bx.x + bx.width / 2, bx.y + bx.height / 2);
     await page.waitForSelector(want, { timeout: 30000 });
     await page.waitForTimeout(250);
     const t = await page.evaluate(() => window.__tap);

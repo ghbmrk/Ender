@@ -13,6 +13,7 @@ const PAINTED_STATIONS = [
   { id: "bazaar", x: 250, y: 990 },
   { id: "grimoire", x: 830, y: 990 },
   { id: "gate", x: 790, y: 1270 },
+  { id: "yard", x: 250, y: 1270 },
   { id: "loom", x: 330, y: 1520 },
 ] as const;
 import { refreshLoom, setOut } from "../../game/flow";
@@ -22,7 +23,7 @@ import { Head } from "../battle/Figure";
 import { HeroHead } from "../battle/ArtHeads";
 import { useWorldTop } from "../Stage";
 import { Coach } from "../Coach";
-import { finishTutorial } from "../../game/tutorial";
+import { finishTutorial, practiseDefence } from "../../game/tutorial";
 import { weaves } from "../loom/Weave";
 import { startOver } from "../../game/reset";
 
@@ -74,6 +75,7 @@ const LABEL: Record<string, { name: string; sub: string }> = {
   mirror: { name: "Mirror", sub: "see a Form at work" },
   grimoire: { name: "Grimoire", sub: "every Form you have found" },
   loom: { name: "The Loom", sub: "weave your skills" },
+  yard: { name: "Training Yard", sub: "practise Dodge and Parry" },
 };
 
 /** The hub between Expeditions: painted stations you tap. */
@@ -128,6 +130,7 @@ export function Crossing() {
     else if (id === "crucible") setState({ panel: "crucible", crucibleMode: "craft" });
     else if (id === "mirror") setState({ panel: "crucible", crucibleMode: "mirror" });
     else if (id === "grimoire") setState({ panel: "grimoire" });
+    else if (id === "yard") practiseDefence();
     else if (id === "loom") {
       setState({ screen: "loom", loomEditable: true });
       // The Loom opens on the copy already held; the fresh read waits until it's on screen, so the two never share a frame.

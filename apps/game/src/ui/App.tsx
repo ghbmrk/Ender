@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArtDefs } from "../art/defs";
 import { battleSetup, endBattle } from "../game/flow";
 import { demoSetup } from "../game/demo";
-import { LESSONS, lessonEnded, lessonSetup, skipTutorial } from "../game/tutorial";
+import { LESSONS, leavePractice, lessonEnded, lessonSetup, skipTutorial } from "../game/tutorial";
 import { getState, setState, toast, useStore } from "../state/store";
 import { enterGame } from "../game/launch";
 import { Stage } from "./Stage";
@@ -31,6 +31,7 @@ const DEMO = params.get("demo");
 function LessonHost() {
   const step = useStore((s) => s.tutorial);
   const run = useStore((s) => s.tutorialRun);
+  const practice = useStore((s) => !!s.practice);
   const lesson = step && step in LESSONS ? LESSONS[step as keyof typeof LESSONS] : null;
   const setup = useMemo(() => (lesson ? lessonSetup(lesson) : null), [step, run]);
   if (!lesson || !setup) return null;
@@ -42,7 +43,8 @@ function LessonHost() {
       boss={false}
       title={lesson.title}
       lesson={lesson}
-      onSkip={() => skipTutorial().catch((e) => toast((e as Error).message, "loss"))}
+      onSkip={practice ? leavePractice : () => skipTutorial().catch((e) => toast((e as Error).message, "loss"))}
+      practice={practice}
       onEnd={(r) => lessonEnded(lesson.step, r.outcome === "victory")}
     />
   );
