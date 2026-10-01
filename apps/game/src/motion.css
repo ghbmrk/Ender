@@ -1385,3 +1385,11 @@
 .loot .loot-tile .lt-name.lt-name {
   font-size: 24px;
 }
+
+/* A long foe name stays on one line, centred over its bars, rather than wrapping onto the figure. */
+.stage .foe-tag .foe-name {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  white-space: nowrap;
+}

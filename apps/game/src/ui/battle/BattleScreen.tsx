@@ -199,10 +199,16 @@ export function BattleScreen({
   };
 
   // ───────────── feedback ─────────────
+  /** Floaters on the same spot at nearly the same moment stack downward instead of printing over each other. */
+  const floatSlots = useRef<{ x: number; y: number; at: number }[]>([]);
   const float = (u: Unit | [number, number], text: string, cls: string, delay = 0) => {
     const [x, y] = Array.isArray(u) ? u : chest(u);
     const id = ++uid;
-    setFloaters((f) => [...f, { id, x: x + (Math.random() * 40 - 20), y, text, cls, delay }]);
+    const at = Date.now() + delay;
+    floatSlots.current = floatSlots.current.filter((q) => q.at > Date.now() - 1000);
+    const crowd = floatSlots.current.filter((q) => q.x === x && q.y === y && Math.abs(q.at - at) < 600).length;
+    floatSlots.current.push({ x, y, at });
+    setFloaters((f) => [...f, { id, x: x + (Math.random() * 40 - 20), y: y + crowd * 96, text, cls, delay }]);
     later(1000 + delay, () => setFloaters((f) => f.filter((q) => q.id !== id)));
   };
   const spawnFx = (kind: Fx["kind"], at: [number, number], color: string, delay = 0) => {
