@@ -83,6 +83,24 @@ export function MapScreen() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [omenKey]);
+  // A Mystery turns itself over the moment you arrive: the tap on the stop was the choice, so no second tap to reveal it.
+  const turn = () => {
+    if (!reveal || reveal.open) return;
+    setReveal({ ...reveal, open: true });
+    if (reveal.node.encounter) sfx.telegraph();
+    else sfx.loot(3);
+    const n = reveal.node;
+    setTimeout(() => {
+      setReveal(null);
+      stepTo(n).catch((e) => toast((e as Error).message, "loss"));
+    }, n.encounter ? 1100 : 800);
+  };
+  useEffect(() => {
+    if (!reveal || reveal.open) return;
+    const t = setTimeout(turn, 220);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reveal]);
   const openLoom = () => setState({ attune: null, screen: "loom" });
   const moveOn = () => {
     setState({ attune: null });
@@ -110,14 +128,20 @@ export function MapScreen() {
   // A tap on a stop you can't reach yet says where you can go, and the reachable stops flash.
   const [nudge, setNudge] = useState(0);
   const Back = backdropFor(ex.plan.realmId, false)?.default;
-  const go = (n: MapNode) => {
+  const go = (n: MapNode): void => {
     if (reveal) return;
+    // A tap on a stop further on goes by the way there; when that way is a fight, say so, so a Shrine never seems to turn into a foe.
+    const by = (v: MapNode): void => {
+      if (n.layer > anchor && v.encounter && v.kind !== "mystery")
+        toast(`${withArticle(FOES[v.encounter.waves.flat()[0] as FoeKind]?.name ?? "Something")} stands between you and the ${n.label ?? KIND[n.kind]?.name ?? "stop"}.`);
+      return go(v);
+    };
     // With one way on there is no choice to make, so a tap on any stop takes that way.
-    if (reach.length === 1 && !next.has(n.id)) return go(reach[0]!);
+    if (reach.length === 1 && !next.has(n.id)) return by(reach[0]!);
     // A tap on a stop further on that only one glowing stop leads to takes that stop: the tap says where you want to go.
     if (!next.has(n.id) && n.layer > anchor) {
       const via = reach.filter((r) => leadsTo(r, n.id));
-      if (via.length === 1) return go(via[0]!);
+      if (via.length === 1) return by(via[0]!);
     }
     if (!next.has(n.id)) {
       if (n.layer > anchor) {
@@ -224,21 +248,10 @@ export function MapScreen() {
           <button
             className={`mystery-card ${reveal.open ? "open" : ""} ${reveal.node.encounter ? "ambush" : "cache"}`}
             data-testid="mystery-card"
-            onClick={() => {
-              if (reveal.open) return;
-              setReveal({ ...reveal, open: true });
-              if (reveal.node.encounter) sfx.telegraph();
-              else sfx.loot(3);
-              const n = reveal.node;
-              setTimeout(() => {
-                setReveal(null);
-                stepTo(n).catch((e) => toast((e as Error).message, "loss"));
-              }, n.encounter ? 1300 : 900);
-            }}
+            onClick={turn}
           >
             <span className="mc-back">
               <b>?</b>
-              <small>Tap to turn it over</small>
             </span>
             <span className="mc-face">
               {reveal.node.encounter ? (
@@ -251,7 +264,7 @@ export function MapScreen() {
                 <>
                   <i className="mc-glow">◈</i>
                   <b>A hidden cache</b>
-                  <small>Yours to take</small>
+                  <small>A Form to weave, and more</small>
                 </>
               )}
             </span>
@@ -352,7 +365,7 @@ export function MapScreen() {
                   <div style={{ width: `${(shown / ROOTS[r].hp) * 100}%` }} />
                 </div>
                 <span>
-                  {hp}/{ROOTS[r].hp}
+                  {hp}/{ROOTS[r].hp} health
                 </span>
                 {gain !== 0 && <b key={`${hp}-${was}`} className={`mp-delta ${gain > 0 ? "up" : "down"}`}>{gain > 0 ? `+${gain}` : gain}</b>}
               </div>

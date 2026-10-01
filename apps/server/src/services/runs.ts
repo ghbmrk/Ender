@@ -80,7 +80,9 @@ function encounterFor(r: Rng, realm: RealmTemplate, kind: NodeKind, layer: numbe
   const difficulty = realm.difficulty;
   if (kind === "combat" || kind === "mystery") {
     const waves = [normalWave(r, realm, layer >= 2 ? 3 : 2)];
-    if (layer >= 2 && r.chance(0.3)) waves.push(normalWave(r, realm, 2));
+    // At most three duels in one ordinary fight, so a single stop can't bleed a hero dry.
+    const room = 3 - waves[0]!.length;
+    if (layer >= 2 && room > 0 && r.chance(0.3)) waves.push(normalWave(r, realm, Math.min(2, room)));
     return { waves, difficulty, seed };
   }
   if (kind === "elite") return { waves: [[r.pick(["ironbound", "cinder", "matron"] as const), ...normalWave(r, realm, 2).slice(0, 2)]], difficulty, seed };
@@ -198,8 +200,9 @@ export function rollNodeLoot(ctx: Ctx, plan: RunPlan, node: MapNode, discoveryBo
     if (cls !== "essence") loot.forms = [pickForm(1, 0)];
     loot.xp = RANK_XP.combat;
   } else if (node.kind === "mystery") {
-    // A quiet Mystery: a small cache, sometimes a curio.
+    // A quiet Mystery: a cache that always holds a Form to weave, so the gamble pays in the currency that grows the hero.
     loot.crowns = r.int(10, 20);
+    loot.forms = [pickForm(2, 0)];
     loot.essences = essenceDrop(r, realm, 2, glut);
     if (r.chance(0.25)) loot.currency = r.pick(Object.keys(CURRENCIES) as CurrencyId[]);
   }

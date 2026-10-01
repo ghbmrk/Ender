@@ -742,6 +742,15 @@ export class Battle {
     }
     if (!this.living("foe").length && !this.reactions.length) {
       if (this.waveIndex + 1 < this.setup.waves.length) {
+        // In a duel the next foe steps up only after the hero catches a breath, so a fight of several foes is a run of duels, not one long bleed.
+        if (this.setup.fieldCap === 1)
+          for (const u of this.living("party")) {
+            const amount = Math.min(u.maxHp - u.hp, Math.round(u.maxHp * RULES.duelBreath));
+            if (amount > 0) {
+              u.hp += amount;
+              events.push({ type: "heal", source: u.id, target: u.id, amount });
+            }
+          }
         const units = this.spawnWave(this.waveIndex + 1);
         events.push({ type: "wave", index: this.waveIndex, units });
       } else {

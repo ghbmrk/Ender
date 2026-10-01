@@ -158,6 +158,8 @@ export const RULES = {
   initiativeCap: 0.4,
   reviveFraction: 0.25,
   restFraction: 0.2,
+  /** Health a hero mends between the duels of one fight. */
+  duelBreath: 0.12,
 };
 export type StatusId = "marked" | "slow" | "fracture" | "burn" | "poison";
 export const STATUS_NAMES: Record<StatusId, string> = { marked: "Marked", slow: "Slow", fracture: "Fracture", burn: "Burn", poison: "Poison" };

@@ -1332,7 +1332,19 @@
   .battle .unit.foe.enraged::after { animation: none; opacity: 0.8; }
 }
 
-/* With nothing to place, the Forms tray is one line and the board gets the room. */
+/* With nothing to place, the summary sits on the Continue bar. */
+.loom-screen .loom-lower.bare {
+  justify-content: flex-end;
+}
+/* With nothing to place there is no tray; dragging a Form off the board raises one above the summary to drop it in. */
+.loom-screen .loom-lower .tray.empty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 16px);
+  height: 170px;
+  flex: none;
+}
 .loom-screen .loom-lower .tray.empty .tray-empty {
   padding: 8px 4px;
 }

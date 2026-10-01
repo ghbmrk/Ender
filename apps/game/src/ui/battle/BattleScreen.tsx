@@ -820,8 +820,13 @@ export function BattleScreen({
   };
   const onStageDown = (e: React.PointerEvent) => {
     const s = seq.current;
-    // While a lesson holds the blow for its defence, a tap anywhere is that defence: a miss of the button never strands the player.
-    if (s?.k === "defend" && s.frozenAt) return unfreeze(s, lesson?.step === "parry" ? "parry" : "dodge");
+    // While a lesson holds the blow, a near miss of the buttons (anywhere on the right half, where they sit) still counts,
+    // so the player is never stranded; a tap elsewhere only repeats the prompt, so no stray tap earns a Perfect.
+    if (s?.k === "defend" && s.frozenAt) {
+      if (toStage(e.clientX, e.clientY).x >= 540) return unfreeze(s, lesson?.step === "parry" ? "parry" : "dodge");
+      said.current.delete("now");
+      return say("now");
+    }
     if (!s || s.k !== "attack") return;
     const p = toStage(e.clientX, e.clientY);
     pressAttack(s, elapsedAt(s, e), { x: p.x, y: p.y - worldTop });
@@ -1329,7 +1334,7 @@ function HeroBadge({ u, others, impacts, art }: { u: Unit; others: Unit[]; impac
       </div>
       <div className="hb-hp">
         <b>{Math.round(u.hp)}</b>
-        <small>of {u.maxHp}</small>
+        <small>of {u.maxHp} health</small>
       </div>
       {others.length > 0 && (
         <div className="hb-others">

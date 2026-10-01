@@ -50,12 +50,12 @@ const hexPath = (x: number, y: number, s: number) =>
 let TRAY_TOP = 1150;
 /** Room kept above the Forms tray for the lesson's tip, so it never covers the board or the tray. */
 const COACH_ROOM = 250;
-function fitLoom(stageH: number, tabs: boolean, emptyTray = false, coach = false) {
+function fitLoom(stageH: number, tabs: boolean, bareRows = 0, coach = false) {
   // The lower block (Forms tray + skills summary, ~600) sits on the Continue bar; the board fills and centres in
   // what is left above it. A radius-2 board is 8.66 hexes tall and 8 wide. With no Forms to place, the tray
-  // shrinks to one line rather than leaving an empty box.
+  // goes and only the skills summary stays, so the board gets the room.
   const head = tabs ? 290 : 170;
-  TRAY_TOP = stageH - 178 - (emptyTray ? 290 : 600);
+  TRAY_TOP = stageH - 178 - (bareRows ? 60 + 48 * bareRows : 600);
   // Up to 150: on a tall phone the locked outer ring may bleed off the sides so the cells you use are bigger.
   const foot = TRAY_TOP - (coach ? COACH_ROOM : 0);
   HEX = Math.round(Math.min(150, (foot - head - 30) / 8.66));
@@ -103,7 +103,6 @@ export function LoomScreen() {
   const afterFight = useStore((s) => s.afterFight) && !DEMO;
   const spoils = useStore((s) => s.rewards);
   const [raw, setRaw] = useState<any[]>([]);
-  fitLoom(stageH, roots.length > 1, !pool.length && !raw.length && !lesson, !!lesson);
   const [weaving, setWeaving] = useState<any | null>(null);
   /** A pool node (by Form id) waiting for the player to tap a cell. */
   const [placing, setPlacing] = useState<string | null>(null);
@@ -119,6 +118,8 @@ export function LoomScreen() {
 
   const nodes = layout[hero] ?? [];
   const compiled = useMemo(() => compileLoom(nodes, rank), [nodes, rank]);
+  const rows = Math.max(1, compiled.actions.length) + (compiled.reactions.length ? 1 : 0) + (compiled.keystone ? 1 : 0);
+  fitLoom(stageH, roots.length > 1, !pool.length && !raw.length && !lesson ? rows : 0, !!lesson);
 
   // What the board would compile to if the dragged node were dropped where it hovers (§93–94).
   const preview = useMemo(() => {
@@ -473,7 +474,9 @@ export function LoomScreen() {
         return <div key={n.id} className="node-hit" style={{ left: x - HEX * 0.8, top: y - HEX * 0.8, width: HEX * 1.6, height: HEX * 1.6 }} onPointerDown={(e) => down(e, n, "board")} data-testid={`node-${n.id}`} />;
       })}
 
-      <div className="loom-lower" style={{ top: TRAY_TOP }}>
+      <div className={`loom-lower ${!pool.length && !raw.length ? "bare" : ""}`} style={{ top: TRAY_TOP }}>
+      {/* With nothing to place, no tray: it shows only while a Form is dragged off the board, as the place to drop it. */}
+      {(pool.length > 0 || raw.length > 0 || drag?.moved) && (
       <div className={`tray ${!pool.length && !raw.length ? "empty" : ""} ${drag?.moved && drag.over === "tray" ? "hover" : ""}`} onPointerDown={trayDown}>
         <div className="tray-label">
           Forms {(raw.length > 0 || pool.length > 0) && <span className="dim">· {raw.length ? "tap a new Form to weave it" : placing ? "tap a glowing cell" : "tap or drag onto the Loom"}</span>}
@@ -490,7 +493,7 @@ export function LoomScreen() {
               <div className="tray-name">{a.tier === "veiled" ? "New Form" : a.name}</div>
             </div>
           ))}
-          {pool.length === 0 && raw.length === 0 && <div className="tray-empty">{afterFight ? "All woven. Your new skills are ready for the next fight." : "No new Forms. Win fights to find them."}</div>}
+          {pool.length === 0 && raw.length === 0 && <div className="tray-empty">Drop here to take it off the Loom</div>}
           {pool.map((n) => (
             <div key={n.id} className={`tray-item ${placing === n.formId ? "picked" : ""} ${lesson && n.id === lessonForm?.id && hero === mine ? "coach-pulse" : ""}`} onPointerDown={(e) => down(e, n, "pool")} data-testid={`pool-${n.id}`}>
               <svg viewBox="-80 -80 160 160" width={150} height={150}>
@@ -501,6 +504,7 @@ export function LoomScreen() {
           ))}
         </div>
       </div>
+      )}
 
       <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} power={ROOTS[hero].basic} />
       </div>

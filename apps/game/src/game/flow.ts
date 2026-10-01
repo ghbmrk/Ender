@@ -145,7 +145,11 @@ export async function stepTo(node: MapNode) {
     setState({ loomEditable: true, attune: { forms: raw + pool } });
   }
   else if (node.kind === "bazaar" || node.kind === "contract") setState({ panel: "bazaar", bazaarTab: node.kind === "contract" ? "contracts" : "market" });
-  if (out?.rewards && hasRewards(out.rewards)) setState({ rewards: { ...out.rewards, title: out.title ?? "Found" }, panel: node.kind === "mystery" ? "rewards" : getState().panel });
+  if (out?.rewards && hasRewards(out.rewards)) {
+    const rewards = { ...out.rewards, title: out.title ?? "Found" };
+    // A Mystery's cache tallies in the passing strip, like a fight's spoils: no panel to dismiss.
+    setState(node.kind === "mystery" ? { rewards, spoils: { ...rewards, at: Date.now() } } : { rewards });
+  }
   if (out?.encounter) setState({ battle: { nodeId: node.id, kind: "combat", waves: out.encounter.waves, difficulty: out.encounter.difficulty }, screen: "battle" });
 }
 
