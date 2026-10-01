@@ -1905,3 +1905,11 @@
 .crossing .backdrop.hub-painted::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 55% 60%,transparent 40%,#0b0a1088 100%),linear-gradient(180deg,#0b0a1066 0%,transparent 20%,transparent 80%,#0b0a10aa 100%);pointer-events:none}
 .crossing:has(.hub-painted) .station{width:400px;box-sizing:border-box}
 .crossing:has(.hub-painted) .station .st-name{white-space:nowrap}
+
+/* Loop 57: the painted Crossing breathes: window light swells and embers drift up the lane. */
+.hub-amb{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.hub-glow{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,180,90,.32),rgba(255,150,60,.12) 40%,transparent 70%);mix-blend-mode:screen;animation:hub-breathe 5.5s ease-in-out infinite alternate}
+@keyframes hub-breathe{0%{opacity:.45}40%{opacity:.9}55%{opacity:.7}100%{opacity:1}}
+.hub-mote{position:absolute;top:1900px;border-radius:50%;background:#ffd08a;box-shadow:0 0 12px 3px rgba(255,190,100,.7);opacity:0;animation:hub-rise 10s linear infinite}
+@keyframes hub-rise{0%{transform:translate(0,0);opacity:0}10%{opacity:.85}50%{transform:translate(40px,-700px)}90%{opacity:.6}100%{transform:translate(-30px,-1400px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.hub-glow,.hub-mote{animation:none}.hub-mote{display:none}}

@@ -117,6 +117,7 @@ export function Crossing() {
       <div className="world" style={{ top: worldTop }}>
         <div className={`backdrop ${painted ? "hub-painted" : ""}`}>
           <SceneBackdrop id="crossing" Drawn={Back} />
+          {painted && <HubAmbience />}
         </div>
         {shown.map((s) => (
           <button
@@ -166,6 +167,28 @@ export function Crossing() {
           Set out
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Window light that breathes, and embers drifting up the lane: the painted square, alive. Transform and opacity only. */
+const GLOWS = [
+  [150, 560, 260],
+  [330, 1150, 230],
+  [700, 660, 200],
+  [930, 1150, 220],
+  [560, 1290, 160],
+] as const;
+const MOTES = Array.from({ length: 16 }, (_, i) => ({ x: (i * 397) % 1000 + 40, delay: -((i * 1.7) % 11), dur: 9 + ((i * 13) % 7), size: 9 + ((i * 7) % 8) }));
+function HubAmbience() {
+  return (
+    <div className="hub-amb" aria-hidden>
+      {GLOWS.map(([x, y, r], i) => (
+        <i key={`g${i}`} className="hub-glow" style={{ left: x - r, top: y - r, width: r * 2, height: r * 2, animationDelay: `${-i * 1.3}s` }} />
+      ))}
+      {MOTES.map((m, i) => (
+        <i key={`m${i}`} className="hub-mote" style={{ left: m.x, width: m.size, height: m.size, animationDelay: `${m.delay}s`, animationDuration: `${m.dur}s` }} />
+      ))}
     </div>
   );
 }
