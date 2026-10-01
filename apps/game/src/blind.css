@@ -56,3 +56,5 @@
 .stage .battle .bpanel.arc .tap-anywhere {
   top: -520px;
 }
+/* Which foe of the fight this is, beside its name: "2 of 2" says a new foe stepped in, not that the old one changed. */
+.stage .foe-tag .foe-count { margin-left: 14px; font-size: 36px; color: var(--gold-1); opacity: .85; letter-spacing: .04em; }

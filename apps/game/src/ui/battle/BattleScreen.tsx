@@ -960,7 +960,7 @@ export function BattleScreen({
                 <div className="bob">
                   <Fig bake art={artOf(u)} look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${artOf(u) ? "" : u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
                 </div>
-                {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} />}
+                {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} count={duel && setup.waves.length > 1 ? `${battle.waveIndex + 1} of ${setup.waves.length}` : undefined} />}
                 {u.side === "party" && <HeroTag u={u} h={figureBox(u.figure, figScale(u)).h} />}
               </div>
             );
@@ -1209,7 +1209,7 @@ function Statuses({ u, named }: { u: Unit; named?: boolean }) {
 /** Matches .foe-tag's width in frame.css, so tags near the edges stay on screen. */
 const FOE_TAG_W = 300;
 
-function FoeTag({ u, h, x }: { u: Unit; h: number; x: number }) {
+function FoeTag({ u, h, x, count }: { u: Unit; h: number; x: number; count?: string }) {
   // Keep the tag on screen near the edges.
   const left = Math.max(10, Math.min(1070 - FOE_TAG_W, x - FOE_TAG_W / 2)) - x;
   return (
@@ -1217,6 +1217,8 @@ function FoeTag({ u, h, x }: { u: Unit; h: number; x: number }) {
       <div className="foe-name">
         {u.name}
         {u.tier === "elite" && <span className="elite-mark">elite</span>}
+        {/* Which foe of the fight this is, always on show: a banner alone is gone before a new foe is read as the old one changing. */}
+        {count && <span className="foe-count">{count}</span>}
       </div>
       <Bar v={u.hp} max={u.maxHp} cls="hp" />
       <div className="foe-hp-num">
