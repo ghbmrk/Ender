@@ -105,40 +105,47 @@
   text-shadow: 0 2px 8px #000;
 }
 
-/* Sign in: the Crossing's bottom plate and its gold button, full width under the thumb. */
+/* Sign in with ChatGPT: a standard provider button, deliberately outside the game's theme so it reads as the
+   familiar sign-in. Black pill, white OpenAI mark and label in the system UI face; the mark is used only in
+   black or white, at its own proportions. In stage units: 150 tall is about 54pt. */
 .keyart .ka-foot {
   position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: calc(24px + var(--safe-b, 0px));
-  padding: 18px;
-  border: 6px solid transparent;
-  border-radius: 24px;
-  background:
-    var(--leather) padding-box,
-    var(--metal) border-box;
-  box-shadow: 0 0 0 3px var(--ink-deep), inset 0 0 26px #000b, 0 14px 30px #000c;
+  left: 60px;
+  right: 60px;
+  bottom: calc(70px + var(--safe-b, 0px));
 }
-.stage .keyart button.ka-signin {
+.stage .keyart button.oauth-chatgpt {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 26px;
+  gap: 28px;
   width: 100%;
+  min-width: 0;
   min-height: 150px;
-  padding: 0 40px;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 60px;
-  letter-spacing: 0.04em;
+  padding: 0 48px;
+  border: 3px solid #ffffff33;
+  border-radius: 999px;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+  font-size: 52px;
+  letter-spacing: 0;
+  text-transform: none;
+  text-shadow: none;
+  box-shadow: 0 12px 30px #000c;
 }
-.stage .keyart button.ka-signin:disabled {
+.stage .keyart button.oauth-chatgpt:active:not(:disabled) {
+  background: #1f1f1f;
+  transform: scale(0.98);
+}
+.stage .keyart button.oauth-chatgpt:disabled {
   opacity: 1;
 }
-.keyart .ka-mark {
+.keyart .oa-mark {
   flex: none;
 }
-.stage .keyart button.ka-signin.going .ka-mark {
+.stage .keyart button.oauth-chatgpt.going .oa-mark {
   animation: signin-wait 0.9s ease-in-out infinite alternate;
 }
 @media (prefers-reduced-motion: reduce) {

@@ -42,7 +42,7 @@ export function Landing() {
     going.current = false;
   };
   // One composition, like the game's own key art: the painting fills the screen, the title sits in the storm at
-  // the top, and Sign in sits on the same gilt plate as the Crossing's buttons, in the thumb zone.
+  // the top, and the standard Sign in with ChatGPT button sits in the thumb zone.
   return (
     <div className="landing keyart" data-testid="landing" onClick={begin}>
       <CoverPainting />
@@ -51,9 +51,10 @@ export function Landing() {
         <p className="ka-tagline">You never earn a skill. You make one.</p>
       </header>
       <footer className="ka-foot">
-        <button className={`primary ka-signin ${busy ? "going" : ""}`} disabled={busy} onClick={begin} aria-label="Sign in with ChatGPT" data-testid="sign-in">
-          <OpenAIMark size={64} className="ka-mark" />
-          <span>{busy ? "Entering…" : "Sign in"}</span>
+        {/* A standard provider sign-in button, not themed: black pill, the OpenAI mark in white, the provider's name. */}
+        <button className={`oauth-chatgpt ${busy ? "going" : ""}`} disabled={busy} onClick={begin} data-testid="sign-in">
+          <OpenAIMark size={60} className="oa-mark" />
+          <span>{busy ? "Signing in…" : "Sign in with ChatGPT"}</span>
         </button>
       </footer>
     </div>
