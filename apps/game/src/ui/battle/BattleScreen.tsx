@@ -100,7 +100,7 @@ const RIDER_SHORT: Record<string, string> = {
   flex: "Perfect timing: act sooner",
   bond: "gives an ally 1 AP",
 };
-const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PERFECT PARRY", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "DODGE", hit: "HIT" };
+const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PARRY! COUNTER", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "DODGE", hit: "HIT" };
 const STATUS_GLYPH: Record<string, string> = { marked: "◎", slow: "≋", fracture: "⟋", burn: "♨", poison: "☠" };
 
 type CamKick = "shake" | "big" | "punch" | "finale";
@@ -949,7 +949,7 @@ export function BattleScreen({
               <button className={`def-btn round parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} style={at(ARC.parry)} onPointerDown={press("parry")} aria-disabled={!live} data-testid={live ? "parry" : undefined}>
                 <span className="def-glyph">⚔</span>
                 Parry
-                {live && <small>tight · +1 AP</small>}
+                {live && <small>perfect · counter</small>}
               </button>
             )}
           </div>
@@ -1026,7 +1026,7 @@ function defeatTip(battle: Battle): string {
   const foe = battle.foes().find((f) => f.alive) ?? battle.foes()[0];
   const blurb = foe ? FOES[foe.kind as FoeKind]?.blurb.replace(/^Boss\.\s*/, "") : undefined;
   if (battle.stats.perfects === 0) return "Tap as the closing ring meets the mark: a Perfect strike hits much harder.";
-  if (battle.stats.parries === 0) return `Try Parry when you know the beat. It's tight, but it gives AP and Breaks the foe.${blurb ? ` ${foe!.name}: ${blurb}` : ""}`;
+  if (battle.stats.parries === 0) return `Try Parry when you know the beat. Only a perfect one counts, but it strikes back, gives AP and Breaks the foe.${blurb ? ` ${foe!.name}: ${blurb}` : ""}`;
   if (blurb) return `${foe!.name}: ${blurb}`;
   return "Weave the Forms you find on the Loom. New skills hit harder.";
 }
@@ -1353,7 +1353,7 @@ function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq 
     const acts = b.actionsOf(phase.actor);
     const cheapest = Math.min(...acts.map((a) => b.costOf(phase.actor, a.nodeId)));
     text = acts.length && u.ap < cheapest ? "Basic builds AP. Your crafted Actions spend it." : duel ? "" : "Tap a foe to target, then a command.";
-  } else if (phase.k === "defend" && s?.k === "defend") text = s.impacts.length > 1 ? `${s.impacts.length} blows: defend each one` : "Dodge is forgiving. Parry is tight but earns AP.";
+  } else if (phase.k === "defend" && s?.k === "defend") text = s.impacts.length > 1 ? `${s.impacts.length} blows: defend each one` : "Dodge is forgiving and avoids the hit. Parry must be perfect, and strikes back.";
   if (!text) return null;
   return (
     <div className={`hint ${fresh ? "fresh" : ""}`} style={{ top }} key={fresh ?? "hint"}>
@@ -1390,7 +1390,10 @@ function CueBands({ kind, at: [cx, cy] }: { kind: "attack" | "defend"; at: [numb
   return (
     <g className="cues">
       <circle cx={cx} cy={cy} r={mid(band.outer)} fill="none" stroke={attack ? "#ecc56a" : "#86c6f2"} strokeWidth={wid(band.outer)} opacity={0.22} />
-      <circle cx={cx} cy={cy} r={mid(band.inner)} fill="none" stroke="#ecc56a" strokeWidth={wid(band.inner)} opacity={0.4} />
+      <circle cx={cx} cy={cy} r={mid(band.inner)} fill="none" stroke="#ecc56a" strokeWidth={wid(band.inner)} opacity={attack ? 0.4 : 0.55} />
+      {/* Defending, the Parry band is the narrow gold one inside the wide blue Dodge band: edge it so it reads as its own target. */}
+      {!attack && <circle cx={cx} cy={cy} r={band.inner[0]} fill="none" stroke="#fbe8b0" strokeWidth={4} opacity={0.8} />}
+      {!attack && <circle cx={cx} cy={cy} r={band.inner[1]} fill="none" stroke="#fbe8b0" strokeWidth={4} opacity={0.8} />}
       <circle cx={cx} cy={cy} r={MARK_R} fill="none" stroke="#1d1822" strokeWidth={12} opacity={0.85} />
     </g>
   );
