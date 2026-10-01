@@ -29,9 +29,14 @@ const orList = (xs: string[]): string => {
   const u = [...new Set(xs)];
   return u.length < 2 ? (u[0] ?? "") : `${u.slice(0, -1).join(", ")} or ${u[u.length - 1]}`;
 };
-/** "the glowing Mystery or Shrine", or "a glowing Fight" when two stops share a name. */
+/** "the glowing Mystery or Shrine"; stops that share a name are told apart by their foe ("the glowing Wisp Fight or Seer Fight"). */
 const glowing = (ns: MapNode[]): string => {
-  const names = ns.map(stopName);
+  let names = ns.map(stopName);
+  if (new Set(names).size < names.length)
+    names = ns.map((n) => {
+      const foe = n.encounter ? FOES[n.encounter.waves.flat()[0] as FoeKind]?.name : undefined;
+      return foe ? `${foe} ${stopName(n)}` : stopName(n);
+    });
   return `${new Set(names).size < names.length ? "a" : "the"} glowing ${orList(names)}`;
 };
 /** Whether a path of links runs from one stop to another further on. */

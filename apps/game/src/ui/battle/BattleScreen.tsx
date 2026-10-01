@@ -857,7 +857,9 @@ export function BattleScreen({
 
   // ───────────── input ─────────────
   // Time starts again from the frozen moment of a lesson's blow, and the press is judged right there.
+  const heldMisses = useRef(0);
   const unfreeze = (live: DefendSeq, kind: "parry" | "dodge") => {
+    heldMisses.current = 0;
     const t = elapsed(live);
     live.t0 += performance.now() - live.frozenAt!;
     live.frozenAt = undefined;
@@ -879,6 +881,8 @@ export function BattleScreen({
         if (d < r.width * 1.6 && (!near || d < near.d)) near = { kind: b.classList.contains("parry") ? "parry" : "dodge", d };
       }
       if (near) return unfreeze(s, near.kind);
+      // A lesson never strands anyone: after a few misses the tap that comes next is taken as the taught defence.
+      if ((heldMisses.current = heldMisses.current + 1) >= 4) return unfreeze(s, drillRef.current ?? (lesson?.step === "parry" ? "parry" : "dodge"));
       said.current.delete("now");
       return say("now");
     }

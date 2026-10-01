@@ -357,6 +357,8 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
   };
   // A single new Form still to weave: the tray around it and the tip that names it both open it.
   const soleRaw = raw.length === 1 && !pool.length ? raw[0] : null;
+  // The lesson's skill is made and the next step is Fight: the tip and the skills summary both take that step.
+  const lessonDone = !!(lesson && lessonSkill && (boosted || !lessonMod));
   const openSoleRaw = soleRaw ? () => (sfx.tap(), setWeaving(soleRaw)) : undefined;
   // With a single Form in the tray, the whole tray is its handle.
   const trayDown = (e: React.PointerEvent) => {
@@ -542,9 +544,12 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
       </div>
       )}
 
-      <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} power={ROOTS[hero].basic} />
+      {/* With the lesson's skill made, the skills summary just above Fight is Fight too: thumbs aiming for the button land on it. */}
+      <div onClick={lessonDone ? () => goTo("skill") : undefined} style={lessonDone ? { cursor: "pointer" } : undefined}>
+        <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} power={ROOTS[hero].basic} />
       </div>
-      {coach && !drag?.moved && !weaving && <Coach text={coach.text} key={coach.text} style={{ bottom: 1920 - TRAY_TOP + 16 }} onTap={openSoleRaw} />}
+      </div>
+      {coach && !drag?.moved && !weaving && <Coach text={coach.text} key={coach.text} style={{ bottom: 1920 - TRAY_TOP + 16 }} onTap={openSoleRaw ?? (lessonDone ? () => goTo("skill") : undefined)} />}
 
       {drag?.moved && (
         <svg className="drag-ghost" viewBox="0 0 1080 1920">
