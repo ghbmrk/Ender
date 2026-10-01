@@ -30,3 +30,15 @@ writeFileSync(
 writeFileSync(resolve(dist, "artifact.html"), `${title}\n${style}\n${root}\n${script}\n`);
 const mb = (s: string) => (Buffer.byteLength(s) / 1e6).toFixed(2);
 console.log(`ender.html + artifact.html written (${mb(js)} MB script, ${mb(css)} MB css)`);
+
+// The split build (apps/game/dist-split): a small first script that draws the title, with the rest fetched beside it.
+// artifact.html is its body fragment; the files under assets/ are published next to it.
+const split = resolve(ROOT, "apps/game/dist-split");
+const shtml = readFileSync(resolve(split, "index.html"), "utf8");
+const head = shtml.match(/<head>([\s\S]*?)<\/head>/)?.[1] ?? "";
+const links = head
+  .split("\n")
+  .map((l) => l.trim())
+  .filter((l) => /^<(script|link rel="(stylesheet|modulepreload)")/.test(l));
+writeFileSync(resolve(split, "artifact.html"), `${title}\n${links.join("\n")}\n${root}\n`);
+console.log(`dist-split/artifact.html written (${readdirSync(resolve(split, "assets")).length} supporting files)`);

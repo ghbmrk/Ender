@@ -20,7 +20,7 @@ const shot = (n) => page.screenshot({ path: `${shots}/${n}.png` });
 const tid = (t) => `[data-testid="${t}"]`;
 const visible = async (sel) => (await page.$(sel)) !== null;
 
-await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html") + "?autoplay=1");
+await page.goto((process.env.PAGE ?? "file://" + resolve(root, "apps/game/dist-web/ender.html")) + "?autoplay=1");
 await page.waitForSelector(tid("sign-in"), { timeout: 60000 });
 await shot("flow-landing");
 // Signing in leads straight into the game: with the prologue done, that is the Crossing.

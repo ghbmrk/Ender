@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "dev:web": "vite --mode web",
-    "build:web": "vite build --mode web --outDir dist-web --base ./"
+    "build:web": "vite build --mode web --outDir dist-web --base ./",
+    "build:split": "vite build --mode split --outDir dist-split --base ./"
   },
   "dependencies": {
     "@ender/battle": "workspace:*",

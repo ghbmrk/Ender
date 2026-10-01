@@ -23,7 +23,7 @@
     "fixtures:list": "tsx scripts/fixture-list.ts",
     "fixtures:validate": "tsx scripts/fixture-validate.ts",
     "fixtures:collect": "tsx scripts/fixture-collect.ts",
-    "build:web": "pnpm --filter @ender/game build:web && tsx scripts/bundle-web.ts",
+    "build:web": "pnpm --filter @ender/game build:web && pnpm --filter @ender/game build:split && tsx scripts/bundle-web.ts",
     "dev:web": "pnpm --filter @ender/game dev:web",
     "check:latency": "node scripts/latency.mjs"
   },
