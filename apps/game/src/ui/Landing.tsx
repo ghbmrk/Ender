@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { savedStep, tutorialDone } from "../game/tutorial";
-import { paintedBackdrop, paintedCard } from "../art/painted";
+import { paintedBackdrop, paintedFigure } from "../art/painted";
 import { setState } from "../state/store";
-import { Fig, Head } from "./battle/Figure";
+import { Fig } from "./battle/Figure";
 import { sfx } from "./battle/sfx";
-import { useWorldTop } from "./Stage";
 
 /**
- * The first screen anyone sees. Behind the title a short reel loops: a fight (a timed strike, a parry,
- * a crafted skill), then a Loom being woven. The title and the button sit in darkened bands so they stay
- * legible over it. Sign-in is a placeholder: the button simply begins.
+ * The first screen anyone sees, laid out like the cover of an old fantasy rulebook: a title block on
+ * aged card, one big framed painting of a torchlit temple, and a line of cover copy. The painting is
+ * alive: torchlight flickers, embers rise and the idol's gem eyes smoulder. Sign-in is a placeholder;
+ * the button simply begins.
  */
 export function Landing() {
-  const worldTop = useWorldTop();
   const [hasSave, setHasSave] = useState(false);
   useEffect(() => {
     api
@@ -32,49 +31,18 @@ export function Landing() {
     // A returning player picks their hero; a new one goes straight into making one.
     setState({ screen: returning ? "title" : "create" });
   };
-  const fightBg = paintedBackdrop("ashen-vault");
   return (
-    <div className="landing" data-testid="landing">
-      <div className="world" style={{ top: worldTop }}>
-        <div className="reel reel-fight">
-          {fightBg && <img className="reel-bg" src={fightBg} alt="" draggable={false} />}
-          <div className="rf-foe" style={{ left: 760, top: 1330 }}>
-            <div className="rf-foe-move">
-              <Fig figure="wyrm" scale={2.3} />
-            </div>
-          </div>
-          <div className="rf-hero" style={{ left: 290, top: 1580 }}>
-            <div className="rf-hero-move">
-              <Fig bake figure="binder" scale={2.05} />
-            </div>
-          </div>
-          <div className="rf-ring" style={{ left: 770, top: 1000 }} />
-          <div className="rf-slash" style={{ left: 770, top: 1000 }} />
-          <div className="rf-burst" style={{ left: 770, top: 1000 }} />
-          <div className="rf-parry" style={{ left: 330, top: 1250 }} />
-          <div className="rf-pop rf-dmg1" style={{ left: 770, top: 780 }}>142</div>
-          <div className="rf-pop rf-perfect" style={{ left: 770, top: 720 }}>
-            Perfect!
-            <small>214</small>
-          </div>
-          <div className="rf-pop rf-parried" style={{ left: 330, top: 960 }}>Parry</div>
-          <div className="rf-pop rf-skill" style={{ left: 770, top: 700 }}>
-            <small>Crush</small>
-            286
-          </div>
-        </div>
-        <div className="reel reel-loom">
-          {fightBg && <img className="reel-bg loom-bg" src={fightBg} alt="" draggable={false} />}
-          <LoomReel />
-        </div>
+    <div className="landing cover" data-testid="landing">
+      <header className="cv-head">
+        <div className="cv-series">A Book of Making</div>
+        <h1 className="cv-title">Ender</h1>
+        <div className="cv-sub">Adventurer’s Handbook</div>
+      </header>
+      <div className="cv-art">
+        <CoverPainting />
       </div>
-      <div className="landing-fade top" />
-      <div className="landing-fade bottom" />
-      <div className="title-card landing-card">
-        <h1>ENDER</h1>
-        <p className="tagline">You never earn a skill. You make one.</p>
-      </div>
-      <div className="title-actions landing-actions">
+      <p className="cv-copy">Everything a hero needs to make their own skills, and to live long enough to use them.</p>
+      <div className="cv-actions">
         <button className="big primary landing-signin" onClick={begin} data-testid="sign-in">
           Sign in with ChatGPT
         </button>
@@ -83,58 +51,47 @@ export function Landing() {
   );
 }
 
-/** Pointy-top hexes, as on the Loom: neighbours sit at ±√3·R across and 1.5·R up or down. */
-const R = 160;
-const DX = Math.sqrt(3) * R;
-const CX = 540;
-const CY = 1030;
-const CELLS: [number, number][] = [
-  [0, 0],
-  [1, 0],
-  [-1, 0],
-  [0.5, -1],
-  [-0.5, -1],
-  [0.5, 1],
-  [-0.5, 1],
-];
-const NODES: { at: number; art: string; glyph: string; name: string; n?: string; kind: "action" | "mod" | "react" }[] = [
-  { at: 1, art: "burden", glyph: "▲", name: "Crush", n: "78", kind: "action" },
-  { at: 3, art: "flex", glyph: "✦", name: "+Damage", kind: "mod" },
-  { at: 5, art: "veil", glyph: "✧", name: "+Crits", kind: "mod" },
-  { at: 4, art: "reach", glyph: "◆", name: "Riposte", kind: "react" },
-];
-
-function LoomReel() {
-  const pos = (i: number) => {
-    const [q, r] = CELLS[i]!;
-    return { left: CX + q * DX, top: CY + r * 1.5 * R };
-  };
+/** The painting: a dedicated cover piece when one has been rendered, else one composed from the game's art. */
+function CoverPainting() {
+  const cover = paintedBackdrop("cover");
+  const hall = paintedBackdrop("throne");
+  const idol = paintedFigure("king");
+  const embers = Array.from({ length: 14 }, (_, i) => i);
   return (
-    <>
-      <div className="rl-glow" style={{ left: CX, top: CY }} />
-      {CELLS.map((_, i) => (
-        <div key={i} className="rl-cell" style={pos(i)} />
-      ))}
-      <div className="rl-hex rl-core" style={pos(0)}>
-        <div className="rl-head">
-          <Head figure="binder" size={160} />
-        </div>
-      </div>
-      {NODES.map((nd, i) => {
-        const art = paintedCard(nd.art);
-        return (
-          <div key={nd.name} className={`rl-node rl-n${i} ${nd.kind}`} style={pos(nd.at)}>
-            <div className="rl-hex" style={art ? { backgroundImage: `url(${art})` } : undefined}>
-              <span className="rl-glyph">{nd.glyph}</span>
-              {nd.n && <span className="rl-num">{nd.n}</span>}
-              <span className="rl-name">{nd.name}</span>
+    <div className="cv-paint">
+      {cover ? (
+        <img className="cv-bg" src={cover} alt="" draggable={false} />
+      ) : (
+        <>
+          {hall && <img className="cv-bg composed" src={hall} alt="" draggable={false} />}
+          <div className="cv-dais" />
+          {idol && (
+            <div className="cv-idol">
+              <img src={idol} alt="" draggable={false} />
+              <span className="cv-eye l" />
+              <span className="cv-eye r" />
+            </div>
+          )}
+          <div className="cv-party">
+            <div className="cv-climber">
+              <Fig bake figure="ranger" scale={0.95} />
+            </div>
+            <div style={{ position: "absolute", left: 330, bottom: 0 }}>
+              <Fig bake figure="warden" scale={1.6} />
+            </div>
+            <div style={{ position: "absolute", left: 150, bottom: -20 }}>
+              <Fig bake figure="binder" scale={1.75} />
             </div>
           </div>
-        );
-      })}
-      <div className="rl-result" style={{ left: CX, top: CY + 430 }}>
-        <b>▲ Crush</b> 78 → <em>131 damage</em> ✦
+        </>
+      )}
+      <div className="cv-torch" />
+      <div className="cv-embers">
+        {embers.map((i) => (
+          <span key={i} style={{ left: `${8 + ((i * 61) % 84)}%`, animationDelay: `${(i * 0.7) % 6}s`, animationDuration: `${5 + (i % 4)}s` }} />
+        ))}
       </div>
-    </>
+      <div className="cv-vignette" />
+    </div>
   );
 }

@@ -120,7 +120,7 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
       await page.waitForTimeout(500);
       continue;
     }
-    const cards = await page.$$('[data-testid="commands"] .card:not(.poor):not(.basic)');
+    const cards = await page.$$('[data-testid="commands"] .card:not(.poor):not(.basic):not(.empty)');
     if (cards.length) {
       if (fights === 0 && step < 40) await shot("flow-battle-command");
       await cards[0].click();

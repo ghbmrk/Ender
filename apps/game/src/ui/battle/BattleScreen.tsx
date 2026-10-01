@@ -24,7 +24,7 @@ import { paintedCard } from "../../art/painted";
 import { STAGE_H, useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH } from "../affinity";
 import { FIG_SCALE, Fig, Head, figureBox } from "./Figure";
-import { BOSS_ADDS, BOSS_POS, DUEL_HERO_SHARE, FOE_POS, HERO_POS, PANEL_TOP, duelLayout } from "./layout";
+import { ARC, BOSS_ADDS, BOSS_POS, DUEL_FOE_DEPTH, DUEL_HERO_SHARE, FOE_POS, HERO_POS, PANEL_TOP, duelLayout } from "./layout";
 import { sfx } from "./sfx";
 import { debug } from "../../game/debug";
 import type { CoachKey, Lesson } from "../../game/tutorial";
@@ -206,10 +206,10 @@ export function BattleScreen({
     // The hero stands half the arena tall; the foe matches that zoom unless it would crowd the turn bar.
     const hero = battle.party()[0]!;
     const heroBase = FIG_SCALE[hero.figure] ?? 1.2;
-    const zoom = Math.max(1.5, Math.min(2.8, (DUEL_HERO_SHARE * arena.h) / figureBox(hero.figure, heroBase).feetY));
+    const zoom = Math.max(1.5, Math.min(4.6, (DUEL_HERO_SHARE * arena.h) / figureBox(hero.figure, heroBase).feetY));
     if (u.side === "party") return base * zoom;
     const room = arena.foe[1] - arena.top - (u.tier === "boss" ? 20 : 120);
-    return Math.min(base * zoom, room / figureBox(u.figure, 1).feetY);
+    return Math.min(base * zoom * DUEL_FOE_DEPTH, room / figureBox(u.figure, 1).feetY);
   };
 
   // ───────────── feedback ─────────────
@@ -808,46 +808,61 @@ export function BattleScreen({
         </button>
       )}
 
-      {/* One-thumb panel: everything pressed often sits in the right column, inside a right thumb's reach;
-          the hero's status (and the incoming blows while defending) fill the left. */}
-      <div className="bpanel thumb" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
-        <div className="bp-left">
-          <PartyStrip b={battle} active={active?.side === "party" ? active.id : null} />
-          {phase.k === "defend" && s?.k === "defend" && (
-            <div className="impacts">
-              {s.impacts.map((_, i) => {
-                const r = s.tracker.resultAt(i);
-                return <span key={i} className={`pip ${r ?? ""}`} />;
-              })}
-            </div>
-          )}
-        </div>
-        <div className="bp-right">
-          {/* Between turns the hero's cards stay in place, dimmed, so the panel never empties and the thumb knows where to go. */}
-          {(phase.k === "wait" || phase.k === "intro") && battle.living("party")[0] && (
-            <div className="cards-idle" aria-hidden>
-              <Commands b={battle} actor={battle.living("party")[0]!.id} ally={false} basicOnly={lesson?.commands === "basic"} onPick={() => {}} onCancel={() => {}} idle />
-            </div>
-          )}
-          {(phase.k === "command" || phase.k === "ally") && <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "command" ? "basic" : coach?.key === "skill" ? "actions" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />}
-          {phase.k === "defend" && s?.k === "defend" && (
-            <div className="defense">
-              <button className={`def-btn dodge ${lesson?.step === "dodge" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsedAt(s, e), "dodge"))} data-testid="dodge">
-                <span className="def-glyph">⤺</span>
-                DODGE
-                <small>forgiving</small>
+      {/* Over-the-shoulder fight UI. The hero's badge holds the top-left corner beside the turn bar; Dodge
+          and Parry sit on the thumb arc, inside a right thumb's reach; the skill cards fill the bottom row. */}
+      {(() => {
+        const hero = (active?.side === "party" ? active : null) ?? battle.living("party")[0] ?? battle.party()[0];
+        return hero ? <HeroBadge u={hero} others={battle.party().filter((p) => p.id !== hero.id)} impacts={phase.k === "defend" && s?.k === "defend" ? s : null} /> : null;
+      })()}
+      <svg className="thumb-arc" viewBox={`0 0 1080 ${stageH}`} style={{ height: stageH }} aria-hidden>
+        <defs>
+          <linearGradient id="arc-shade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#0b0910" stopOpacity="0" />
+            <stop offset="0.4" stopColor="#0b0910" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#0b0910" stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        <path d={`${ARC.path(PANEL_TOP + stageH - STAGE_H)} L1080 ${stageH} L0 ${stageH} Z`} fill="url(#arc-shade)" />
+        <path d={ARC.path(PANEL_TOP + stageH - STAGE_H)} fill="none" stroke="#ecc56a" strokeWidth="5" opacity="0.7" />
+      </svg>
+      {(() => {
+        const live = phase.k === "defend" && s?.k === "defend" ? s : null;
+        const top = PANEL_TOP + stageH - STAGE_H;
+        const at = (b: { x: number; y: number; d: number }) => ({ left: b.x - b.d / 2, top: top + b.y - b.d / 2, width: b.d, height: b.d });
+        // Outside a foe's attack the buttons rest dimmed and let taps through to the field.
+        const press = (kind: "parry" | "dodge") => (e: React.PointerEvent) => {
+          if (!live) return;
+          e.stopPropagation();
+          pressDefend(live, elapsedAt(live, e), kind);
+        };
+        return (
+          <div className={`def-arc ${live ? "live" : ""}`}>
+            <button className={`def-btn round dodge ${lesson?.step === "dodge" && coach?.key === "defend" ? "coach-pulse" : ""}`} style={at(ARC.dodge)} onPointerDown={press("dodge")} aria-disabled={!live} data-testid={live ? "dodge" : undefined}>
+              <span className="def-glyph">⤺</span>
+              Dodge
+              {live && <small>forgiving</small>}
+            </button>
+            {lesson?.defense !== "dodge" && (
+              <button className={`def-btn round parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} style={at(ARC.parry)} onPointerDown={press("parry")} aria-disabled={!live} data-testid={live ? "parry" : undefined}>
+                <span className="def-glyph">⚔</span>
+                Parry
+                {live && <small>tight · +1 AP</small>}
               </button>
-              {lesson?.defense !== "dodge" && (
-                <button className={`def-btn parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsedAt(s, e), "parry"))} data-testid="parry">
-                  <span className="def-glyph">⚔</span>
-                  PARRY
-                  <small>tight · +1 AP · Break</small>
-                </button>
-              )}
-            </div>
-          )}
-          {phase.k === "attack" && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
-        </div>
+            )}
+          </div>
+        );
+      })()}
+      <div className="bpanel arc" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
+        {phase.k === "attack" && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
+        {(phase.k === "command" || phase.k === "ally") && (
+          <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "command" ? "basic" : coach?.key === "skill" ? "actions" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />
+        )}
+        {/* Outside your turn the cards stay in place, dimmed, so the row never empties and the thumb knows where to go. */}
+        {phase.k !== "command" && phase.k !== "ally" && battle.living("party")[0] && (
+          <div className="cards-idle" aria-hidden>
+            <Commands b={battle} actor={battle.living("party")[0]!.id} ally={false} basicOnly={lesson?.commands === "basic"} onPick={() => {}} onCancel={() => {}} idle />
+          </div>
+        )}
       </div>
 
       {phase.k === "end" && (
@@ -1017,28 +1032,48 @@ function Timeline({ b, tl }: { b: Battle; tl: { round: number; ids: string[] }[]
   );
 }
 
-function PartyStrip({ b, active }: { b: Battle; active: string | null }) {
+/** The hero's corner badge: portrait, health along the curved edge, AP as gems. */
+function HeroBadge({ u, others, impacts }: { u: Unit; others: Unit[]; impacts: DefendSeq | null }) {
+  const pct = Math.max(0, Math.min(100, (100 * u.hp) / u.maxHp));
+  const arc = "M372 24 Q 372 420 14 432";
   return (
-    <div className="party-strip">
-      {b.party().map((u) => (
-        <div key={u.id} className={`ps ${active === u.id ? "active" : ""} ${u.alive ? "" : "down"}`} data-testid={`hero-${u.id}`}>
-          <Head look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} size={86} />
-          <div className="ps-body">
-            <div className="ps-name">
-              {u.name}
-              <span className="ps-hp">
-                {Math.round(u.hp)}/{u.maxHp}
-              </span>
+    <div className={`hero-badge ${u.alive ? "" : "down"}`} data-testid={`hero-${u.id}`}>
+      <svg className="hb-plate" viewBox="0 0 400 460" aria-hidden>
+        <path d="M0 0 H400 V12 Q 396 444 0 460 Z" fill="#14101cee" />
+        <path d={arc} fill="none" stroke="#0b0910" strokeWidth="34" strokeLinecap="round" />
+        <path d={arc} fill="none" stroke={pct > 50 ? "#3aa58a" : pct > 25 ? "#d9a441" : "#d9534f"} strokeWidth="22" strokeLinecap="round" pathLength={100} strokeDasharray={`${pct} 100`} />
+        <path d="M398 0 Q 398 446 0 458" fill="none" stroke="#ecc56a" strokeWidth="4" opacity="0.8" />
+      </svg>
+      <div className="hb-portrait">
+        <Head look={lookFor(u.kind)} figure={u.figure} size={210} />
+      </div>
+      <div className="hb-hp">
+        <b>{Math.round(u.hp)}</b>
+        <small>of {u.maxHp}</small>
+      </div>
+      <div className="ap-pips hb-ap" data-testid={`ap-${u.id}`}>
+        {Array.from({ length: RULES.apMax }, (_, i) => (
+          <span key={i} className={i < u.ap ? "on" : ""} />
+        ))}
+      </div>
+      {others.length > 0 && (
+        <div className="hb-others">
+          {others.map((o) => (
+            <div key={o.id} className={`hb-other ${o.alive ? "" : "down"}`} data-testid={`hero-${o.id}`}>
+              <Head look={lookFor(o.kind)} figure={o.figure} size={72} />
+              <Bar v={o.hp} max={o.maxHp} cls="hp hero" />
             </div>
-            <Bar v={u.hp} max={u.maxHp} cls="hp hero" />
-            <div className="ap-pips" data-testid={`ap-${u.id}`}>
-              {Array.from({ length: RULES.apMax }, (_, i) => (
-                <span key={i} className={i < u.ap ? "on" : ""} />
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
+      {impacts && (
+        <div className="impacts">
+          {impacts.impacts.map((_, i) => {
+            const r = impacts.tracker.resultAt(i);
+            return <span key={i} className={`pip ${r ?? ""}`} />;
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1120,6 +1155,11 @@ function Commands({
           </button>
         );
       })}
+      {actions.length < 3 && (
+        <div className="card empty slot" style={{ gridColumn: `span ${3 - actions.length}` }} aria-hidden>
+          {basicOnly ? "Skills you weave appear here" : "Weave more skills on the Loom"}
+        </div>
+      )}
       {actions.length === 0 && !basicOnly && <div className="card empty">No Actions woven. Inscribe a Form as an Action and place it on this Loom.</div>}
     </div>
   );

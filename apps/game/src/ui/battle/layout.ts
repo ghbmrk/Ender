@@ -16,16 +16,27 @@ export const BOSS_ADDS: [number, number][] = [
   [1000, 760],
   [560, 1140],
 ];
-export const PANEL_TOP = 1440;
+/** Top of the skill-card row, in stage px on the 1920-tall stage (it sits on the screen's bottom edge). */
+export const PANEL_TOP = 1520;
 
 /**
- * Duels (one hero, one foe) fill the arena between the turn bar and the command panel, so the two
- * figures are as large and close as the phone allows. `panel` is the panel's top in world px.
+ * Duels (one hero, one foe) are framed over the hero's shoulder: the hero stands large in the
+ * foreground with the legs cropped by the card row, and the foe stands further back, smaller, upper
+ * right. `panel` is the card row's top in world px.
  */
 export function duelLayout(worldTop: number, panel: number, bossBar: boolean) {
   const top = 175 - worldTop + (bossBar ? 150 : 0);
   const h = panel - top;
-  return { top, h, hero: [300, panel - 36] as [number, number], foe: [770, Math.round(top + h * 0.64)] as [number, number] };
+  return { top, h, hero: [240, panel + Math.round(h * 0.3)] as [number, number], foe: [800, Math.round(top + h * 0.58)] as [number, number] };
 }
-/** The hero's height (feet to crown) as a share of the arena's. */
-export const DUEL_HERO_SHARE = 0.5;
+/** The hero's height (feet to crown) as a share of the arena's; the feet sit below the card row. */
+export const DUEL_HERO_SHARE = 1.0;
+/** The foe is further away, so it is drawn at this share of the hero's zoom (if it fits). */
+export const DUEL_FOE_DEPTH = 0.5;
+
+/** The thumb arc, in stage px relative to the card row's top: Parry and Dodge sit on it. */
+export const ARC = {
+  parry: { x: 885, y: -440, d: 330 },
+  dodge: { x: 590, y: -200, d: 280 },
+  path: (top: number) => `M0 ${top + 210} Q 524 ${top - 207} 1080 ${top - 574}`,
+};

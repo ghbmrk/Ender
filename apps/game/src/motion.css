@@ -1938,415 +1938,515 @@
   padding-bottom: 6px;
 }
 
-/* ═════════════ Landing: title over a looping reel of a fight, then a Loom being woven ═════════════
-   One 16s cycle: the fight plays in 0–8s, the Loom in 8–16s. Every animation shares the cycle, so
-   percentages below are of 16s (1s = 6.25%). */
-.landing {
-  position: absolute;
-  inset: 0;
-  background: #0b0910;
-  overflow: hidden;
-}
-.landing .reel {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1080px;
-  height: 1920px;
-}
-.landing .reel > * {
-  position: absolute;
-}
-.landing .reel-fight { animation: reel-a 16s linear infinite both; }
-.landing .reel-loom { animation: reel-b 16s linear infinite both; }
-@keyframes reel-a {
-  0% { opacity: 0; }
-  3% { opacity: 1; }
-  46% { opacity: 1; }
-  50%, 100% { opacity: 0; }
-}
-@keyframes reel-b {
-  0%, 48% { opacity: 0; }
-  53% { opacity: 1; }
-  96% { opacity: 1; }
-  100% { opacity: 0; }
-}
-.landing .reel-bg {
-  left: 0;
-  top: 0;
-  width: 1080px;
-  height: 1920px;
-  object-fit: cover;
-  filter: brightness(0.62) saturate(0.9);
-  animation: reel-pan 16s ease-in-out infinite;
-}
-.landing .reel-bg.loom-bg {
-  filter: brightness(0.32) saturate(0.6) blur(6px);
-  animation: none;
-  transform: scale(1.12);
-}
-@keyframes reel-pan {
-  0% { transform: scale(1.04) translateX(0); }
-  50%, 100% { transform: scale(1.1) translateX(-20px); }
-}
-.landing .rf-hero > div,
-.landing .rf-foe > div {
-  filter: drop-shadow(0 18px 18px #000a);
-}
-.landing .rf-hero-move { animation: rf-hero 16s ease-out infinite; }
-@keyframes rf-hero {
-  0%, 3.75% { transform: none; }
-  6.25% { transform: translate(300px, -150px); }
-  8.75%, 17.5% { transform: none; }
-  19.4% { transform: translate(320px, -160px); }
-  22%, 29.4% { transform: none; }
-  30% { transform: translateX(-24px); filter: brightness(1.8); }
-  32%, 37.5% { transform: none; filter: none; }
-  40% { transform: translate(330px, -170px) scale(1.04); }
-  44%, 100% { transform: none; }
-}
-.landing .rf-foe-move { animation: rf-foe 16s ease-out infinite; }
-@keyframes rf-foe {
-  0%, 6% { transform: none; filter: none; }
-  6.6% { transform: translateX(24px); filter: brightness(2.2); }
-  8%, 19% { transform: none; filter: none; }
-  19.6% { transform: translateX(30px); filter: brightness(2.4); }
-  21%, 26% { transform: none; filter: none; }
-  30% { transform: translate(-330px, 170px); }
-  31.5% { transform: translate(-150px, 70px); }
-  34%, 40% { transform: none; filter: none; }
-  40.6% { transform: translateX(40px) rotate(4deg); filter: brightness(2.6) saturate(0.3); }
-  43%, 100% { transform: none; filter: none; }
-}
-/* The timing ring closes on the foe; the strike lands as it meets. */
-.landing .rf-ring {
-  width: 0;
-  height: 0;
-  animation: rf-ring 16s linear infinite;
-}
-.landing .rf-ring::before {
-  content: "";
-  position: absolute;
-  left: -110px;
-  top: -110px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  border: 8px solid #f4d58c;
-  box-shadow: 0 0 30px #f4d58c, inset 0 0 20px #f4d58c88;
-}
-@keyframes rf-ring {
-  0%, 12.5% { opacity: 0; transform: scale(2.6); }
-  13.5% { opacity: 1; transform: scale(2.4); }
-  19.4% { opacity: 1; transform: scale(1); }
-  21%, 100% { opacity: 0; transform: scale(0.8); }
-}
-.landing .rf-slash {
-  width: 0;
-  height: 0;
-  animation: rf-slash 16s linear infinite;
-}
-.landing .rf-slash::before {
-  content: "";
-  position: absolute;
-  left: -220px;
-  top: -40px;
-  width: 440px;
-  height: 80px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at center, #fffbe8 0%, #f4d58ccc 30%, transparent 70%);
-  transform: rotate(-32deg);
-}
-@keyframes rf-slash {
-  0%, 6% { opacity: 0; transform: scale(0.4); }
-  6.4% { opacity: 1; transform: scale(1); }
-  8.5% { opacity: 0; transform: scale(1.3); }
-  8.6%, 19.2% { opacity: 0; transform: scale(0.4) rotate(70deg); }
-  19.6% { opacity: 1; transform: scale(1.25) rotate(70deg); }
-  22%, 100% { opacity: 0; transform: scale(1.5) rotate(70deg); }
-}
-.landing .rf-burst {
-  width: 0;
-  height: 0;
-  animation: rf-burst 16s ease-out infinite;
-}
-.landing .rf-burst::before {
-  content: "";
-  position: absolute;
-  left: -260px;
-  top: -260px;
-  width: 520px;
-  height: 520px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff 0%, #c9a2ff 18%, #7b4bc9aa 42%, #4a2a8a33 62%, transparent 70%);
-}
-@keyframes rf-burst {
-  0%, 40% { opacity: 0; transform: scale(0.2); }
-  40.6% { opacity: 1; transform: scale(0.8); }
-  45% { opacity: 0; transform: scale(1.7); }
-  100% { opacity: 0; }
-}
-.landing .rf-parry {
-  width: 0;
-  height: 0;
-  animation: rf-parry 16s ease-out infinite;
-}
-.landing .rf-parry::before {
-  content: "";
-  position: absolute;
-  left: -150px;
-  top: -150px;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  border: 10px solid #e8f6ff;
-  box-shadow: 0 0 40px #9fd8ff, inset 0 0 40px #9fd8ff;
-}
-@keyframes rf-parry {
-  0%, 29.6% { opacity: 0; transform: scale(0.5); }
-  30% { opacity: 1; transform: scale(0.8); }
-  33% { opacity: 0; transform: scale(1.5); }
-  100% { opacity: 0; }
-}
-.landing .rf-pop {
-  width: 600px;
-  margin-left: -300px;
-  text-align: center;
-  font-family: var(--display);
-  font-weight: 800;
-  line-height: 1;
-  opacity: 0;
-  text-shadow: 0 5px 0 #1a1008, 0 0 24px #000;
-}
-.landing .rf-pop small {
-  display: block;
-  font-size: 0.55em;
-}
-.landing .rf-dmg1 { font-size: 110px; color: #fff4d8; animation: rf-dmg1 16s ease-out infinite; }
-.landing .rf-perfect { font-size: 96px; color: #f4d58c; animation: rf-perfect 16s ease-out infinite; }
-.landing .rf-perfect small { font-size: 90px; color: #fff4d8; }
-.landing .rf-parried { font-size: 100px; color: #e8f6ff; text-shadow: 0 5px 0 #0b1a2a, 0 0 30px #4aa8ff; animation: rf-parried 16s ease-out infinite; }
-.landing .rf-skill { font-size: 150px; color: #e6d2ff; text-shadow: 0 6px 0 #1a0b2a, 0 0 40px #8a5ad8; animation: rf-skill 16s ease-out infinite; }
-.landing .rf-skill small { font-size: 64px; letter-spacing: 0.06em; color: #f4d58c; }
-@keyframes rf-dmg1 {
-  0%, 6.2% { opacity: 0; transform: translateY(20px) scale(0.6); }
-  7% { opacity: 1; transform: translateY(0) scale(1.15); }
-  8% { transform: scale(1); }
-  12% { opacity: 1; transform: translateY(-60px); }
-  13.5%, 100% { opacity: 0; transform: translateY(-80px); }
-}
-@keyframes rf-perfect {
-  0%, 19.4% { opacity: 0; transform: scale(0.5); }
-  20.2% { opacity: 1; transform: scale(1.2); }
-  21.2% { transform: scale(1); }
-  26% { opacity: 1; transform: translateY(-40px); }
-  27.5%, 100% { opacity: 0; transform: translateY(-60px); }
-}
-@keyframes rf-parried {
-  0%, 29.8% { opacity: 0; transform: scale(0.5) rotate(-6deg); }
-  30.6% { opacity: 1; transform: scale(1.2) rotate(-6deg); }
-  31.6% { transform: scale(1) rotate(-4deg); }
-  36% { opacity: 1; transform: translateY(-40px) rotate(-4deg); }
-  37.5%, 100% { opacity: 0; transform: translateY(-60px) rotate(-4deg); }
-}
-@keyframes rf-skill {
-  0%, 40.4% { opacity: 0; transform: scale(0.4); }
-  41.2% { opacity: 1; transform: scale(1.25); }
-  42.4% { transform: scale(1); }
-  46% { opacity: 1; transform: translateY(-40px); }
-  48%, 100% { opacity: 0; transform: translateY(-60px); }
+/* Fight figures keep their own layer, so moving or breathing never re-runs their drop-shadow filters. */
+.battle .unit .fig-svg,
+.battle .unit .fig-img {
+  will-change: transform;
 }
 
-/* The Loom: an empty board, Forms dropping into place one by one, links lighting, then the skill it made. */
-.landing .rl-glow {
-  width: 0;
-  height: 0;
+/* ═════════════ Over-the-shoulder fight layout (Mark's sketch, 2026-10-01) ═════════════
+   Corner badge top-left beside the turn bar; Dodge and Parry as round buttons on the thumb arc;
+   four skill cards across the bottom row. Stage px throughout. */
+.battle .timeline {
+  left: 300px;
+  right: 16px;
+  top: 20px;
 }
-.landing .rl-glow::before {
-  content: "";
+.battle .hero-badge {
   position: absolute;
-  left: -520px;
-  top: -520px;
-  width: 1040px;
-  height: 1040px;
+  z-index: 3060;
+  left: 0;
+  top: 0;
+  width: 400px;
+  height: 460px;
+  pointer-events: none;
+}
+.battle .hb-plate {
+  position: absolute;
+  inset: 0;
+  width: 400px;
+  height: 460px;
+  filter: drop-shadow(0 10px 18px #000c);
+}
+.battle .hb-portrait {
+  position: absolute;
+  left: 28px;
+  top: 26px;
+  width: 210px;
+  height: 210px;
   border-radius: 50%;
-  background: radial-gradient(circle, #6a44a355 0%, #3a245a33 40%, transparent 68%);
-  animation: rl-breathe 4s ease-in-out infinite alternate;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #3a3142, #15121a);
+  box-shadow: 0 0 0 7px #ecc56a, 0 0 0 13px #1d1822, 0 10px 24px #000c;
 }
-@keyframes rl-breathe {
-  to { transform: scale(1.08); opacity: 0.8; }
+.battle .hb-portrait .head {
+  width: 100% !important;
+  height: 100% !important;
 }
-.landing .rl-cell,
-.landing .rl-hex {
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+.battle .hero-badge.down .hb-portrait {
+  filter: grayscale(1) brightness(0.5);
 }
-.landing .rl-cell {
-  width: 272px;
-  height: 314px;
-  margin: -157px 0 0 -136px;
-  background: linear-gradient(180deg, #5a4630, #2a2016);
-  filter: drop-shadow(0 0 0 #000);
-}
-.landing .rl-cell::after {
-  content: "";
+.battle .hb-hp {
   position: absolute;
-  inset: 6px;
-  clip-path: inherit;
-  background: #120e18e6;
+  left: 34px;
+  top: 252px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 58px;
+  line-height: 1;
+  color: #eef5e8;
+  text-shadow: 0 4px 0 #000;
 }
-.landing .rl-hex {
+.battle .hb-hp small {
+  margin-left: 10px;
+  font-family: var(--serif-body);
+  font-size: 30px;
+  font-weight: 600;
+  color: #c9b48a;
+}
+.battle .hb-ap {
   position: absolute;
-  width: 258px;
-  height: 298px;
-  margin: -149px 0 0 -129px;
-  background-size: cover;
-  background-position: center;
+  left: 30px;
+  top: 326px;
+  width: 250px;
+  margin: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.battle .hb-ap span {
+  width: 22px;
+  height: 22px;
+}
+.battle .hb-others {
+  position: absolute;
+  left: 20px;
+  top: 470px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.battle .hb-other {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 260px;
+}
+.battle .hb-other .head {
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 4px #ecc56a;
+  flex: none;
+}
+.battle .hb-other .gbar {
+  flex: 1;
+}
+.battle .hero-badge .impacts {
+  position: absolute;
+  left: 250px;
+  top: 250px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The thumb arc: the field darkens below it, toward the controls. */
+.battle .thumb-arc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1080px;
+  z-index: 3000;
+  pointer-events: none;
+}
+.battle .def-arc .def-btn.round {
+  position: absolute;
+  z-index: 3070;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  border-radius: 50%;
+  border: 8px solid #ecc56a;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 0 200px #0003;
-}
-.landing .rl-core {
-  background: radial-gradient(circle at 50% 40%, #6b5232, #2c2016 70%);
-}
-.landing .rl-core::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  clip-path: inherit;
-  box-shadow: inset 0 0 0 7px #f4d58c;
-}
-.landing .rl-head .head {
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow: 0 0 0 4px #f4d58c, 0 6px 16px #000c;
-  background: #1d1822;
-}
-.landing .rl-node {
-  width: 0;
-  height: 0;
-  opacity: 0;
-}
-.landing .rl-node .rl-hex::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  clip-path: inherit;
-  box-shadow: inset 0 0 0 7px var(--rim, #f4d58c);
-}
-.landing .rl-node.mod { --rim: #c9a2ff; }
-.landing .rl-node.react { --rim: #9fd8ff; }
-.landing .rl-glyph {
-  font-size: 64px;
-  color: #fff8e6;
-  text-shadow: 0 3px 0 #000a, 0 0 14px #000;
-}
-.landing .rl-num {
+  gap: 2px;
   font-family: var(--display);
+  font-weight: 800;
   font-size: 50px;
-  font-weight: 800;
-  color: #fff8e6;
-  text-shadow: 0 3px 0 #000a;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-shadow: 0 3px 0 #0009;
+  box-shadow: 0 0 0 8px #1d1822, 0 18px 36px #000c;
+  transition: filter 140ms ease-out, transform 90ms ease-out;
 }
-.landing .rl-name {
-  font-family: var(--display);
-  font-size: 42px;
-  font-weight: 800;
-  color: #fff8e6;
-  text-shadow: 0 3px 0 #000, 0 0 10px #000;
+.battle .def-arc .def-btn.round .def-glyph {
+  font-size: 66px;
+  line-height: 1;
+  margin: 0;
 }
-.landing .rl-n0 { animation: rl-drop0 16s cubic-bezier(0.2, 1.4, 0.5, 1) infinite; }
-.landing .rl-n1 { animation: rl-drop1 16s cubic-bezier(0.2, 1.4, 0.5, 1) infinite; }
-.landing .rl-n2 { animation: rl-drop2 16s cubic-bezier(0.2, 1.4, 0.5, 1) infinite; }
-.landing .rl-n3 { animation: rl-drop3 16s cubic-bezier(0.2, 1.4, 0.5, 1) infinite; }
-@keyframes rl-drop0 {
-  0%, 56% { opacity: 0; transform: scale(1.5) translateY(-60px); }
-  59%, 95% { opacity: 1; transform: none; filter: brightness(1); }
-  60.5% { filter: brightness(1.8); }
-  62%, 100% { filter: brightness(1); }
-}
-@keyframes rl-drop1 {
-  0%, 62% { opacity: 0; transform: scale(1.5) translateY(-60px); }
-  65%, 95% { opacity: 1; transform: none; }
-  100% { opacity: 1; }
-}
-@keyframes rl-drop2 {
-  0%, 68% { opacity: 0; transform: scale(1.5) translateY(-60px); }
-  71%, 95% { opacity: 1; transform: none; }
-  100% { opacity: 1; }
-}
-@keyframes rl-drop3 {
-  0%, 74% { opacity: 0; transform: scale(1.5) translateY(-60px); }
-  77%, 95% { opacity: 1; transform: none; }
-  100% { opacity: 1; }
-}
-.landing .rl-result {
-  width: 900px;
-  margin-left: -450px;
-  text-align: center;
+.battle .def-arc .def-btn.round small {
   font-family: var(--serif-body);
-  font-size: 50px;
-  color: #f4e3b8;
-  padding: 18px 0;
-  border-radius: 20px;
-  background: linear-gradient(90deg, transparent, #1a1222ee 18%, #1a1222ee 82%, transparent);
-  text-shadow: 0 2px 0 #000;
-  opacity: 0;
-  animation: rl-result 16s ease-out infinite;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0;
+  opacity: 0.9;
 }
-.landing .rl-result b {
-  font-family: var(--display);
-  color: #ffd9a8;
+.battle .def-arc .def-btn.round.parry {
+  background: radial-gradient(circle at 40% 30%, #d0505e, #6b1a28 72%);
 }
-.landing .rl-result em {
-  font-style: normal;
-  font-weight: 800;
-  color: #f4d58c;
+.battle .def-arc .def-btn.round.dodge {
+  border-color: #b3cbf5;
+  background: radial-gradient(circle at 40% 30%, #5f7fd8, #1f2f6b 72%);
 }
-@keyframes rl-result {
-  0%, 80% { opacity: 0; transform: translateY(30px); }
-  83%, 95% { opacity: 1; transform: none; }
-  100% { opacity: 0; }
+.battle .def-arc:not(.live) .def-btn.round {
+  filter: saturate(0.3) brightness(0.5);
+  border-color: #8f6420aa;
+  pointer-events: none;
+}
+.battle .def-arc.live .def-btn.round:active {
+  transform: scale(0.94);
+  filter: brightness(1.35);
 }
 
-/* Darkened bands keep the title and the button legible over the reel. */
-.landing .landing-fade {
+/* Four skill cards across the bottom: Basic, then up to three crafted skills. */
+.stage .battle .bpanel.arc {
+  display: block;
+  padding: 0 16px calc(18px + var(--safe-b));
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+.stage .battle .bpanel.arc::before,
+.stage .battle .bpanel.arc::after {
+  display: none;
+}
+.stage .battle .bpanel.arc .cards-idle {
+  display: block;
+  height: 100%;
+}
+.stage .battle .bpanel.arc .cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  height: calc(100% - 4px);
+  margin: 0;
+}
+.stage .battle .bpanel.arc .card {
+  min-width: 0;
+  padding: 7px;
+  border-width: 5px;
+}
+.stage .battle .bpanel.arc .card-top {
+  height: auto;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 4px 10px;
+  gap: 8px;
+}
+.stage .battle .bpanel.arc .card-name {
+  max-width: 100%;
+  font-size: 34px;
+  text-align: center;
+}
+.stage .battle .bpanel.arc .card-boost {
+  margin-left: 4px;
+}
+.stage .battle .bpanel.arc .card-ap {
+  font-size: 30px;
+  padding: 5px 14px 7px;
+}
+.stage .battle .bpanel.arc .card:not(.empty)::after {
+  top: 146px;
+  left: 9px;
+  right: 9px;
+  bottom: 9px;
+}
+.stage .battle .bpanel.arc .card-line {
+  margin: 0;
+  padding: 0 6px;
+  font-size: 31px;
+  line-height: 1.1;
+  text-align: center;
+  -webkit-line-clamp: 3;
+}
+.stage .battle .bpanel.arc .card-top + .card-line {
+  margin-top: 22px;
+}
+.stage .battle .bpanel.arc .card .card-line.dim {
+  font-size: 28px;
+  margin-top: 8px;
+}
+.stage .battle .bpanel.arc .card.empty.slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-style: italic;
+  font-size: 32px;
+  color: #c9b48a;
+  background: #2a2236aa;
+  border: 5px solid #8f642066;
+  box-shadow: 0 0 0 3px var(--ink-deep);
+}
+.stage .battle .bpanel.arc .tap-anywhere,
+.stage .battle .bpanel.arc .ally-pick {
+  position: absolute;
+  left: 20px;
+  right: 380px;
+  top: -120px;
+  margin: 0;
+  font-size: 40px;
+  text-align: left;
+}
+/* The foe's attack name sits under the hero's badge; hints sit above the cards on the left. */
+.battle .tell,
+.battle .boss-bar ~ .tell {
+  left: 20px;
+  right: auto;
+  width: 560px;
+  top: 480px;
+}
+.battle .hint {
+  left: 20px;
+  right: auto;
+  max-width: 470px;
+  text-align: left;
+}
+.battle .hint {
+  top: 640px !important;
+}
+/* Resting cards are dimmed but solid, so the hero's legs never show through them. */
+.stage .battle .bpanel.arc .cards-idle {
+  opacity: 1;
+  filter: saturate(0.35) brightness(0.48);
+}
+/* Tutorial tips sit in the left column above the cards, clear of Dodge and Parry. */
+.battle .coach {
+  left: 16px;
+  right: auto;
+  width: 420px;
+  z-index: 3080;
+  font-size: 36px;
+  padding: 20px 22px;
+  gap: 14px;
+}
+
+/* ═════════════ Landing: an old-school rulebook cover ═════════════
+   Aged card stock, a title block, one big framed painting, a line of cover copy, then the button. */
+.landing.cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(56px + env(safe-area-inset-top, 0px) * 2.6) 48px calc(64px + var(--safe-b, 0px));
+  background:
+    radial-gradient(ellipse at 50% 40%, #00000000 55%, #5a3a1a55 100%),
+    var(--tex-grain, none),
+    linear-gradient(180deg, #ece2c8, #e2d4b2 60%, #d6c49c);
+  color: #1a120c;
+  overflow: hidden;
+}
+/* worn edges */
+.landing.cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 14px #1a120c, inset 0 0 0 20px #e2d4b2, inset 0 0 0 23px #7a1d12, inset 0 0 80px 30px #6b4a2266;
+  pointer-events: none;
+}
+.landing .cv-head {
+  flex: none;
+  text-align: center;
+  margin-top: 20px;
+}
+.landing .cv-series {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 36px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #7a1d12;
+}
+.landing .cv-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 230px;
+  line-height: 0.95;
+  letter-spacing: 0.06em;
+  color: #c4361c;
+  -webkit-text-stroke: 6px #1a120c;
+  paint-order: stroke fill;
+  text-shadow: 7px 8px 0 #1a120c;
+}
+.landing .cv-sub {
+  margin-top: 6px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 66px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a120c;
+}
+.landing .cv-art {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  margin-top: 34px;
+  padding: 12px;
+  background: #1a120c;
+  box-shadow: 0 0 0 4px #e2d4b2, 0 0 0 9px #1a120c, 0 18px 30px #3a240f88;
+}
+.landing .cv-paint {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #120c08;
+}
+.landing .cv-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: cv-drift 24s ease-in-out infinite alternate;
+}
+.landing .cv-bg.composed {
+  filter: sepia(0.55) saturate(1.3) brightness(0.55) contrast(1.15) hue-rotate(-10deg);
+}
+@keyframes cv-drift {
+  from { transform: scale(1.04); }
+  to { transform: scale(1.1) translateY(-14px); }
+}
+.landing .cv-dais {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 22%;
+  background: linear-gradient(180deg, #3a2a1c, #120c08);
+  clip-path: polygon(16% 0, 84% 0, 100% 40%, 100% 100%, 0 100%, 0 40%);
+  box-shadow: inset 0 4px 0 #6b4a2a;
+}
+.landing .cv-idol {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  width: 78%;
+  aspect-ratio: 832 / 1067;
+  transform: translateX(-50%);
+}
+.landing .cv-idol img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) sepia(0.45) brightness(0.62) contrast(1.35) drop-shadow(0 0 30px #00000099);
+}
+.landing .cv-eye {
+  position: absolute;
+  top: 21.2%;
+  width: 3.6%;
+  aspect-ratio: 1;
+  margin-left: -1.8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3e0 0 12%, #ff3b2a 30%, #a8100a 62%, transparent 72%);
+  box-shadow: 0 0 26px 10px #ff2a1a99;
+  animation: cv-eye 3.2s ease-in-out infinite alternate;
+}
+.landing .cv-eye.l { left: 48.3%; }
+.landing .cv-eye.r { left: 52.5%; }
+@keyframes cv-eye {
+  from { opacity: 0.75; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1.15); }
+}
+.landing .cv-party {
   position: absolute;
   left: 0;
   right: 0;
+  top: 0;
+  bottom: 2%;
+}
+.landing .cv-party > div {
+  filter: brightness(0.5) sepia(0.55) saturate(1.2) drop-shadow(-8px -6px 12px #ff9a3a88);
+}
+/* Fig places a figure by its feet at its parent's origin, so each wrapper sets that origin. */
+.landing .cv-party > div:not(.cv-climber) {
+  top: auto;
+}
+.landing .cv-climber {
+  position: absolute;
+  left: 63%;
+  top: 52%;
+  transform: rotate(-10deg);
+}
+.landing .cv-torch {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 14% 78%, #ffb85a88 0%, #ff7a2a33 22%, transparent 48%),
+    radial-gradient(circle at 86% 30%, #ff9a3a33 0%, transparent 35%);
+  mix-blend-mode: screen;
+  animation: cv-flicker 1.9s steps(1) infinite;
   pointer-events: none;
 }
-.landing .landing-fade.top {
-  top: 0;
-  height: 760px;
-  background: linear-gradient(180deg, #0b0910 0%, #0b0910f2 42%, #0b0910b0 66%, transparent 100%);
+@keyframes cv-flicker {
+  0% { opacity: 0.9; }
+  13% { opacity: 1; }
+  27% { opacity: 0.78; }
+  41% { opacity: 0.95; }
+  58% { opacity: 0.84; }
+  72% { opacity: 1; }
+  86% { opacity: 0.88; }
 }
-.landing .landing-fade.bottom {
-  bottom: 0;
-  height: 500px;
-  background: linear-gradient(0deg, #0b0910 0%, #0b0910f0 40%, #0b0910a0 66%, transparent 100%);
+.landing .cv-embers span {
+  position: absolute;
+  bottom: -20px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffcf7a;
+  box-shadow: 0 0 12px 4px #ff8a2a99;
+  opacity: 0;
+  animation: cv-ember 6s linear infinite;
 }
-.landing .landing-card {
-  top: calc(170px + env(safe-area-inset-top, 0px) * 2.6);
+@keyframes cv-ember {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translate(40px, -900px); opacity: 0; }
 }
-.stage .landing-actions button.landing-signin {
+.landing .cv-vignette {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 120px 40px #000c;
+  pointer-events: none;
+}
+.landing .cv-copy {
+  flex: none;
+  margin: 26px 20px 0;
+  text-align: center;
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 40px;
+  line-height: 1.2;
+  color: #3a2614;
+}
+.landing .cv-actions {
+  flex: none;
+  margin-top: 30px;
+}
+.stage .landing .cv-actions button.landing-signin {
   min-width: 760px;
   min-height: 150px;
   font-size: 56px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .landing .reel-fight,
-  .landing .reel-loom,
-  .landing .reel *,
-  .landing .reel *::before {
+  .landing .cv-bg,
+  .landing .cv-eye,
+  .landing .cv-torch,
+  .landing .cv-embers span {
     animation: none !important;
   }
-  .landing .reel-loom { opacity: 0; }
-}
-
-/* Fight figures keep their own layer, so moving or breathing never re-runs their drop-shadow filters. */
-.battle .unit .fig-svg,
-.battle .unit .fig-img {
-  will-change: transform;
 }

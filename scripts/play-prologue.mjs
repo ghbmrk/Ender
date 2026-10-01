@@ -72,7 +72,7 @@ for (let step = 0; step < 1500; step++) {
       await page.waitForTimeout(500);
       continue;
     }
-    const cards = await page.$$('[data-testid="commands"] .card:not(.poor):not(.basic)');
+    const cards = await page.$$('[data-testid="commands"] .card:not(.poor):not(.basic):not(.empty)');
     if (await visible(".unit.pickable")) await page.click(".unit.pickable .hit");
     else if (cards.length) await cards[0].click();
     else if (await visible(tid("cmd-basic"))) await page.click(tid("cmd-basic"));
