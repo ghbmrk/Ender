@@ -395,7 +395,7 @@ export function LoomScreen() {
         </div>
       </div>
 
-      <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} />
+      <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} power={ROOTS[hero].basic} />
       </div>
       {coach && !drag?.moved && !weaving && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: TRAY_TOP - 175 }} />}
 
@@ -522,7 +522,7 @@ function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, lan
   );
 }
 
-function CompilePreview({ c, diff, previewing }: { c: CompiledLoom; diff: string[]; previewing: boolean }) {
+function CompilePreview({ c, diff, previewing, power }: { c: CompiledLoom; diff: string[]; previewing: boolean; power: number }) {
   return (
     <div className={`compile ${previewing ? "previewing" : ""}`} data-testid="compile-preview">
       <div className="compile-grid">
@@ -531,8 +531,13 @@ function CompilePreview({ c, diff, previewing }: { c: CompiledLoom; diff: string
           {c.actions.length === 0 && <span className="dim">none</span>}
           {c.actions.map((a) => (
             <div key={a.nodeId} className="c-row">
-              <span style={{ color: AFF_COLOR[a.dominant] }}>{AFF_GLYPH[a.dominant]}</span> {a.name} <b>{a.apCost} AP</b>
-              <span className="dim"> · Break {Math.round(a.breakTotal)}</span>
+              {/* The same numbers the fight's card shows, so what you weave here is what you swing there. */}
+              <span style={{ color: AFF_COLOR[a.dominant] }}>{AFF_GLYPH[a.dominant]}</span> {a.name}
+              {a.modifiers.length > 0 && <span className="c-boost">{"✦".repeat(Math.min(3, a.modifiers.length))}</span>} <b>{a.apCost} AP</b>
+              <span className="dim">
+                {" "}
+                · {Math.round(((power * a.damagePct) / 100) * a.hits)} damage · Break {Math.round(a.breakTotal)}
+              </span>
             </div>
           ))}
         </div>
