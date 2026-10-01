@@ -206,6 +206,9 @@ export function BattleScreen({
   const drillRef = useRef(drill);
   drillRef.current = drill;
   /** Coach the player once per moment (lessons only). */
+  // Taps on nothing during your turn, counted so the hint can answer each one; cleared as the turn moves on.
+  const [stray, setStray] = useState(0);
+  useEffect(() => setStray(0), [phase]);
   const say = (key: CoachKey) => {
     const text = (drillRef.current === "parry" && lesson?.parryCoach?.[key]) || lesson?.coach[key];
     if (!text || said.current.has(key)) return;
@@ -878,11 +881,23 @@ export function BattleScreen({
       said.current.delete("now");
       return say("now");
     }
+    // Your turn, and a tap landed on nothing that acts (the scene, the hero, or Dodge and Parry, which wait for the
+    // foe's turn): say what does act, so no tap reads as the game being broken.
+    if (phase.k === "command") {
+      const t = e.target as Element;
+      if (t.closest(".def-btn") || !t.closest(".cards, button, a, [role=button], .hint, .coach")) strayTap();
+      return;
+    }
     if (!s || s.k !== "attack") return;
     const p = toStage(e.clientX, e.clientY);
     pressAttack(s, elapsedAt(s, e), { x: p.x, y: p.y - worldTop });
   };
 
+  const strayTap = () => {
+    // In a lesson the tip says it, and a tap on the tip takes Basic.
+    if (lesson) setCoach({ key: "command", text: lesson.commands === "basic" ? "Your turn: tap **Basic**, bottom left, to strike." : "Your turn: tap a card below to act." });
+    else setStray((n) => n + 1);
+  };
   const tapHero = (id: string) => {
     if (phase.k === "ally" && id !== phase.actor && battle.unit(id).alive) commit(phase.actor, phase.command, id);
   };
@@ -993,6 +1008,8 @@ export function BattleScreen({
                 onPointerDown={(e) => {
                   if (seq.current) return;
                   e.stopPropagation();
+                  // In a duel there is nothing to pick on the stage, so a tap on either figure during your turn says what acts.
+                  if (duel && phase.k === "command") strayTap();
                   if (u.side === "foe") tapFoe(u.id);
                   else tapHero(u.id);
                 }}
@@ -1081,11 +1098,11 @@ export function BattleScreen({
             key={coach.key}
             // While a blow comes in, the tip moves up under the foe's attack name, clear of the ring on the hero.
             style={phase.k === "defend" ? { top: 720 } : { bottom: STAGE_H - PANEL_TOP + 120 }}
-            onTap={coach.key === "command" && phase.k === "command" ? () => chooseCommand(phase.actor, "basic") : undefined}
+            onTap={(coach.key === "command" || coach.key === "ap") && phase.k === "command" ? () => chooseCommand(phase.actor, "basic") : undefined}
           />
         )
       ) : (
-        <Hint duel={duel} phase={phase} s={s} b={battle} top={PANEL_TOP + stageH - STAGE_H - 70} />
+        <Hint duel={duel} phase={phase} s={s} b={battle} stray={stray} top={PANEL_TOP + stageH - STAGE_H - 70} />
       )}
       {/* Which practice fight this is, always on show: lessons hand straight on to each other, so without it a new foe reads as the old one coming back. */}
       {lesson && LESSON_NO[lesson.step] && (
@@ -1552,7 +1569,7 @@ const seenStatuses = (): string[] => {
   }
 };
 
-function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq | null; b: Battle; top: number }) {
+function Hint({ duel, phase, s, b, stray, top }: { duel: boolean; phase: Phase; s: Seq | null; b: Battle; stray: number; top: number }) {
   // A status seen for the first time is explained at the start of your turn, once ever.
   const fresh = useMemo(() => {
     if (phase.k !== "command") return null;
@@ -1571,6 +1588,7 @@ function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq 
   }, [phase]);
   let text = "";
   if (fresh) text = `${STATUS_GLYPH[fresh]} ${STATUS_EXPLAIN[fresh]}`;
+  else if (phase.k === "command" && stray) text = "Your turn: tap a card below to act. Dodge and Parry are for the foe's turn.";
   else if (phase.k === "command") {
     const u = b.unit(phase.actor);
     const acts = b.actionsOf(phase.actor);
@@ -1579,7 +1597,7 @@ function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq 
   } else if (phase.k === "defend" && s?.k === "defend") text = s.impacts.length > 1 ? `${s.impacts.length} blows: defend each one` : "Dodge is forgiving and avoids the hit. Parry must be perfect, and strikes back.";
   if (!text) return null;
   return (
-    <div className={`hint ${fresh ? "fresh" : ""}`} style={{ top }} key={fresh ?? "hint"}>
+    <div className={`hint ${fresh || stray ? "fresh" : ""}`} style={{ top }} key={fresh ?? (stray ? `stray-${stray}` : "hint")}>
       {text}
     </div>
   );
