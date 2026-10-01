@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import { enterGame, signIn } from "../game/launch";
-import { paintedBackdrop, paintedFigure } from "../art/painted";
-import { Fig } from "./battle/Figure";
+import { paintedBackdrop } from "../art/painted";
+import { gameReady } from "../ready";
 import { sfx } from "./battle/sfx";
 import { OpenAIMark } from "./OpenAIMark";
 
@@ -16,7 +15,8 @@ export function Landing() {
   const going = useRef(false);
   // Warm the save while the title shows (a first visit creates the character here), so signing in is quick.
   useEffect(() => {
-    const warm = () => void api.character().catch(() => undefined);
+    // (The game itself is still loading in the background on a first visit; this waits for it.)
+    const warm = () => void gameReady().then(() => api.character()).catch(() => undefined);
     const id = "requestIdleCallback" in window ? requestIdleCallback(warm, { timeout: 1500 }) : setTimeout(warm, 300);
     return () => ("cancelIdleCallback" in window ? cancelIdleCallback(id as number) : clearTimeout(id as number));
   }, []);
@@ -27,6 +27,8 @@ export function Landing() {
     going.current = true;
     sfx.unlock();
     setBusy(true);
+    // The rest of the game loads behind the title; sign-in waits for it only if it isn't in yet.
+    const [{ enterGame, signIn }] = await Promise.all([import("../game/launch"), gameReady()]);
     signIn();
     await enterGame();
     setBusy(false);
@@ -49,50 +51,21 @@ export function Landing() {
         {/* The mark is the button; "Sign in" sits in its heart. It names ChatGPT for screen readers. */}
         <button className="landing-signin" disabled={busy} onClick={begin} aria-label="Sign in with ChatGPT" data-testid="sign-in">
           <OpenAIMark size={330} className="signin-mark" />
-          <span className="signin-text">Sign in</span>
+          <span className="signin-text">{busy ? "Entering" : "Sign in"}</span>
         </button>
       </div>
     </div>
   );
 }
 
-/** The painting: a dedicated cover piece when one has been rendered, else one composed from the game's art. */
+/** The painting: the dedicated cover piece, with flickering braziers and rising embers over it. */
 export function CoverPainting() {
   const cover = paintedBackdrop("cover");
-  const hall = paintedBackdrop("throne");
-  const idol = paintedFigure("king");
   const embers = Array.from({ length: 14 }, (_, i) => i);
   return (
     <div className="cv-paint">
-      {cover ? (
-        <>
-          {/* The cover holds its own lone knight before the demon, so nothing is drawn over it. */}
-          <img className="cv-bg" src={cover} alt="" draggable={false} />
-        </>
-      ) : (
-        <>
-          {hall && <img className="cv-bg composed" src={hall} alt="" draggable={false} />}
-          <div className="cv-dais" />
-          {idol && (
-            <div className="cv-idol">
-              <img src={idol} alt="" draggable={false} />
-              <span className="cv-eye l" />
-              <span className="cv-eye r" />
-            </div>
-          )}
-          <div className="cv-party">
-            <div className="cv-climber">
-              <Fig bake figure="ranger" scale={0.95} />
-            </div>
-            <div style={{ position: "absolute", left: 330, bottom: 0 }}>
-              <Fig bake figure="warden" scale={1.6} />
-            </div>
-            <div style={{ position: "absolute", left: 150, bottom: -20 }}>
-              <Fig bake figure="binder" scale={1.75} />
-            </div>
-          </div>
-        </>
-      )}
+      {/* The cover holds its own lone knight before the demon, so nothing is drawn over it. */}
+      {cover && <img className="cv-bg" src={cover} alt="" draggable={false} fetchPriority="high" />}
       <div className="cv-torch" />
       <div className="cv-embers">
         {embers.map((i) => (

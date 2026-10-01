@@ -1,8 +1,24 @@
 // No-install web build: the Ender server runs inside the page. Every /api/* request the
 // game makes is answered by the same server code, backed by sql.js and bundled seeds.
 // The database is saved to this browser's IndexedDB, so progress survives a reload.
-import initSqlJs from "sql.js/dist/sql-asm-memory-growth.js";
-import type { Database } from "sql.js";
+import type { Database, SqlJsStatic } from "sql.js";
+
+/**
+ * SQLite for the in-page server. The split page fetches the compact WebAssembly build (quick to compile, a third of
+ * the size), falling back to the plain-JS build if this browser or host won't run it; the single-file page keeps the
+ * plain-JS build inside itself.
+ */
+async function loadSql(): Promise<SqlJsStatic> {
+  if (import.meta.env.MODE === "split") {
+    try {
+      const [{ default: init }, { default: wasm }] = await Promise.all([import("sql.js/dist/sql-wasm-browser.js"), import("sql.js/dist/sql-wasm-browser.wasm?url")]);
+      return await init({ locateFile: () => wasm });
+    } catch (e) {
+      console.warn("WebAssembly SQLite unavailable, using the JS build", e);
+    }
+  }
+  return (await import("sql.js/dist/sql-asm-memory-growth.js")).default();
+}
 import { memoryFixtureStore, type FixtureFile } from "@ender/inference";
 import { realityFromSeeds } from "@ender/reality";
 import { SCHEMA, createInPageServer, type Db } from "@ender/server/browser";
@@ -72,7 +88,7 @@ function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<
 }
 
 export async function installInPageServer() {
-  const SQL = await initSqlJs();
+  const SQL = await loadSql();
   const read = await Promise.race([
     idb<Uint8Array>("readonly", (s) => s.get(IDB.key) as IDBRequest<Uint8Array>),
     new Promise<typeof TIMED_OUT>((r) => setTimeout(() => r(TIMED_OUT), IDB_READ_MS)),

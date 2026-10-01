@@ -33,7 +33,7 @@ async function pass() {
     requestAnimationFrame(ph);
   });
   const cdp = await page.context().newCDPSession(page);
-  await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html"));
+  await page.goto(process.env.PAGE ?? "file://" + resolve(root, "apps/game/dist-web/ender.html"));
   await page.waitForSelector('[data-testid="sign-in"]', { timeout: 60000 });
   await page.waitForTimeout(800);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: RATE });

@@ -789,3 +789,14 @@ tr.sel td {
     flex-wrap: wrap;
   }
 }
+/* The loading screen while a signed-in player's game loads (matches the static one in the page shell). */
+.boot-loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #0b0910;
+  color: #c3ccd7;
+  font: 600 18px system-ui, sans-serif;
+  letter-spacing: 0.2em;
+}

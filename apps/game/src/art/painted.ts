@@ -1,10 +1,11 @@
 /**
  * Painted art (art/prompts.json → scripts/art-generate.py or uploads → scripts/art-ingest.py).
- * Each webp in ./painted is inlined into the single-file build as a data URL. Where a painted
+ * Each webp in ./painted is a URL: inlined as a data URL in the single-file build, a separate file
+ * (fetched only when shown) in the split build. Where a painted
  * image exists it replaces the code-drawn figure, backdrop or card art of the same id; where it
  * doesn't, the drawn art stays.
  */
-const files = import.meta.glob("./painted/*.webp", { eager: true, query: "?inline", import: "default" }) as Record<string, string>;
+const files = import.meta.glob("./painted/*.webp", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
 
 const byId: Record<string, string> = {};
 for (const [path, url] of Object.entries(files)) byId[path.replace(/^.*\/(.+)\.webp$/, "$1")] = url;

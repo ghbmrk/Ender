@@ -2665,3 +2665,7 @@
   100% { box-shadow: 0 0 0 4px #ffd67a, 0 0 30px 8px #ffd67a99; }
   50% { box-shadow: 0 0 0 8px #fff1c2, 0 0 70px 24px #ffd67add; }
 }
+
+/* While the rest of the game is still arriving after a sign-in tap, the mark breathes so the tap reads as taken. */
+.landing-signin:disabled .signin-mark { animation: signin-wait 0.9s ease-in-out infinite alternate; }
+@keyframes signin-wait { to { opacity: 0.55; transform: scale(0.96); } }
