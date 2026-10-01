@@ -261,6 +261,8 @@ export function LoomScreen() {
         : null
     : hero !== mine
       ? { text: `Open **${heroName}** to place the new Form.` }
+      : !lessonPlaced && pending
+        ? { text: `**${pending.name}** is in hand. Tap a cell with a **+** to place it.` }
       : !lessonPlaced
         ? { text: `You found a Form: **${lessonForm?.name ?? "a new piece"}**, in the tray below. Forms are the pieces of your skills. **Drag it** onto a glowing cell beside ${heroName}.` }
         : !lessonSkill
