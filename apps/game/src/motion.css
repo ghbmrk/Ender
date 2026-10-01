@@ -1826,3 +1826,17 @@
 @keyframes sr-bar {
   from { filter: brightness(2.2); }
 }
+/* An Attunement is the Loom's stop: teal, and quiet when there is nothing to weave. */
+.shrine-rest.attune .sr-glow {
+  color: #bfeef2;
+  text-shadow: 0 0 30px #5fc6cf, 0 0 60px #2f9aa5;
+}
+.shrine-rest.attune .sr-gain {
+  color: #8fd8e0;
+  text-shadow: 0 0 24px #5fc6cf66;
+}
+.shrine-rest.attune .sr-gain.none {
+  color: #e9dcc0;
+  text-shadow: none;
+  font-size: 60px;
+}

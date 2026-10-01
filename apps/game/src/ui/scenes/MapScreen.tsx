@@ -47,6 +47,7 @@ export function MapScreen() {
   const [reveal, setReveal] = useState<{ node: MapNode; open: boolean } | null>(null);
   const [omen, setOmen] = useState<MapNode | null>(null);
   const rest = useStore((s) => s.rest);
+  const attune = useStore((s) => s.attune);
   useEffect(() => {
     if (rest) sfx.loot(2);
   }, [rest]);
@@ -58,7 +59,7 @@ export function MapScreen() {
   }, []);
   const bossNext = ex ? reachable().filter((n) => n.kind === "boss") : [];
   // The Boss's moment waits for a Shrine's rest to be dismissed, so the two never stack.
-  const omenKey = ex && bossNext.length && ex.at && !rest ? ex.plan.runId : null;
+  const omenKey = ex && bossNext.length && ex.at && !rest && !attune ? ex.plan.runId : null;
   useEffect(() => {
     if (!omenKey || warned.has(omenKey)) return;
     warned.add(omenKey);
@@ -68,6 +69,11 @@ export function MapScreen() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [omenKey]);
+  const openLoom = () => setState({ attune: null, screen: "loom" });
+  const moveOn = () => {
+    setState({ attune: null });
+    leaveShrine().catch((e) => toast((e as Error).message, "loss"));
+  };
   if (!ex) return null;
   const layers = ex.plan.map.layers;
   // The route scrolls as you climb: where you stand sits at the bottom, so the next choice is always under
@@ -231,6 +237,38 @@ export function MapScreen() {
               >
                 Move on
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {attune && (
+        <div className="shrine-rest attune" data-testid="attune">
+          <div className="sr-card">
+            <i className="sr-glow">◬</i>
+            <b>An Attunement</b>
+            <span className={`sr-gain ${attune.forms ? "" : "none"}`}>{attune.forms ? `${attune.forms} ${attune.forms === 1 ? "Form" : "Forms"} to weave` : "Nothing to weave yet"}</span>
+            <small>{attune.forms ? "Weave what you found into your skills before the next fight." : "Forms you find in fights can be woven here. Move on for now."}</small>
+            {/* With Forms waiting, weaving is the main act; with none, moving on is, and the Loom stays a tap away. */}
+            <div className="sr-actions">
+              {attune.forms ? (
+                <>
+                  <button className="big" onClick={moveOn} data-testid="attune-later">
+                    Later
+                  </button>
+                  <button className="big primary" onClick={openLoom} data-testid="attune-go">
+                    Weave
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="big" onClick={openLoom} data-testid="attune-loom">
+                    Open Loom
+                  </button>
+                  <button className="big primary" onClick={moveOn} data-testid="attune-go">
+                    Move on
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

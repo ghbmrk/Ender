@@ -139,6 +139,13 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
     await page.waitForTimeout(400);
     continue;
   }
+  if (await visible(tid("attune"))) {
+    await page.waitForTimeout(500);
+    await shot("flow-attune");
+    await page.click(tid("attune-go"));
+    await page.waitForTimeout(400);
+    continue;
+  }
   if (await visible(tid("boss-omen"))) {
     await page.waitForTimeout(500);
     await shot("flow-omen");

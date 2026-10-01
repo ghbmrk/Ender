@@ -125,9 +125,11 @@ export async function stepTo(node: MapNode) {
     const root = partyRoots()[0]!;
     setState({ expedition: { ...cur, partyHp: { ...cur.partyHp, ...healed } }, loomEditable: true, rest: { gained, hp: healed[root]!, max: ROOTS[root].hp } });
   } else if (node.kind === "attunement") {
-    // Crafting lives on the Loom now: an Attunement opens it so any Forms you carry can be woven.
-    toast("An Attunement: weave any Forms you carry.", "info");
-    setState({ loomEditable: true, screen: "loom" });
+    // Crafting lives on the Loom: an Attunement says how many Forms are waiting, then opens it or lets you move on.
+    const inv = await api.inventory().catch(() => null);
+    const raw = (inv?.artifacts ?? []).filter((a: any) => a.status === "held" && !a.inscribedRole && !a.loom).length;
+    const pool = (getState().loom?.pool ?? []).length;
+    setState({ loomEditable: true, attune: { forms: raw + pool } });
   }
   else if (node.kind === "bazaar" || node.kind === "contract") setState({ panel: "bazaar" });
   if (out?.rewards && hasRewards(out.rewards)) setState({ rewards: { ...out.rewards, title: out.title ?? "Found" }, panel: node.kind === "mystery" ? "rewards" : getState().panel });
