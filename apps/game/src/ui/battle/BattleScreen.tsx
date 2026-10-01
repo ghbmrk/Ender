@@ -88,13 +88,14 @@ type Phase =
   | { k: "wait" }
   | { k: "end"; outcome: "victory" | "defeat" };
 
+/** What each Affinity adds to an Action, in a few plain words for the card. */
 const RIDER_SHORT: Record<string, string> = {
-  burden: "+15 Break, +1 AP",
-  veil: "+15% crit vs debuffed",
-  reach: "weak point",
-  knots: "+20% on a condition",
-  flex: "Perfect: act sooner",
-  bond: "+1 AP to an ally",
+  burden: "extra Break, 1 AP back",
+  veil: "more crits on a weakened foe",
+  reach: "has a weak spot to aim for",
+  knots: "+20% on a weakened foe",
+  flex: "Perfect timing: act sooner",
+  bond: "gives an ally 1 AP",
 };
 const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PERFECT PARRY", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "DODGE", hit: "HIT" };
 const STATUS_GLYPH: Record<string, string> = { marked: "◎", slow: "≋", fracture: "⟋", burn: "♨", poison: "☠" };
@@ -1065,14 +1066,13 @@ function Commands({
               </span>
               <span className={`card-ap ${cost < a.apCost ? "cheap" : ""}`}>{cost} AP</span>
             </div>
+            {/* Damage in the same units as Basic's, so the two compare at a glance. */}
             <div className="card-line">
-              {a.hits > 1 ? `${a.hits}×` : ""}
-              {Math.round(a.damagePct)}% · Break {Math.round(a.breakTotal)}
-              {a.weakPoint ? " · weak pt" : ""}
+              {Math.round(((u.power * a.damagePct) / 100) * a.hits)} damage{a.hits > 1 ? ` in ${a.hits} hits` : ""} · Break {Math.round(a.breakTotal)}
             </div>
             <div className="card-line dim">
               <span style={{ color: AFF_COLOR[a.rider] }}>{AFF_GLYPH[a.rider]}</span> {RIDER_SHORT[a.rider]}
-              {a.modifiers.length > 0 && <span> · {a.modifiers.map((m) => AFF_GLYPH[m.affinity]).join("")} mod</span>}
+              {a.modifiers.length > 0 && <span> · boosted{a.modifiers.length > 1 ? ` ×${a.modifiers.length}` : ""}</span>}
             </div>
             <div className="card-form">{a.formName}</div>
           </button>
