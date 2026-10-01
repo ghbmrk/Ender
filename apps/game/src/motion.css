@@ -971,3 +971,47 @@
   35% { opacity: 1; }
   100% { opacity: 0; transform: scale(1.6); }
 }
+
+/* Loop 10: the killing blow. The camera leans in and holds, colour drains, then a soft white bloom. */
+@keyframes cam-finale-0 {
+  0% { transform: scale(1.02); filter: none; }
+  12% { transform: scale(1.1) translate(-6px, 4px); filter: saturate(0.4) contrast(1.15); }
+  70% { transform: scale(1.13); filter: saturate(0.25) contrast(1.2) brightness(1.05); }
+  100% { transform: none; filter: none; }
+}
+@keyframes cam-finale-1 {
+  0% { transform: scale(1.02); filter: none; }
+  12% { transform: scale(1.1) translate(6px, 4px); filter: saturate(0.4) contrast(1.15); }
+  70% { transform: scale(1.13); filter: saturate(0.25) contrast(1.2) brightness(1.05); }
+  100% { transform: none; filter: none; }
+}
+.battle .finale-bloom {
+  position: absolute;
+  inset: 0;
+  z-index: 3200;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 42%, rgba(255, 248, 228, 0.95), rgba(255, 236, 190, 0.5) 40%, rgba(255, 236, 190, 0) 75%);
+  animation: finale-bloom 1000ms ease-out both;
+}
+@keyframes finale-bloom {
+  0%, 55% { opacity: 0; }
+  72% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .finale-bloom { animation-duration: 1ms; }
+}
+
+/* Loop 10: toasts drop in just under the screen headers instead of covering them. */
+.toasts {
+  top: calc(96px + env(safe-area-inset-top, 0px));
+}
+/* The final foe falls slowly through the finale, flaring white as it goes. */
+.battle.finale .unit.foe.dead .bob {
+  animation: finale-fall 950ms cubic-bezier(0.4, 0, 0.7, 0.3) forwards;
+}
+@keyframes finale-fall {
+  0% { filter: brightness(1); }
+  25% { filter: brightness(2.2) saturate(0.2); transform: translateY(0) scaleY(1); opacity: 1; }
+  100% { filter: brightness(3) saturate(0); transform: translateY(30px) scaleY(0.15); opacity: 0; }
+}

@@ -112,6 +112,12 @@ export const sfx = {
     tone(200, 0.5, "sawtooth", 0.08, 50);
     noise(0.4, 0.4, 300, 0.5);
   },
+  finale: () => {
+    buzz([60, 50, 140]);
+    tone(70, 0.9, "sine", 0.4, 35);
+    noise(0.7, 0.45, 260, 0.4);
+    tone(660, 0.6, "sine", 0.05, 990, 0.35);
+  },
   ap: () => tone(990, 0.08, "sine", 0.06, 1180),
   ko: () => tone(330, 0.5, "triangle", 0.1, 80),
   victory: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.35, "triangle", 0.1, undefined, i * 0.12)),

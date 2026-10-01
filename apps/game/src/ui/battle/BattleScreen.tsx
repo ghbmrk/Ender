@@ -91,8 +91,8 @@ const RIDER_SHORT: Record<string, string> = {
 const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PERFECT PARRY", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "DODGE", hit: "HIT" };
 const STATUS_GLYPH: Record<string, string> = { marked: "◎", slow: "≋", fracture: "⟋", burn: "♨", poison: "☠" };
 
-type CamKick = "shake" | "big" | "punch";
-const CAM_MS: Record<CamKick, number> = { shake: 200, big: 320, punch: 260 };
+type CamKick = "shake" | "big" | "punch" | "finale";
+const CAM_MS: Record<CamKick, number> = { shake: 200, big: 320, punch: 260, finale: 1000 };
 
 let uid = 0;
 /** Sequence time in ms (debug ?speed= slows it down for screenshots). */
@@ -222,6 +222,9 @@ export function BattleScreen({
 
   /** Camera kicks: a small shake on every blow, a big one on heavy hits, a punch-in toward Perfects. */
   const camN = useRef(0);
+  const [finale, setFinale] = useState(0);
+  /** Units whose knock-out has played. A unit only falls when its KO lands, not when the turn resolves. */
+  const [downed, setDowned] = useState<Record<string, true>>({});
   const [cam, setCam] = useState<{ k: CamKick; n: number; at: [number, number] } | null>(null);
   const kick = (k: CamKick, at: [number, number] = [540, 1100], delay = 0) =>
     later(delay, () => {
@@ -285,10 +288,19 @@ export function BattleScreen({
         case "recover":
           float(battle.unit(e.target), "recovers", "fl-status", d);
           break;
-        case "ko":
+        case "ko": {
           later(d, sfx.ko);
-          d += 120;
+          const u = battle.unit(e.target);
+          later(d, () => setDowned((m) => ({ ...m, [u.id]: true })));
+          if (u.side === "foe" && battle.outcome === "victory") {
+            // The killing blow: the camera leans in on the fallen foe, the world drains of colour, then a white bloom.
+            kick("finale", chest(u), d);
+            later(d, () => setFinale(++uid));
+            later(d + 80, sfx.finale);
+            d += 900;
+          } else d += 120;
           break;
+        }
         case "full-parry":
           float(battle.unit(e.target), "FULL PARRY", "full", d);
           d += 120;
@@ -653,7 +665,7 @@ export function BattleScreen({
   const bossUnit = battle.foes().find((f) => f.tier === "boss");
 
   return (
-    <div className={`battle phase-${phase.k}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
+    <div className={`battle phase-${phase.k} ${finale ? "finale" : ""}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
       <div
         className="world"
         style={{ top: worldTop, transformOrigin: cam ? `${cam.at[0]}px ${cam.at[1]}px` : undefined, animation: cam ? `cam-${cam.k}-${cam.n % 2} ${CAM_MS[cam.k]}ms ease-out` : undefined }}
@@ -665,7 +677,7 @@ export function BattleScreen({
       {/* units: foes behind, heroes in front */}
       <div className="field">
         {[...battle.foes(), ...battle.party()]
-          .filter((u) => u.alive || u.side === "party" || hurt[u.id] !== undefined)
+          .filter((u) => u.alive || u.side === "party" || hurt[u.id] !== undefined || !downed[u.id])
           .sort((a, b) => posOf(a)[1] - posOf(b)[1])
           .map((u) => {
             const [x, y] = posOf(u);
@@ -674,7 +686,7 @@ export function BattleScreen({
             return (
               <div
                 key={u.id}
-                className={`unit ${u.side} ${u.alive ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe ? "windup" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
+                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe ? "windup" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
                 style={{ left: x, top: y, zIndex: Math.round(y), ...lungeVec(u) }}
                 onPointerDown={(e) => {
                   if (seq.current) return;
@@ -701,6 +713,7 @@ export function BattleScreen({
           })}
       </div>
 
+      {finale > 0 && <div key={`fin${finale}`} className="finale-bloom" />}
       {flash && <div key={flash.id} className="flash" style={{ left: flash.at[0], top: flash.at[1], ["--flash" as string]: flash.color }} />}
 
       {/* paint: slashes, splats, sparks */}
