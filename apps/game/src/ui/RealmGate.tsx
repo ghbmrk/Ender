@@ -16,6 +16,9 @@ export function RealmGate() {
     refreshWorld().catch((e) => toast(e.message, "loss"));
   }, []);
   const best = bests();
+  // The first Realm you haven't cleared is where to go next; a new player sees "Start here" on the easiest.
+  const nextUp = (world?.realms ?? []).find((r: any) => !best[r.id]?.cleared)?.id;
+  const fresh = !Object.keys(best).length;
   if (!world) return <Panel title="Realm Gate">Listening to the Gate…</Panel>;
   const go = async (id: string) => {
     setBusy(true);
@@ -32,6 +35,7 @@ export function RealmGate() {
         {world.realms.map((r: any) => (
           <div key={r.id} className="realm-card" data-testid={`realm-${r.id}`}>
             <div className={`realm-head ${paintedBackdrop(r.id) ? "has-art" : ""}`} style={paintedBackdrop(r.id) ? { ["--realm-art" as string]: `url(${paintedBackdrop(r.id)})` } : undefined}>
+              {r.id === nextUp && <span className="realm-next">{fresh ? "Start here" : "Next"}</span>}
               <h3>{r.name}</h3>
               <span className="diff">Difficulty {r.difficultyLabel}</span>
               {best[r.id] && (

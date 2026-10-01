@@ -58,7 +58,7 @@ const LABEL: Record<string, { name: string; sub: string }> = {
   crucible: { name: "Crucible", sub: "refine your Forms" },
   mirror: { name: "Mirror", sub: "see a Form at work" },
   grimoire: { name: "Grimoire", sub: "every Form you have found" },
-  loom: { name: "The Loom", sub: "weave your party's skills" },
+  loom: { name: "The Loom", sub: "weave your skills" },
 };
 
 /** The hub between Expeditions: painted stations you tap. */

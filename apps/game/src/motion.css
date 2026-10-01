@@ -1877,3 +1877,9 @@
 .hint.fresh{left:40px;right:40px;padding:16px 26px;border-radius:16px;background:#140f16e8;border:2px solid #c9953a;box-shadow:0 8px 24px #000a;text-shadow:none;text-align:center;line-height:1.25;transform:translateY(calc(-100% + 50px));animation:hint-in .28s cubic-bezier(.2,1.4,.4,1) both}
 @keyframes hint-in{from{opacity:0;transform:translateY(calc(-100% + 70px)) scale(.94)}}
 .compile .c-boost{margin-left:.25em;font-size:.8em;color:#b07a10;text-shadow:0 0 6px rgba(255,210,110,.8)}
+
+/* Loop 53: the Gate points a new player at the easiest Realm, and Essence chips use the game's serif. */
+.realm-card .realm-head .realm-next{position:absolute;top:10px;left:12px;padding:2px 12px;border-radius:999px;background:linear-gradient(180deg,#fbe8b0,#c9953a);color:#2a1a08;font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 0 0 2px #2a1a08,0 0 18px rgba(255,214,120,.55);animation:realm-next 1.6s ease-in-out infinite alternate}
+@keyframes realm-next{to{box-shadow:0 0 0 2px #2a1a08,0 0 30px rgba(255,214,120,.9)}}
+@media (prefers-reduced-motion:reduce){.realm-card .realm-head .realm-next{animation:none}}
+.realm-chips .ess-chip,.realm-details .ess-chip{font-family:var(--serif-body)}
