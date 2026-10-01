@@ -131,7 +131,7 @@ export async function stepTo(node: MapNode) {
     const pool = (getState().loom?.pool ?? []).length;
     setState({ loomEditable: true, attune: { forms: raw + pool } });
   }
-  else if (node.kind === "bazaar" || node.kind === "contract") setState({ panel: "bazaar" });
+  else if (node.kind === "bazaar" || node.kind === "contract") setState({ panel: "bazaar", bazaarTab: node.kind === "contract" ? "contracts" : "market" });
   if (out?.rewards && hasRewards(out.rewards)) setState({ rewards: { ...out.rewards, title: out.title ?? "Found" }, panel: node.kind === "mystery" ? "rewards" : getState().panel });
   if (out?.encounter) setState({ battle: { nodeId: node.id, kind: "combat", waves: out.encounter.waves, difficulty: out.encounter.difficulty }, screen: "battle" });
 }

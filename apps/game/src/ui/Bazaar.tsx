@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { refreshCharacter, refreshWorld } from "../game/flow";
-import { toast, useStore } from "../state/store";
+import { getState, setState, toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
 import { FormCard, Sparkline } from "./FormCard";
 import { announceProgress } from "./craftActions";
@@ -13,7 +13,8 @@ const VERDICT: Record<string, string> = { cheap: "Cheap: a good buy", steady: "F
 type Tab = "market" | "forms" | "contracts" | "prophecy";
 
 export function Bazaar() {
-  const [tab, setTab] = useState<Tab>("market");
+  const [tab, setTab] = useState<Tab>(() => getState().bazaarTab ?? "market");
+  useEffect(() => () => setState({ bazaarTab: undefined }), []);
   const [bz, setBz] = useState<any>(null);
   const [inv, setInv] = useState<any>(null);
   const [busy, setBusy] = useState(false);

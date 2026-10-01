@@ -1071,7 +1071,8 @@ function Commands({
               {Math.round(((u.power * a.damagePct) / 100) * a.hits)} damage{a.hits > 1 ? ` in ${a.hits} hits` : ""} · Break {Math.round(a.breakTotal)}
             </div>
             <div className="card-line dim">
-              <span style={{ color: AFF_COLOR[a.rider] }}>{AFF_GLYPH[a.rider]}</span> {RIDER_SHORT[a.rider]}
+              {/* Alone, Bond's "ally" is the hero, so its AP comes back to you. */}
+              <span style={{ color: AFF_COLOR[a.rider] }}>{AFF_GLYPH[a.rider]}</span> {a.rider === "bond" && b.party().length === 1 ? "1 AP back" : RIDER_SHORT[a.rider]}
               {a.modifiers.length > 0 && <span> · boosted{a.modifiers.length > 1 ? ` ×${a.modifiers.length}` : ""}</span>}
             </div>
             <div className="card-form">{a.formName}</div>

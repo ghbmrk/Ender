@@ -34,6 +34,8 @@ export type State = {
   rest?: { gained: number; hp: number; max: number } | null;
   /** An Attunement on the map: how many Forms are waiting to be woven, before you open the Loom or move on. */
   attune?: { forms: number } | null;
+  /** Which Bazaar tab to open on (a Contract node opens on its contracts). */
+  bazaarTab?: "market" | "forms" | "contracts" | "prophecy";
   expedition: Expedition | null;
   /** The fight in progress: which map node it came from. */
   battle: { nodeId: string; kind: string; waves: string[][]; difficulty: number } | null;

@@ -1840,3 +1840,17 @@
   text-shadow: none;
   font-size: 60px;
 }
+
+/* Loop 44: contracts and offers in the game's serif, with the reward in gold, like the rest of the Bazaar. */
+.contracts .contract,
+.offer {
+  font-family: var(--serif-body);
+}
+.contracts .contract b,
+.contracts .contract strong {
+  font-family: var(--display);
+}
+.contracts .contract .reward {
+  color: #f4d58c;
+  font: 700 22px var(--display);
+}
