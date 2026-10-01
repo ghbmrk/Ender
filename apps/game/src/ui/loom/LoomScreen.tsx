@@ -480,6 +480,9 @@ function sigil(id: string) {
   return { d: strokes.join(" "), dot: rnd() > 0.5 };
 }
 
+/** What a Modifier adds to the Actions beside it, in a word or two that fits on its hex. */
+const MOD_SHORT: Record<string, string> = { burden: "+Break", veil: "+Crits", reach: "+Weak spot", knots: "+Damage", flex: "+Speed", bond: "+AP share" };
+
 function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, landed }: { landed?: boolean; n: LoomNode; x: number; y: number; dormant?: boolean; reason?: string; selected?: boolean; small?: boolean; lifted?: boolean; ghost?: boolean }) {
   const [a, b] = n.affinities;
   const s = small ? 70 : HEX - 12;
@@ -505,7 +508,7 @@ function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, lan
         {AFF_GLYPH[b]}
       </text>
       <text x={x} y={y + s * 0.62} className="node-name">
-        {n.role === "action" ? TEMPLATES[templateFor(a)].name : ROLE_NAME[n.role]}
+        {n.role === "action" ? TEMPLATES[templateFor(a)].name : n.role === "modifier" ? MOD_SHORT[a] : ROLE_NAME[n.role]}
       </text>
       {!small && <text x={x} y={y + s * 0.34} className="node-score">{Math.round(n.technicalScore)}</text>}
       {dormant && (
