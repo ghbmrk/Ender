@@ -1038,7 +1038,7 @@ export function BattleScreen({
         );
       })()}
       <div className="bpanel arc" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
-        {battle.living("party")[0] && <ApBar u={phase.k === "command" || phase.k === "ally" ? battle.unit(phase.actor) : battle.living("party")[0]!} aim={phase.k === "command" ? aim : 0} />}
+        {battle.living("party")[0] && <ApBar u={phase.k === "command" || phase.k === "ally" ? battle.unit(phase.actor) : battle.living("party")[0]!} aim={phase.k === "command" ? aim : 0} max={lesson?.commands === "basic" ? 3 : undefined} />}
         {phase.k === "attack" && !(lesson && coach) && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
         {(phase.k === "command" || phase.k === "ally") && (
           <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : null} onAim={setAim} onPick={(a, c) => { setAim(0); chooseCommand(a, c); }} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />
@@ -1229,7 +1229,11 @@ function Timeline({ b, tl, artOf }: { b: Battle; tl: { round: number; ids: strin
  * AP sits on top of the cards that spend it: a row of gems that fill as Basic and Parries earn AP and drain when a
  * skill is used. While a card is pressed, the gems it would spend flicker (or, for Basic, the ones it would add show).
  */
-function ApBar({ u, aim }: { u: Unit; aim: number }) {
+/**
+ * AP as gems. Before the player has a skill (the prologue's Basic-only fights), only the three a first skill costs
+ * show, and full reads "ready": AP fills toward something rather than to a ceiling it can't use.
+ */
+function ApBar({ u, aim, max = RULES.apMax }: { u: Unit; aim: number; max?: number }) {
   const prev = useRef(u.ap);
   const [flash, setFlash] = useState<"gain" | "spend" | null>(null);
   useEffect(() => {
@@ -1242,16 +1246,17 @@ function ApBar({ u, aim }: { u: Unit; aim: number }) {
   return (
     <div className={`ap-bar ${flash ?? ""}`} data-testid={`ap-${u.id}`}>
       <span className="ap-label">
-        AP <b>{u.ap}</b>
+        AP <b>{Math.min(u.ap, max)}</b>
       </span>
       <span className="ap-gems">
-        {Array.from({ length: RULES.apMax }, (_, i) => {
+        {Array.from({ length: max }, (_, i) => {
           const on = i < u.ap;
           const spend = aim > 0 && on && i >= u.ap - aim;
           const gain = aim < 0 && !on && i < u.ap - aim;
           return <i key={i} className={`ap-gem ${on ? "on" : ""} ${spend ? "aim-spend" : ""} ${gain ? "aim-gain" : ""}`} />;
         })}
       </span>
+      {max < RULES.apMax && u.ap >= max && <span className="ap-ready">ready for a skill</span>}
     </div>
   );
 }

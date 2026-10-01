@@ -3003,3 +3003,60 @@
   .stage .battle .bpanel.arc > .cards .card,
   .stage .battle .bpanel.arc .cards-idle .cards { animation: none; }
 }
+.ap-bar .ap-ready {
+  margin-left: 14px;
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-size: 26px;
+  color: #9fd4ff;
+  white-space: nowrap;
+}
+
+/* A fight's spoils, passing over the map: in, tally, out. Transform and opacity only. */
+.spoils-strip {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: calc(200px + env(safe-area-inset-top, 0px) * 2.6);
+  z-index: 4000;
+  padding: 18px 24px;
+  border: 5px solid transparent;
+  border-radius: 20px;
+  background: linear-gradient(#1a1420f2, #1a1420f2) padding-box, var(--metal) border-box;
+  box-shadow: 0 0 0 3px var(--ink-deep), 0 14px 30px #000c;
+  pointer-events: none;
+  animation: spoils-in 2600ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.spoils-strip .ss-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 40px;
+  color: #f4d58c;
+  margin-bottom: 6px;
+}
+.spoils-strip .ss-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-family: var(--serif-body);
+  font-weight: 700;
+  font-size: 40px;
+  color: #fbe8b0;
+}
+.spoils-strip .ss-tile i {
+  font-style: normal;
+}
+.spoils-strip .ss-tile small {
+  font-weight: 400;
+  font-size: 26px;
+  opacity: 0.85;
+}
+@keyframes spoils-in {
+  0% { opacity: 0; transform: translateY(-30px); }
+  10% { opacity: 1; transform: none; }
+  85% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-16px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spoils-strip { animation-duration: 1ms; animation-delay: 0s; opacity: 1; }
+}

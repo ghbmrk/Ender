@@ -54,6 +54,7 @@ await shot("flow-map");
 let fights = 0;
 let woven = 0;
 let skipRaw = false;
+let spoilsShot = false;
 for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom-done")))); step++) {
   if (await visible(tid("rewards-ok"))) {
     if (fights === 1) await shot("flow-rewards");
@@ -125,6 +126,11 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
       await shot(`flow-battle-end-${fights}`);
       console.log("end", fights, JSON.stringify(await page.evaluate(() => ({ sx: scrollX, sy: scrollY, w: document.documentElement.scrollWidth, els: [...document.querySelectorAll("*")].filter((e) => e.scrollLeft > 0).map((e) => e.className + ":" + e.scrollLeft) }))));
       await page.click(tid("battle-end"), { timeout: 1500 }).catch(() => undefined);
+      if (!spoilsShot && (await page.waitForSelector(tid("spoils"), { timeout: 4000 }).then(() => true, () => false))) {
+        spoilsShot = true;
+        await page.waitForTimeout(700);
+        await shot("flow-spoils");
+      }
       await page.waitForTimeout(500);
       continue;
     }

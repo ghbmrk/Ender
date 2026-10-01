@@ -194,7 +194,8 @@ export async function endBattle(r: BattleResult) {
     setState({ screen: "loom", loomEditable: true, afterFight: true, rewards, panel: null });
     return;
   }
-  setState({ screen: "map", rewards, panel: hasRewards(out.rewards) ? "rewards" : null });
+  // No stop for the spoils: they tally in a strip over the map while the next stop lights up.
+  setState({ screen: "map", rewards, panel: null, spoils: hasRewards(out.rewards) ? { ...rewards, at: Date.now() } : null });
 }
 
 export async function finishExpedition(outcome: "victory" | "death" | "abandon", fellTo?: BattleResult["foe"]) {

@@ -17,7 +17,7 @@ import { Grimoire } from "./Grimoire";
 import { Inventory } from "./Inventory";
 import { Provenance } from "./Provenance";
 import { RunSummary } from "./RunSummary";
-import { Rewards } from "./Rewards";
+import { Rewards, SpoilsStrip } from "./Rewards";
 import { BattleScreen } from "./battle/BattleScreen";
 import { Crossing } from "./scenes/Crossing";
 import { MapScreen } from "./scenes/MapScreen";
@@ -106,6 +106,7 @@ export function App() {
         {screen === "create" && <CreateHero />}
         {screen === "crossing" && <Crossing />}
         {screen === "map" && <MapScreen />}
+        {screen === "map" && <SpoilsStrip />}
         {screen === "battle" && <BattleHost />}
         {screen === "loom" && <LoomScreen />}
       </Stage>
