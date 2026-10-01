@@ -40,10 +40,13 @@ await page.waitForSelector(tid("loom"));
 await page.waitForTimeout(600);
 await shot("flow-loom");
 await page.click(tid("loom-done"));
-await page.click(tid("hub-gate"));
+// The Gate on the square is for choosing a Realm; Set out goes straight into the next one.
+await page.click(tid("station-gate"));
 await page.waitForSelector('[data-testid^="enter-"]');
 await shot("flow-gate");
-await page.click('[data-testid^="enter-"]');
+await page.click('.panel-close, [aria-label="Close"]').catch(() => page.keyboard.press("Escape"));
+await page.waitForSelector('[data-testid^="enter-"]', { state: "detached" });
+await page.click(tid("hub-gate"));
 await page.waitForSelector(tid("map"));
 await page.waitForTimeout(400);
 await shot("flow-map");

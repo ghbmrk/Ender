@@ -8,7 +8,7 @@ const page = await browser.newPage({ viewport: { width: 412, height: 915 }, devi
 await page.addInitScript(() => localStorage.setItem("ender:tutorial", "done"));
 await page.goto(process.env.PAGE ?? "file://" + resolve(root, "apps/game/dist-web/ender.html"));
 const tid = (t) => `[data-testid="${t}"]`;
-for (const s of [tid("sign-in"), tid("hub-gate"), '[data-testid^="enter-"]']) { await page.waitForSelector(s, { timeout: 60000 }); await page.waitForTimeout(600); await page.tap(s); }
+for (const s of [tid("sign-in"), tid("hub-gate")]) { await page.waitForSelector(s, { timeout: 60000 }); await page.waitForTimeout(600); await page.tap(s); }
 await page.waitForSelector(".map-node.next", { timeout: 30000 });
 await page.waitForTimeout(1500);
 const cdp = await page.context().newCDPSession(page);

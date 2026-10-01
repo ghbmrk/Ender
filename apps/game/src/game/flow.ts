@@ -83,6 +83,20 @@ export async function startExpedition(realmId: string) {
   setState({ expedition: { plan: out.plan, visited: [], at: null, partyHp: {}, loom: out.loom ?? null }, screen: "map", panel: null, loomEditable: false });
 }
 
+/** The Realm to go to next: the first one not yet cleared (a new player's is the easiest), else the last. */
+export async function nextRealm(): Promise<string> {
+  const world = getState().world ?? (await refreshWorld());
+  const { bests } = await import("./records");
+  const best = bests();
+  const realms: { id: string }[] = world.realms;
+  return (realms.find((r) => !best[r.id]?.cleared) ?? realms[realms.length - 1]!).id;
+}
+
+/** Set out: straight into the next Realm, no choosing. Choosing a different Realm is the Gate's job. */
+export async function setOut() {
+  await startExpedition(await nextRealm());
+}
+
 export function nodeById(id: string): MapNode | undefined {
   return getState().expedition?.plan.map.layers.flat().find((n) => n.id === id);
 }

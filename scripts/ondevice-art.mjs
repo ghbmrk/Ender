@@ -30,8 +30,6 @@ await page.click(tid("sign-in"));
 await page.waitForSelector(`${tid("crossing")}, ${tid("map")}`);
 if (!(await page.$(tid("map")))) {
   await page.click(tid("hub-gate"));
-  await page.waitForSelector('[data-testid^="enter-"]');
-  await page.click('[data-testid^="enter-"]');
   await page.waitForSelector(tid("map"));
 }
 await page.waitForTimeout(600);

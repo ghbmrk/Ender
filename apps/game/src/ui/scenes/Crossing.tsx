@@ -15,7 +15,7 @@ const PAINTED_STATIONS = [
   { id: "gate", x: 790, y: 1270 },
   { id: "loom", x: 330, y: 1520 },
 ] as const;
-import { refreshLoom } from "../../game/flow";
+import { refreshLoom, setOut } from "../../game/flow";
 import { setState, toast, useStore } from "../../state/store";
 import { essenceColor, essenceGlyph } from "../../economy/format";
 import { Head } from "../battle/Figure";
@@ -68,7 +68,7 @@ function announce(ids: string[]): string[] {
 }
 
 const LABEL: Record<string, { name: string; sub: string }> = {
-  gate: { name: "The Gate", sub: "begin an Expedition" },
+  gate: { name: "The Gate", sub: "choose a Realm" },
   bazaar: { name: "Bazaar", sub: "Essences, Forms, contracts" },
   crucible: { name: "Crucible", sub: "refine your Forms" },
   mirror: { name: "Mirror", sub: "see a Form at work" },
@@ -91,8 +91,7 @@ export function Crossing() {
   const painted = !!paintedBackdrop("crossing");
   const stations = (painted ? PAINTED_STATIONS : (mod?.STATIONS ?? [])) as readonly { id: string; x: number; y: number }[];
   const visited = seen();
-  // The Gate has no sign of its own: Set out is the one way through it, so the two never read as different things.
-  const shown = stations.filter((st) => st.id !== "gate" && unlocked(st.id, c?.mirrorCharges ?? 0));
+  const shown = stations.filter((st) => unlocked(st.id, c?.mirrorCharges ?? 0));
   const has = (id: string) => shown.some((st) => st.id === id);
   const [risen] = useState(() => (lesson ? [] : announce(shown.map((st) => st.id).filter((id) => id !== "gate" && id !== "loom"))));
   useEffect(() => {
@@ -106,6 +105,19 @@ export function Crossing() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Set out goes straight into the next Realm; the Gate on the square is where you pick a different one.
+  const [going, setGoing] = useState(false);
+  const go = async () => {
+    if (going) return;
+    if (lesson) finishTutorial();
+    setGoing(true);
+    try {
+      await setOut();
+    } catch (e) {
+      toast((e as Error).message, "loss");
+      setGoing(false);
+    }
+  };
   const open = (id: string) => {
     if (lesson) finishTutorial();
     markSeen(id);
@@ -129,7 +141,7 @@ export function Crossing() {
         {shown.map((s) => (
           <button
             key={s.id}
-            className={`station st-${s.id} ${risen.includes(s.id) ? "risen" : ""} ${lesson ? (s.id === "gate" ? "coach-pulse" : "muted") : ""} ${!lesson && s.id !== "gate" && s.id !== "loom" && !visited.includes(s.id) ? "fresh" : ""}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
+            className={`station st-${s.id} ${risen.includes(s.id) ? "risen" : ""} ${lesson ? "muted" : ""} ${!lesson && s.id !== "gate" && s.id !== "loom" && !visited.includes(s.id) ? "fresh" : ""}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
             {!lesson && s.id !== "gate" && s.id !== "loom" && !visited.includes(s.id) && <span className="st-new">New</span>}
             <span className="st-name">{LABEL[s.id]?.name ?? s.id}</span>
             <span className="st-sub">{LABEL[s.id]?.sub}</span>
@@ -187,7 +199,7 @@ export function Crossing() {
         <button className="big" onClick={() => open("loom")} data-testid="hub-loom">
           Loom
         </button>
-        <button className={`big primary ${lesson ? "coach-pulse" : ""}`} onClick={() => open("gate")} data-testid="hub-gate">
+        <button className={`big primary ${lesson ? "coach-pulse" : ""} ${going ? "going" : ""}`} onClick={go} data-testid="hub-gate">
           Set out
         </button>
       </div>

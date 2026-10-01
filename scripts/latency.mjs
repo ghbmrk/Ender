@@ -55,8 +55,7 @@ async function pass() {
   await step("sign in → Crossing", tid("sign-in"), tid("crossing"), SERVER);
   await step("Crossing → Loom", tid("station-loom"), tid("loom"));
   await step("Loom → Crossing", tid("loom-done"), tid("crossing"));
-  await step("Set out → Realm Gate", tid("hub-gate"), '[data-testid^="enter-"]');
-  await step("Gate → Map", '[data-testid^="enter-"]', tid("map"), SERVER);
+  await step("Set out → Map", tid("hub-gate"), tid("map"), SERVER);
   await step("Map → fight", ".map-node.next", "[data-phase]");
   {
     const t = await page.evaluate(() => ({ t0: window.__tap.t0, ph: window.__phases }));
