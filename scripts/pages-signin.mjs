@@ -14,6 +14,7 @@ for (const kind of ["fresh", "returning"]) {
   if (kind === "returning") {
     // A second visit: the first one's save is there.
     await page.waitForSelector('[data-testid="sign-in"]', { timeout: 60000 });
+    await page.waitForLoadState("networkidle");
     await page.reload();
   }
   await page.waitForSelector('[data-testid="sign-in"]', { timeout: 60000 });
