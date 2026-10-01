@@ -19,6 +19,8 @@ cat > "$pages/play/index.html" <<'HTML'
 <!doctype html><meta charset="utf-8"><title>Ender</title><meta http-equiv="refresh" content="0; url=../">
 <script>location.replace("../" + location.search + location.hash)</script><a href="../">Play Ender</a>
 HTML
+# The painter speed test (a page that times each engine variant on the phone).
+mkdir -p "$pages/bench" && cp "$root/apps/hero-painter/bench/index.html" "$root/apps/hero-painter/engine.js" "$pages/bench/"
 touch "$pages/.nojekyll"
 git -C "$pages" add -A
 if git -C "$pages" diff --cached --quiet; then echo "already matches $sha"; exit 0; fi
