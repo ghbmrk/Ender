@@ -39,8 +39,10 @@ const cmds = {
     return { shot: await shot() };
   },
   async taptext({ t, after = 250 }) {
-    const loc = page.getByText(String(t), { exact: false }).filter({ visible: true }).first();
-    const box = await loc.boundingBox({ timeout: 1000 }).catch(() => null);
+    // Like a person reading the screen, prefer something that looks pressable over plain words.
+    const pressable = page.locator("button, [role=button], a").filter({ hasText: String(t), visible: true }).first();
+    const words = page.getByText(String(t), { exact: false }).filter({ visible: true }).first();
+    const box = (await pressable.boundingBox({ timeout: 300 }).catch(() => null)) ?? (await words.boundingBox({ timeout: 1000 }).catch(() => null));
     if (!box) return { error: `no visible text "${t}"`, shot: await shot() };
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
     await run(Number(after));

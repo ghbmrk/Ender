@@ -879,7 +879,14 @@ export function BattleScreen({
       )}
 
       {lesson ? (
-        coach && phase.k !== "end" && <Coach text={coach.text} key={coach.key} style={{ bottom: STAGE_H - PANEL_TOP + 24 }} />
+        coach && phase.k !== "end" && (
+          <Coach
+            text={coach.text}
+            key={coach.key}
+            style={{ bottom: STAGE_H - PANEL_TOP + 24 }}
+            onTap={coach.key === "command" && phase.k === "command" ? () => chooseCommand(phase.actor, "basic") : undefined}
+          />
+        )
       ) : (
         <Hint duel={duel} phase={phase} s={s} b={battle} top={PANEL_TOP + stageH - STAGE_H - 70} />
       )}
@@ -1234,6 +1241,7 @@ function Commands({
               <span style={{ color: AFF_COLOR[a.rider] }}>{AFF_GLYPH[a.rider]}</span> {a.rider === "bond" && b.party().length === 1 ? "1 AP back" : RIDER_SHORT[a.rider]}
             </div>
             <div className="card-form">{a.formName}</div>
+            {!can && !idle && <div className="card-need">Needs {cost - u.ap} more AP</div>}
           </button>
         );
       })}
@@ -1243,7 +1251,7 @@ function Commands({
         </div>
       )}
       {/* Basic sits at the right end of the row, under the right thumb. */}
-      <button className={`card basic ${pulse === "basic" ? "coach-pulse" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid={idle ? undefined : "cmd-basic"}>
+      <button className={`card basic ${pulse === "basic" || (!idle && actions.length > 0 && actions.every((a) => b.costOf(actor, a.nodeId) > u.ap)) ? "coach-pulse" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid={idle ? undefined : "cmd-basic"}>
         <div className="card-top">
           <span className="card-name">Basic</span>
           <span className="card-ap gain">+2 AP</span>

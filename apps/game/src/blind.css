@@ -1,2 +1,30 @@
 /* Fixes from the blind new-player loop (scripts/blind). Kept in their own file so they never collide with
    other threads appending to motion.css. Loaded last, so these rules win ties. */
+
+/* A card you can't afford yet says how much more AP it needs, over its art, so a dim card never reads as broken. */
+.stage .battle .card.poor {
+  position: relative;
+}
+.stage .battle .card .card-need {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 10px;
+  padding: 6px 4px;
+  border-radius: 10px;
+  background: #120d12e6;
+  color: #ffe9a8;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  opacity: 1;
+  filter: none;
+}
+/* The lesson's tip doubles as the button it names. */
+.stage .coach.tappable {
+  cursor: pointer;
+}
+.stage .coach.tappable:active {
+  transform: scale(0.97);
+}
