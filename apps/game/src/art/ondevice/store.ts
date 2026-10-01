@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
+import { gameReady } from "../../ready";
 
 /**
  * On-device character art: the hero and foes painted on the player's own GPU (apps/hero-painter), cut out of their
@@ -109,8 +110,11 @@ export function warm() {
   if (!onDeviceArt || started) return;
   started = true;
   const go = () => void import("./service").then((s) => s.start()).catch((e) => console.warn("painter off:", e));
-  if ("requestIdleCallback" in window) requestIdleCallback(go, { timeout: 1500 });
-  else setTimeout(go, 300);
+  // The model is ~200 MB: it waits until the game itself is in, so it never slows the title or Sign in on a phone.
+  void gameReady().then(() => {
+    if ("requestIdleCallback" in window) requestIdleCallback(go, { timeout: 1500 });
+    else setTimeout(go, 300);
+  }, () => undefined);
 }
 
 export const artNow = (key: string | undefined) => (key ? done.get(key) : undefined);

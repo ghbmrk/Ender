@@ -2478,27 +2478,24 @@
   margin-right: auto;
 }
 
-/* ═════════════ Landing, metal: chrome wordmark, a lone hero against the monster, the sign-in mark as the button ═════════════ */
+/* Hero select: the landing's gilt wordmark over the same painting, so the two read as one. */
 .landing .landing-card h1 {
   font-size: 230px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  line-height: 0.9;
+  letter-spacing: 0.06em;
   color: transparent;
-  background: linear-gradient(180deg, #ffffff 0%, #dfe5ec 30%, #8d97a5 47%, #22262e 50%, #c3ccd7 53%, #f4f7fa 70%, #6b7584 100%);
+  background: linear-gradient(180deg, #fffbe8 0%, #f4d58c 38%, #b58a3c 58%, #f0cf7c 100%);
   -webkit-background-clip: text;
   background-clip: text;
-  -webkit-text-stroke: 3px #0b0910;
-  filter: drop-shadow(0 4px 0 #0b0910) drop-shadow(0 0 22px #ff3a1acc) drop-shadow(0 0 60px #a8100a99);
-  transform: scaleY(1.08);
+  -webkit-text-stroke: 0;
+  filter: drop-shadow(0 5px 0 #1d1208) drop-shadow(0 0 28px #b98cff66);
 }
 .landing .landing-card::after {
-  /* A blade line under the wordmark instead of the gilt flourish. */
-  width: 760px;
-  height: 10px;
+  width: 620px;
+  height: 3px;
   margin-top: 18px;
-  background: linear-gradient(90deg, transparent, #c3ccd7 20%, #ffffff 50%, #c3ccd7 80%, transparent);
-  clip-path: polygon(0 50%, 50% 0, 100% 50%, 50% 100%);
-  filter: drop-shadow(0 0 10px #ff3a1a);
+  background: #c9953a99;
 }
 .landing .landing-card .tagline {
   color: #e6d6c8;
