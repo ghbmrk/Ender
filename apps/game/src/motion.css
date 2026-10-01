@@ -796,3 +796,20 @@
 .stage .panel .contracts-strip button.realm-more {
   color: #c9b48a;
 }
+/* Tighter still, so a three-card column fits even short panels. */
+.stage .bpanel.thumb .cards:has(> .card:nth-child(3)) .card {
+  padding: 5px 5px 5px 7px;
+}
+.bpanel.thumb .cards:has(> .card:nth-child(3)) .card-top {
+  height: 52px;
+}
+.stage .bpanel.thumb .cards:has(> .card:nth-child(3)) .card-top + .card-line {
+  margin-top: 10px;
+  font-size: 27px;
+  line-height: 1.15;
+}
+/* The parchment rules box follows the slimmer title bar in a three-card column. */
+.stage .bpanel.thumb .cards:has(> .card:nth-child(3)) .card:not(.empty)::after {
+  top: 70px;
+  bottom: 6px;
+}
