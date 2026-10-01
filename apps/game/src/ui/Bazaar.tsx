@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { refreshCharacter, refreshWorld } from "../game/flow";
+import { refreshCharacter, refreshWorld, toRealmChoice } from "../game/flow";
 import { getState, setState, toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
 import { FormCard, Sparkline } from "./FormCard";
@@ -17,6 +17,8 @@ export function Bazaar() {
   const [inv, setInv] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const c = useStore((s) => s.character);
+  /** Back from a run: the Bazaar is a stop on the way to the next Realm choice, so it leads on there. */
+  const homeward = useStore((s) => !!s.homeward);
 
   const load = async () => {
     const [b, i] = await Promise.all([api.bazaar(), api.inventory()]);
@@ -55,6 +57,7 @@ export function Bazaar() {
       }
       wide
       testId="bazaar"
+      onClose={homeward ? toRealmChoice : undefined}
     >
       <div className="tabs">
         {(["market", "forms", "contracts", "prophecy"] as Tab[]).map((t) => (
@@ -204,6 +207,13 @@ export function Bazaar() {
       )}
 
       {tab === "prophecy" && <Prophecy bz={bz} busy={busy} act={act} />}
+      {homeward && (
+        <div className="row end bz-onward">
+          <button className="primary" onClick={toRealmChoice} data-testid="to-realms">
+            Choose your next Realm
+          </button>
+        </div>
+      )}
     </Panel>
   );
 }

@@ -264,7 +264,13 @@ export function MapScreen() {
             <span className="mn-name">
               {n.label ?? k.name}
               {next.has(n.id) && (!n.encounter || n.kind === "mystery") && PEEK[n.kind] && <small className="mn-peek">{PEEK[n.kind]}</small>}
-              {next.has(n.id) && n.encounter && n.kind !== "mystery" && <small className="mn-peek">{FOES[n.encounter.waves.flat()[0] as FoeKind]?.name ?? "foes"}</small>}
+              {/* An Elite warns before you pick it: one Elite blow can take half your health. */}
+              {next.has(n.id) && n.encounter && n.kind !== "mystery" && (
+                <small className={`mn-peek ${n.kind === "elite" ? "warn" : ""}`}>
+                  {FOES[n.encounter.waves.flat()[0] as FoeKind]?.name ?? "foes"}
+                  {n.kind === "elite" && " · hits very hard"}
+                </small>
+              )}
             </span>
           </button>
         );

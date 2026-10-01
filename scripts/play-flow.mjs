@@ -34,19 +34,16 @@ await shot("flow-landing");
 await page.click(tid("sign-in"));
 await page.waitForSelector(tid("crossing"));
 await page.waitForTimeout(500);
-await shot("flow-crossing");
-await page.click(tid("hub-loom"));
+// Home is the Realm choice (the Gate, over the Crossing); the Loom is a button on it.
+await page.waitForSelector(tid("realm-gate"));
+await shot("flow-gate");
+await page.click(tid("gate-loom"));
 await page.waitForSelector(tid("loom"));
 await page.waitForTimeout(600);
 await shot("flow-loom");
 await page.click(tid("loom-done"));
-// The Gate on the square is for choosing a Realm; Set out goes straight into the next one.
-await page.click(tid("station-gate"));
-await page.waitForSelector('[data-testid^="enter-"]');
-await shot("flow-gate");
-await page.click('.panel-close, [aria-label="Close"]').catch(() => page.keyboard.press("Escape"));
-await page.waitForSelector('[data-testid^="enter-"]', { state: "detached" });
-await page.click(tid("hub-gate"));
+await page.waitForSelector(tid("realm-gate"));
+await page.click('[data-testid^="enter-"]');
 await page.waitForSelector(tid("map"));
 await page.waitForTimeout(400);
 await shot("flow-map");
@@ -67,6 +64,15 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
   if (await visible(tid("run-summary"))) {
     await page.waitForTimeout(900);
     await shot("flow-summary");
+    // The loop home: the summary leads to the Bazaar, and the Bazaar on to the Realm choice.
+    await page.click(tid("return-crossing"));
+    await page.waitForSelector(tid("to-realms"));
+    await page.waitForTimeout(500);
+    await shot("flow-home-bazaar");
+    await page.click(tid("to-realms"));
+    await page.waitForSelector(tid("realm-gate"));
+    await page.waitForTimeout(400);
+    await shot("flow-home-gate");
     break;
   }
   if (await visible(".panel-backdrop")) {

@@ -31,6 +31,8 @@ export type HeroLook = {
   build: number;
   /** Seeds the procedural emblem on shield, tabard clasp or robe. */
   emblem: number;
+  /** The three traits picked at creation (art/traits.ts), which chose the garb and palette. */
+  traits?: string[];
 };
 
 /** `root` is internal (every new hero starts on the same Root); the player shapes how they fight on the Loom. */

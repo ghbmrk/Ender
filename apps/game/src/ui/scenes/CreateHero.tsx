@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GARBS, GARB_NAME, PALETTES, lookFromSeed, newSeed, randomName, type Garb, type HeroLook } from "../../art/look";
+import { GARBS, PALETTES, lookFromSeed, newSeed, randomName, type Garb, type HeroLook } from "../../art/look";
+import { PICKS, TRAITS, lookForTraits } from "../../art/traits";
 import { paintedFigure } from "../../art/painted";
 import { crossingBackdrop } from "../../art/registry";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
@@ -13,17 +14,17 @@ import { sfx } from "../battle/sfx";
 import { useStage, useWorldTop } from "../Stage";
 import "../../create.css";
 
-const PAL_NAME = ["Oxblood", "Sapphire", "Verdigris", "Violet", "Ash", "Ochre", "Bone", "Leather"];
 
 /**
- * Create your hero, on one page (Mark, 22:05): pick what they wear, their colours and their name while the hero is
- * painted out of sight (on this device where it can, else the same look pre-painted), then a reveal. Only the
- * hero's shadow shows while choosing; the reveal is the payoff. There is no class to pick: how the hero fights is
+ * Create your hero, on one page (Mark, 22:05): pick three traits ("Tough", "Sly", "Beautiful"…, Mark 22:25) and a
+ * name while the hero is painted out of sight (on this device where it can, else the same look pre-painted), then a
+ * reveal. The traits choose the garb and colours; only the hero's shadow shows while choosing. There is no class to pick: how the hero fights is
  * crafted on the Loom.
  */
 export function CreateHero() {
   const [look, setLook] = useState<HeroLook>(() => lookFromSeed(newSeed()));
   const [name, setName] = useState(() => randomName());
+  const [traits, setTraits] = useState<string[]>([]);
   const [revealed, setRevealed] = useState(false);
   const [busy, setBusy] = useState(false);
   const worldTop = useWorldTop();
@@ -50,20 +51,29 @@ export function CreateHero() {
   const own = artNow(spec?.key)?.url;
   const art = (revealed && own) || base;
 
-  const pickGarb = (g: Garb) => {
-    sfx.tap();
-    setLook((l) => ({ ...l, garb: g }));
+  // The picked traits choose the garb and palette; the shadow follows each pick.
+  const applyTraits = (ids: string[]) => {
+    setTraits(ids);
+    const t = lookForTraits(ids);
+    if (!t) return;
+    const [primary, secondary, accent] = PALETTES[t.pal]!;
+    setLook((l) => ({ ...l, garb: t.garb, primary, secondary, accent, traits: ids }));
   };
-  const pickPal = (i: number) => {
+  // Tap to pick, tap again to drop; a fourth pick takes the place of the last one.
+  const toggle = (id: string) => {
     sfx.tap();
-    const [primary, secondary, accent] = PALETTES[i]!;
-    setLook((l) => ({ ...l, primary, secondary, accent }));
+    if (traits.includes(id)) return applyTraits(traits.filter((t) => t !== id));
+    applyTraits(traits.length < PICKS ? [...traits, id] : [...traits.slice(0, PICKS - 1), id]);
   };
   const roll = () => {
     sfx.tap();
-    setLook(lookFromSeed(newSeed()));
+    const seed = newSeed();
+    setLook(lookFromSeed(seed));
     setName(randomName());
+    const shuffled = TRAITS.map((t) => t.id).sort(() => Math.random() - 0.5);
+    applyTraits(shuffled.slice(0, PICKS));
   };
+  const left = PICKS - traits.length;
 
   const reveal = () => {
     sfx.unlock();
@@ -95,7 +105,8 @@ export function CreateHero() {
   }, [revealed]);
 
   const shadowTop = 230;
-  const shadowH = Math.max(560, stageH - 1240);
+  // The shadow takes what the choices leave: title above, three rows of traits, the name and Reveal below.
+  const shadowH = Math.max(360, stageH - shadowTop - 1150);
   return (
     <div className="create-hero one-page" data-testid="create-hero">
       <div className="world" style={{ top: worldTop }}>
@@ -122,30 +133,14 @@ export function CreateHero() {
 
       <div className="ch-picks" style={{ top: shadowTop + shadowH + 30 }}>
         <div className="ch-row">
-          <div className="ch-label">Garb</div>
-          <div className="ch-garbs">
-            {GARBS.map((g) => (
-              <button key={g} className={`ch-garb ${g === garb ? "on" : ""}`} onClick={() => pickGarb(g)} data-testid={`garb-${g}`}>
-                <img src={paintedFigure(`hero-${g}-${pal}`)} alt="" draggable={false} />
-                <span>{GARB_NAME[g]}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="ch-row">
           <div className="ch-label">
-            Colours <span className="ch-val">{PAL_NAME[pal]}</span>
+            Pick {PICKS} <span className="ch-val">{left > 0 ? `${left} more` : "your hero is"}</span>
           </div>
-          <div className="ch-pals">
-            {PALETTES.map(([a, b, c], i) => (
-              <button
-                key={a}
-                className={`ch-pal ${i === pal ? "on" : ""}`}
-                style={{ background: `conic-gradient(${a} 0 55%, ${b} 55% 82%, ${c} 82%)` }}
-                onClick={() => pickPal(i)}
-                aria-label={PAL_NAME[i]}
-                data-testid={`pal-${i}`}
-              />
+          <div className="ch-traits">
+            {TRAITS.map((t) => (
+              <button key={t.id} className={`ch-trait ${traits.includes(t.id) ? "on" : ""}`} onClick={() => toggle(t.id)} data-testid={`trait-${t.id}`}>
+                {t.name}
+              </button>
             ))}
           </div>
         </div>
@@ -161,8 +156,8 @@ export function CreateHero() {
       </div>
 
       <div className="ch-bar" style={{ top: stageH - 230 }}>
-        <button className="big primary ch-begin" onClick={reveal} data-testid="hero-reveal">
-          Reveal your hero
+        <button className="big primary ch-begin" disabled={left > 0} onClick={reveal} data-testid="hero-reveal">
+          {left > 0 ? `Pick ${left} more` : "Reveal your hero"}
         </button>
       </div>
 
@@ -175,7 +170,7 @@ export function CreateHero() {
             {art && <img src={art} className="chr-art" alt="" draggable={false} />}
           </div>
           <div className="chr-name" style={{ top: stageH - 520 }}>
-            <small>Your hero</small>
+            <small>{traits.map((id) => TRAITS.find((t) => t.id === id)?.name).join(" · ")}</small>
             <b>{name.trim() || "Hero"}</b>
           </div>
           <button className="big primary chr-begin" style={{ top: stageH - 260 }} disabled={busy} onClick={(e) => (e.stopPropagation(), begin())} data-testid="hero-begin">

@@ -52,6 +52,8 @@ export type State = {
   tutorialRun?: number;
   /** In the Training Yard: a lesson replayed on its own, which never moves tutorial progress. */
   practice?: boolean;
+  /** On the way home from a run: the Bazaar leads on to the Realm choice. */
+  homeward?: boolean;
   /** The player's own hero (made in the prologue); null for saves from before heroes were made. */
   hero: import("../art/look").Hero | null;
 };

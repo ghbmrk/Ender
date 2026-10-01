@@ -1,7 +1,7 @@
 import { paintedBackdrop } from "../art/painted";
 import { useEffect, useState } from "react";
 import { startExpedition, refreshWorld } from "../game/flow";
-import { toast, useStore } from "../state/store";
+import { setState, toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
 import { bests } from "../game/records";
 import { finishTutorial } from "../game/tutorial";
@@ -12,8 +12,6 @@ export function RealmGate() {
   /** The prologue's last step: the Gate opened for you, with what Realms and the Bazaar are for. */
   const lesson = useStore((s) => s.tutorial === "gate");
   const [busy, setBusy] = useState(false);
-  /** Each Realm reads as one line and a button; the market detail opens on request. */
-  const [open, setOpen] = useState<string | null>(null);
   const [contracts, setContracts] = useState(false);
   useEffect(() => {
     refreshWorld().catch((e) => toast(e.message, "loss"));
@@ -45,92 +43,47 @@ export function RealmGate() {
       ) : (
         <p className="gate-why">Each Realm drops different Essences. Today's prices set what a run there is worth.</p>
       )}
-      <div className="realm-grid">
-        {world.realms.map((r: any) => (
-          <div key={r.id} className="realm-card" data-testid={`realm-${r.id}`}>
-            {/* The painting is the biggest thing on the card, so a tap on it enters too. */}
-            <div className={`realm-head ${paintedBackdrop(r.id) ? "has-art" : ""} ${lesson && r.id === nextUp ? "coach-pulse" : ""}`} style={paintedBackdrop(r.id) ? { ["--realm-art" as string]: `url(${paintedBackdrop(r.id)})` } : undefined} onClick={() => go(r.id)} role="button" data-testid={`realm-art-${r.id}`}>
-              {r.id === nextUp && <span className="realm-next">{fresh ? "Start here" : "Next"}</span>}
-              <h3>{r.name}</h3>
-              <span className="diff">Difficulty {r.difficultyLabel}</span>
-              {best[r.id] && (
-                <span className={`realm-best ${best[r.id]!.cleared ? "cleared" : ""}`}>
-                  {best[r.id]!.cleared ? "♚ Cleared" : `Best: step ${best[r.id]!.step} of ${best[r.id]!.of}`}
+      {/* Every Realm on one screen, no scrolling (Mark, 22:31): one compact row each, the whole row enters. */}
+      <div className="realm-list">
+        {world.realms.map((r: any) => {
+          const want = r.demand.find((d: any) => d.arrows !== "·");
+          return (
+            <button
+              key={r.id}
+              className={`realm-row ${lesson && r.id === nextUp ? "coach-pulse" : ""} ${busy ? "going" : ""}`}
+              onClick={() => go(r.id)}
+              data-testid={`enter-${r.id}`}
+            >
+              <span className="rr-art" style={paintedBackdrop(r.id) ? { backgroundImage: `url(${paintedBackdrop(r.id)})` } : undefined} data-testid={`realm-art-${r.id}`} />
+              <span className="rr-body" data-testid={`realm-${r.id}`}>
+                <span className="rr-top">
+                  <b className="rr-name">{r.name}</b>
+                  <span className="rr-diff">Difficulty {r.difficultyLabel}</span>
                 </span>
-              )}
-            </div>
-            <p className="dim">{r.tagline}</p>
-            {/* What this Realm gives you right now, before you choose it. */}
-            <div className="realm-why">
-              <span className="haul">
-                ≈ <b>{crowns(r.haulValue)}</b> in Essences today
+                <span className="rr-haul">
+                  ≈ <b>{crowns(r.haulValue)}</b> today
+                  {r.expectedEssences.slice(0, 3).map((e: any) => (
+                    <i key={e.essence} style={{ color: essenceColor(e.essence) }} title={e.name}>
+                      {essenceGlyph(e.essence)}
+                    </i>
+                  ))}
+                </span>
+                <span className="rr-tags">
+                  {r.id === nextUp && <span className="realm-next">{fresh ? "Start here" : "Next"}</span>}
+                  {r.id === richest && world.realms.length > 1 && <span className="why-tag">Pays best</span>}
+                  {want && <span className="why-tag want">Wanted: {want.label}</span>}
+                  {best[r.id] && <span className={`realm-best ${best[r.id]!.cleared ? "cleared" : ""}`}>{best[r.id]!.cleared ? "♚ Cleared" : `Best: step ${best[r.id]!.step} of ${best[r.id]!.of}`}</span>}
+                </span>
               </span>
-              {r.id === richest && world.realms.length > 1 && <span className="why-tag">Pays best</span>}
-              {r.demand
-                .filter((d: any) => d.arrows !== "·")
-                .slice(0, 1)
-                .map((d: any) => (
-                  <span key={d.contractId} className="why-tag want">
-                    Wanted: {d.label} · {crowns(d.reward)}
-                  </span>
-                ))}
-              {r.events.slice(0, 1).map((e: string) => (
-                <span key={e} className="why-event">{e}</span>
-              ))}
-            </div>
-            <div className="realm-chips">
-              <span className="chips-label">Drops</span>
-              {r.expectedEssences.slice(0, 3).map((e: any) => (
-                <span key={e.essence} className="ess-chip" style={{ color: essenceColor(e.essence), borderColor: essenceColor(e.essence) }}>
-                  {essenceGlyph(e.essence)} {e.name}
-                </span>
-              ))}
-            </div>
-            {open === r.id && (
-              <div className="realm-details">
-            <div className="kv">
-              <div className="k">Forms here are</div>
-              <div className="v">{r.bias.join(" · ")}</div>
-            </div>
-            <div className="kv">
-              <div className="k">Likely Essences</div>
-              <div className="v">
-                {r.expectedEssences.slice(0, 3).map((e: any) => (
-                  <span key={e.essence} className="ess-chip" style={{ color: essenceColor(e.essence), borderColor: essenceColor(e.essence) }}>
-                    {essenceGlyph(e.essence)} {e.name} {Math.round(e.share * 100)}% · {e.price.toFixed(1)}
-                    {e.glut ? " · glut" : ""}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="kv">
-              <div className="k">Expected haul</div>
-              <div className="v">≈ {crowns(r.haulValue)} in Essences at today's prices</div>
-            </div>
-            <div className="kv">
-              <div className="k">Demand</div>
-              <div className="v">
-                {r.demand.length === 0 && <span className="dim">No special demand</span>}
-                {r.demand.map((d: any) => (
-                  <div key={d.contractId} className={`demand ${d.arrows === "↑↑" ? "hot" : ""}`}>
-                    {d.label} <b>{d.arrows}</b> <span className="dim">· contract {crowns(d.reward)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-              </div>
-            )}
-            {/* Details sits beside Enter, so the Essences get their row to themselves. */}
-            <div className="realm-actions">
-                <button className="realm-more" onClick={() => setOpen(open === r.id ? null : r.id)} data-testid={`realm-more-${r.id}`}>
-                  {open === r.id ? "Less" : "Details"}
-                </button>
-              <button className={`primary ${busy ? "going" : ""}`} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
-                Enter
-              </button>
-            </div>
-          </div>
-        ))}
+            </button>
+          );
+        })}
+      </div>
+      {/* The Loom is never far: weave what the last run dropped before choosing the next. */}
+      <div className="row gate-tools">
+        <button onClick={() => setState({ screen: "loom", panel: null, loomEditable: true })} data-testid="gate-loom">
+          The Loom
+        </button>
       </div>
       <div className="contracts-strip">
         <button className="realm-more" onClick={() => setContracts(!contracts)}>

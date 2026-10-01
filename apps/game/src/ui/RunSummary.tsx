@@ -1,4 +1,4 @@
-import { returnToCrossing } from "../game/flow";
+import { toBazaar } from "../game/flow";
 import { useEffect } from "react";
 import { useStore } from "../state/store";
 import { sfx } from "./battle/sfx";
@@ -19,7 +19,7 @@ export function RunSummary() {
   const boss = s.boss ? FOES[s.boss as FoeKind] : undefined;
   const title = s.outcome === "victory" ? "Realm cleared" : s.outcome === "death" ? "Driven back" : "You withdrew";
   return (
-    <Panel title={title} onClose={returnToCrossing} testId="run-summary">
+    <Panel title={title} onClose={toBazaar} testId="run-summary">
       <div className="summary">
         {/* A win shows what you beat: the Boss, crossed out in gold, and the whole climb lit. */}
         {s.outcome === "victory" && (
@@ -102,8 +102,8 @@ export function RunSummary() {
         ))}
       </div>
       <div className="row end">
-        <button className="primary" onClick={returnToCrossing} data-testid="return-crossing">
-          Return to the Crossing
+        <button className="primary" onClick={toBazaar} data-testid="return-crossing">
+          To the Bazaar
         </button>
       </div>
     </Panel>

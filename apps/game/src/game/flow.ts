@@ -45,7 +45,8 @@ export async function continueGame() {
     const hero = { root: "iron" as const, name: randomName(), look: lookFromSeed(newSeed()) };
     saveHero(hero);
   }
-  setState({ screen: getState().expedition ? "map" : "crossing", panel: null, loomEditable: !getState().expedition });
+  // Home is the Realm choice (Mark, 22:28): the loop is Realm choice, a Realm, the Bazaar, then the Realm choice again.
+  setState({ screen: getState().expedition ? "map" : "crossing", panel: getState().expedition ? null : "gate", loomEditable: !getState().expedition });
 }
 
 /** The compiled Loom of each hero: the Expedition's saved snapshot when there is one, else the live Loom. */
@@ -162,8 +163,8 @@ export function battleSetup(): BattleSetup {
   return {
     seed: `${ex.plan.seed}|${b.nodeId}`,
     party: compiledParty().map((p) => ({ ...p, hp: ex.partyHp[p.root] })),
-    // Every fight is a duel: the encounter's foes step up one at a time.
-    waves: (b.waves as FoeKind[][]).flat().map((k) => [k]),
+    // Every fight is one foe, one on one (Mark, 20:42): an encounter saved with more keeps only its first.
+    waves: [[(b.waves as FoeKind[][]).flat()[0] ?? "husk"]],
     difficulty: b.difficulty,
     fieldCap: DUEL_FIELD_CAP,
     foeScale: { hp: DUEL_HP[b.kind === "boss" ? "boss" : b.kind === "elite" ? "elite" : "normal"], atk: DUEL_ATK[b.kind === "boss" ? "boss" : b.kind === "elite" ? "elite" : "normal"] },
@@ -220,8 +221,14 @@ export async function finishExpedition(outcome: "victory" | "death" | "abandon",
   setState({ runSummary: { ...out, totals, outcome, reached, newBest, firstClear, boss: ex.plan.boss, fellTo, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
 }
 
-export function returnToCrossing() {
-  setState({ screen: "crossing", panel: null, runSummary: null, loomEditable: true });
+/** After a run's summary: the Bazaar, to sell the haul, on the way back to the Realm choice. */
+export function toBazaar() {
+  setState({ screen: "crossing", panel: "bazaar", bazaarTab: "market", homeward: true, runSummary: null, loomEditable: true });
+}
+
+/** Home: the Realm choice, over the Crossing. */
+export function toRealmChoice() {
+  setState({ screen: "crossing", panel: "gate", homeward: false, runSummary: null, loomEditable: true });
 }
 
 export const heroName = (root: RootId) => ROOTS[root].name;

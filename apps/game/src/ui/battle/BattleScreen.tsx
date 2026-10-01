@@ -211,7 +211,6 @@ export function BattleScreen({
   const [stray, setStray] = useState(0);
   // Whether the player has chosen a first move: until then a new lesson's banner stays up, so a glance can't miss it.
   const [acted, setActed] = useState(false);
-  const [waveIntro, setWaveIntro] = useState<{ prev?: string; next: string; n: number; of: number } | null>(null);
   useEffect(() => setStray(0), [phase]);
   const say = (key: CoachKey) => {
     const text = (drillRef.current === "parry" && lesson?.parryCoach?.[key]) || lesson?.coach[key];
@@ -452,17 +451,7 @@ export function BattleScreen({
         case "summon":
           later(d, () => showBanner("Reinforcements", "the seals give way"));
           break;
-        case "wave": {
-          // A new foe stepping in is named, and holds the screen over the round banner, so a swap never reads as the old foe changing.
-          // It stays up until the player's next move (a timed banner was missed, and a full-health foe read as a heal).
-          const next = battle.living("foe")[0];
-          const prev = battle.units.find((u) => u.side === "foe" && !u.alive);
-          later(d, () => {
-            setWaveIntro({ prev: prev?.name, next: next?.name ?? "A new foe", n: e.index + 1, of: setup.waves.length });
-            setActed(false);
-          });
-          break;
-        }
+        // No "wave" case: every fight is one foe (Mark, 20:42), so no foe steps in after the first.
         case "round":
           // No round banner: a round count isn't progress, and "Round 1" over a fresh foe read as the fight restarting.
           break;
@@ -1041,7 +1030,7 @@ export function BattleScreen({
                 <div className="bob">
                   <Fig bake art={artOf(u)} look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${artOf(u) ? "" : u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
                 </div>
-                {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} count={setup.waves.length > 1 ? `${battle.waveIndex + 1} of ${setup.waves.length}` : undefined} />}
+                {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} />}
                 {u.side === "party" && <HeroTag u={u} h={figureBox(u.figure, figScale(u)).h} />}
               </div>
             );
@@ -1132,13 +1121,6 @@ export function BattleScreen({
           <small>Lesson {(LESSON_NO[lesson.step] ?? 2) - 1} done</small>
           <b>Lesson {LESSON_NO[lesson.step]} of 2</b>
           <span>A fresh {FOE_NAME(setup.waves[0]?.[0] ?? "foe")} steps up</span>
-        </div>
-      )}
-      {waveIntro && (
-        <div key={`wave-${waveIntro.n}`} className={`lesson-intro ${acted ? "gone" : ""}`} data-testid="wave-intro" aria-hidden>
-          {waveIntro.prev && <small>{waveIntro.prev} down</small>}
-          <b>{waveIntro.next} steps in</b>
-          <span>Foe {waveIntro.n} of {waveIntro.of} in this fight</span>
         </div>
       )}
       {lesson && onSkip && phase.k === "command" && (
@@ -1327,7 +1309,7 @@ const LESSON_NAME: Partial<Record<Lesson["step"], string>> = { strike: "Strike",
 /** Matches .foe-tag's width in frame.css, so tags near the edges stay on screen. */
 const FOE_TAG_W = 300;
 
-function FoeTag({ u, h, x, count }: { u: Unit; h: number; x: number; count?: string }) {
+function FoeTag({ u, h, x }: { u: Unit; h: number; x: number }) {
   // Keep the tag on screen near the edges.
   const left = Math.max(10, Math.min(1070 - FOE_TAG_W, x - FOE_TAG_W / 2)) - x;
   return (
@@ -1335,8 +1317,6 @@ function FoeTag({ u, h, x, count }: { u: Unit; h: number; x: number; count?: str
       <div className="foe-name">
         {u.name}
         {u.tier === "elite" && <span className="elite-mark">elite</span>}
-        {/* Which foe of the fight this is, always on show: a banner alone is gone before a new foe is read as the old one changing. */}
-        {count && <span className="foe-count">{count}</span>}
       </div>
       <Bar v={u.hp} max={u.maxHp} cls="hp" />
       <div className="foe-hp-num">

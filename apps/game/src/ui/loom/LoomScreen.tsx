@@ -248,7 +248,8 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
     if (inRun && editable && !DEMO) {
       leaveShrine().catch((e) => toast((e as Error).message, "loss"));
     } else if (inRun) setState({ screen: "map" });
-    else setState({ screen: "crossing" });
+    // Out of a run, the Loom hands back to the Realm choice: home in the loop (Mark, 22:28).
+    else setState({ screen: "crossing", panel: "gate" });
   };
 
   const lessonForm = lesson ? (pool.find((n) => n.role === "action") ?? nodes.find((n) => n.role === "action")) : undefined;

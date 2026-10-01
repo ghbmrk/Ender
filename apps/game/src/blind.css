@@ -122,3 +122,112 @@
   color: #8a5a12;
   margin-right: 4px;
 }
+
+/* An Elite stop says it hits very hard before you pick it. */
+.stage .map-node .mn-name .mn-peek.warn {
+  color: #ff9a7a;
+  font-weight: 700;
+}
+.row.gate-tools {
+  justify-content: flex-end;
+  margin: 10px 0;
+}
+.bz-onward {
+  position: sticky;
+  bottom: 0;
+  padding-top: 12px;
+}
+
+/* The Realm choice: every Realm in one compact row, all on one screen. */
+.realm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stage .panel button.realm-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  align-items: stretch;
+  width: 100%;
+  min-height: 92px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 2px solid #8a6a32;
+  background: #241a14;
+  color: #f3e6c8;
+  text-align: left;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.stage .panel button.realm-row:active {
+  transform: scale(0.98);
+}
+.realm-row .rr-art {
+  display: block;
+  flex: 0 0 92px;
+  min-height: 76px;
+  border-radius: 10px;
+  background: #3a2c22 center / cover no-repeat;
+}
+.realm-row .rr-body {
+  flex: 1;
+  text-align: left;
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.realm-row .rr-top {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.realm-row .rr-name {
+  font-family: var(--display, Georgia), serif;
+  font-size: 20px;
+  color: #f4d58c;
+}
+.realm-row .rr-diff {
+  font-size: 13px;
+  color: #c9b48a;
+  white-space: nowrap;
+}
+.realm-row .rr-haul {
+  font-size: 15px;
+}
+.realm-row .rr-haul i {
+  font-style: normal;
+  margin-left: 6px;
+}
+.realm-row .rr-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.realm-row .rr-tags > span {
+  position: static;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.realm-row .realm-next {
+  background: #ecc56a;
+  color: #2a1f12;
+  font-weight: 700;
+}
+.realm-row .rr-tags .why-tag {
+  font-weight: 700;
+  color: #1d1408;
+  background: linear-gradient(180deg, #f4d58c, #c8963a);
+}
+.realm-row .rr-tags .why-tag.want {
+  color: #f1fbf4;
+  background: linear-gradient(180deg, #2e8a53, #1c6a3a);
+}
