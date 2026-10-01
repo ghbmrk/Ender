@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import type { RootId } from "@ender/battle";
 
 /** Scenes drawn on the portrait stage. Menu sheets (panels) open over them at the device's own pixel size. */
-export type Screen = "title" | "create" | "crossing" | "map" | "battle" | "loom";
+export type Screen = "landing" | "title" | "create" | "crossing" | "map" | "battle" | "loom";
 export type Panel = null | "gate" | "crucible" | "bazaar" | "grimoire" | "inventory" | "provenance" | "rewards" | "summary" | "codex";
 
 export type Toast = { id: number; text: string; tone?: "gain" | "loss" | "info" | "mastery" };
@@ -53,14 +53,8 @@ export type State = {
 };
 
 let state: State = {
-  // A new player goes straight into making their hero; a returning one gets the hero select.
-  screen: (() => {
-    try {
-      return localStorage.getItem("ender:hero") || localStorage.getItem("ender:tutorial") ? "title" : "create";
-    } catch {
-      return "create";
-    }
-  })(),
+  // Everyone lands on the title; its button leads a new player into making a hero, a returning one to hero select.
+  screen: "landing",
   panel: null,
   character: null,
   loom: null,

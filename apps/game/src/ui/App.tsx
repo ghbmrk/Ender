@@ -7,6 +7,7 @@ import { LESSONS, lessonEnded, lessonSetup, skipTutorial } from "../game/tutoria
 import { setState, toast, useStore } from "../state/store";
 import { Stage } from "./Stage";
 import { Title } from "./Title";
+import { Landing } from "./Landing";
 import { Toasts } from "./Toasts";
 import { RealmGate } from "./RealmGate";
 import { Crucible } from "./Crucible";
@@ -97,6 +98,7 @@ export function App() {
     <div className="app">
       <ArtDefs />
       <Stage>
+        {screen === "landing" && <Landing />}
         {screen === "title" && <Title />}
         {screen === "create" && <CreateHero />}
         {screen === "crossing" && <Crossing />}
