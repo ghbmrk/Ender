@@ -8,6 +8,7 @@ scratch
 .vite
 dist-web
 dist-split
+dist-pages
 art-shots/
 
 # Painted art: raw renders/uploads stay local; the fitted webp files in apps/game/src/art/painted are committed.

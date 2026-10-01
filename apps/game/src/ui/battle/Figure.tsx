@@ -3,6 +3,7 @@ import { figureFor } from "../../art/registry";
 import { paintedFigure } from "../../art/painted";
 import type { Pose } from "../../art/types";
 import type { HeroLook } from "../../art/look";
+import type { Art } from "../../art/ondevice/store";
 
 /** Stage px per viewBox unit, per painted figure. */
 export const FIG_SCALE: Record<string, number> = {
@@ -26,9 +27,16 @@ export function figureBox(figure: string, scale = FIG_SCALE[figure] ?? 1.2) {
 }
 
 /** A painted figure standing with its feet at (x, y) in stage px. Memoised so filters are not re-rasterised needlessly. */
-export const Fig = memo(function Fig({ figure, pose = "idle", scale, className, look, bake }: { figure: string; pose?: Pose; scale?: number; className?: string; look?: HeroLook; bake?: boolean }) {
+export const Fig = memo(function Fig({ figure, pose = "idle", scale, className, look, bake, art }: { figure: string; pose?: Pose; scale?: number; className?: string; look?: HeroLook; bake?: boolean; art?: Art }) {
   const F = figureFor(figure).default;
   const b = figureBox(figure, scale);
+  // Art painted on this device (art/ondevice) stands in for everything else once it's ready.
+  if (art)
+    return (
+      <div className={`${className ?? ""} fig-ondevice ${look ? "is-hero" : ""}`} style={{ position: "absolute", left: -b.w / 2, top: -b.feetY, width: b.w, height: b.feetY }}>
+        <ArtCanvas art={art} className="fig-img" />
+      </div>
+    );
   if (bake && (look || !paintedFigure(figure)))
     return <BakedFig figure={figure} pose={pose} scale={scale} className={className} look={look} />;
   // The player's own hero is always drawn from their look, never swapped for shared painted art.
@@ -48,10 +56,16 @@ export const Fig = memo(function Fig({ figure, pose = "idle", scale, className, 
 });
 
 /** A head crop of a figure, for the timeline and portraits. */
-export const Head = memo(function Head({ figure, size, look }: { figure: string; size: number; look?: HeroLook }) {
+export const Head = memo(function Head({ figure, size, look, art }: { figure: string; size: number; look?: HeroLook; art?: Art }) {
   const mod = figureFor(figure);
   const [x, y, s] = mod.meta.head;
   const F = mod.default;
+  if (art)
+    return (
+      <div className={`head head-ondevice ${look ? "is-hero" : ""}`} style={{ width: size, height: size }}>
+        <ArtCanvas art={art} className="head-img" />
+      </div>
+    );
   const painted = look ? undefined : paintedFigure(figure);
   if (painted)
     return (
@@ -235,4 +249,17 @@ function BakedFig({ figure, pose = "idle", scale, className, look, only }: { fig
       )}
     </div>
   );
+}
+
+/** Shows an on-device paint: one bitmap draw into a canvas the size of the cut-out, scaled by CSS. */
+export function ArtCanvas({ art, className }: { art: Art; className?: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useLayoutEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    c.width = art.w;
+    c.height = art.h;
+    c.getContext("2d")?.drawImage(art.bmp, 0, 0);
+  }, [art]);
+  return <canvas ref={ref} width={art.w} height={art.h} className={`${className ?? ""} art-ondevice`} />;
 }

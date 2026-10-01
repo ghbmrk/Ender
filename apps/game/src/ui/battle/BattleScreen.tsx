@@ -30,6 +30,10 @@ import { debug } from "../../game/debug";
 import type { CoachKey, Lesson } from "../../game/tutorial";
 import { Coach } from "../Coach";
 import { lookFor } from "../../game/hero";
+import { getState } from "../../state/store";
+import { foeSpec } from "../../art/ondevice/specs";
+import { artNow, type Art } from "../../art/ondevice/store";
+import { foeWhere, useHeroArt } from "../../art/ondevice/useArt";
 import { Cues } from "./cues";
 
 export type BattleResult = {
@@ -146,6 +150,18 @@ export function BattleScreen({
   onEnd: (r: BattleResult) => void;
 }) {
   const battle = useMemo(() => new Battle(withDebug(setup)), [setup]);
+  // Characters painted on this device, fixed for the whole fight from the moment each one first shows.
+  const heroArt = useHeroArt();
+  const artSeen = useRef(new Map<string, Art | undefined>());
+  const artOf = (u: Unit): Art | undefined => {
+    const seen = artSeen.current;
+    if (!seen.has(u.id)) {
+      const nodeId = getState().battle?.nodeId;
+      // Prologue fights (no map stop) keep the pre-painted foes.
+      seen.set(u.id, u.side === "party" ? (lookFor(u.kind) ? heroArt : undefined) : nodeId ? artNow(foeSpec(u.kind, foeWhere(nodeId))?.key) : undefined);
+    }
+    return seen.get(u.id);
+  };
   const [, force] = useReducer((n: number) => n + 1, 0);
   const [phase, setPhase] = useState<Phase>({ k: "intro" });
   const [target, setTarget] = useState<string | null>(null);
@@ -869,7 +885,7 @@ export function BattleScreen({
                   </div>
                 )}
                 <div className="bob">
-                  <Fig bake look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
+                  <Fig bake art={artOf(u)} look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${artOf(u) ? "" : u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
                 </div>
                 {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} />}
                 {u.side === "party" && <HeroTag u={u} h={figureBox(u.figure, figScale(u)).h} />}
@@ -915,7 +931,7 @@ export function BattleScreen({
 
       </div>
 
-      <Timeline b={battle} tl={tl} />
+      <Timeline b={battle} tl={tl} artOf={artOf} />
       {bossUnit && bossUnit.alive && <BossBar u={bossUnit} />}
 
       {caption && (
@@ -963,7 +979,7 @@ export function BattleScreen({
           and Parry sit on the thumb arc, inside a right thumb's reach; the skill cards fill the bottom row. */}
       {(() => {
         const hero = (active?.side === "party" ? active : null) ?? battle.living("party")[0] ?? battle.party()[0];
-        return hero ? <HeroBadge u={hero} others={battle.party().filter((p) => p.id !== hero.id)} impacts={phase.k === "defend" && s?.k === "defend" ? s : null} /> : null;
+        return hero ? <HeroBadge u={hero} art={artOf(hero)} others={battle.party().filter((p) => p.id !== hero.id)} impacts={phase.k === "defend" && s?.k === "defend" ? s : null} /> : null;
       })()}
       <svg className="thumb-arc" viewBox={`0 0 1080 ${stageH}`} style={{ height: stageH }} aria-hidden>
         <defs>
@@ -1158,13 +1174,13 @@ function BossBar({ u }: { u: Unit }) {
   );
 }
 
-function Timeline({ b, tl }: { b: Battle; tl: { round: number; ids: string[] }[] }) {
+function Timeline({ b, tl, artOf }: { b: Battle; tl: { round: number; ids: string[] }[]; artOf: (u: Unit) => Art | undefined }) {
   const [now, next] = tl;
   const cell = (id: string, i: number, soon: boolean) => {
     const u = b.unit(id);
     return (
       <div key={`${soon ? "n" : "c"}${i}-${id}`} className={`tl-cell ${u.side} ${i === 0 && !soon ? "now" : ""} ${u.broken ? "is-broken" : ""}`}>
-        <Head look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} size={i === 0 && !soon ? 96 : 72} />
+        <Head look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} size={i === 0 && !soon ? 96 : 72} art={artOf(u)} />
       </div>
     );
   };
@@ -1219,7 +1235,7 @@ function ApBar({ u, aim }: { u: Unit; aim: number }) {
 }
 
 /** The hero's corner badge: portrait and health along the curved edge (AP sits on the card row). */
-function HeroBadge({ u, others, impacts }: { u: Unit; others: Unit[]; impacts: DefendSeq | null }) {
+function HeroBadge({ u, others, impacts, art }: { u: Unit; others: Unit[]; impacts: DefendSeq | null; art?: Art }) {
   const pct = Math.max(0, Math.min(100, (100 * u.hp) / u.maxHp));
   const arc = "M372 24 Q 372 420 14 432";
   return (
@@ -1231,7 +1247,7 @@ function HeroBadge({ u, others, impacts }: { u: Unit; others: Unit[]; impacts: D
         <path d="M398 0 Q 398 446 0 458" fill="none" stroke="#ecc56a" strokeWidth="4" opacity="0.8" />
       </svg>
       <div className="hb-portrait">
-        <Head look={lookFor(u.kind)} figure={u.figure} size={210} />
+        <Head look={lookFor(u.kind)} figure={u.figure} size={210} art={art} />
       </div>
       <div className="hb-hp">
         <b>{Math.round(u.hp)}</b>
