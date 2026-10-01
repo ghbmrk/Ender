@@ -33,6 +33,14 @@ export function ranksFrom(nodes: { affinities: readonly Affinity[] }[], keystone
   return out;
 }
 
+/** The hero's base look as a painted-art id ("hero-armour-3"): a cut-out pre-painted with the same model, shown until
+ *  this device's own paint (with the hero's seed and Loom ranks) is in, or where the device can't paint. */
+export function heroLookId(hero: Hero): string | null {
+  const { look } = hero;
+  if (!look.garb) return null;
+  return `hero-${look.garb}-${Math.max(0, PALETTES.findIndex((p) => p[0] === look.primary))}`;
+}
+
 /** The hero, from behind over the shoulder, wearing their garb and palette, with their strongest Loom affinities showing. */
 export function heroSpec(hero: Hero, ranks: Ranks): ArtSpec | null {
   const { look } = hero;

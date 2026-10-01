@@ -279,12 +279,15 @@ function BakedFig({ figure, pose = "idle", scale, className, look, only }: { fig
 /** Shows an on-device paint: one bitmap draw into a canvas the size of the cut-out, scaled by CSS. */
 export function ArtCanvas({ art, className }: { art: Art; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // Only a paint that has just finished arrives with the burst; art already in shows at once.
+  const cls = `${className ?? ""} art-ondevice ${art.at && performance.now() - art.at < 2000 ? "art-new" : ""}`;
   useLayoutEffect(() => {
     const c = ref.current;
-    if (!c) return;
+    if (!c || !art.bmp) return;
     c.width = art.w;
     c.height = art.h;
-    c.getContext("2d")?.drawImage(art.bmp, 0, 0);
+    c.getContext("2d")?.drawImage(art.bmp!, 0, 0);
   }, [art]);
-  return <canvas ref={ref} width={art.w} height={art.h} className={`${className ?? ""} art-ondevice`} />;
+  if (art.url) return <img src={art.url} className={cls} alt="" draggable={false} />;
+  return <canvas ref={ref} width={art.w} height={art.h} className={cls} />;
 }

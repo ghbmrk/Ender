@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { compileLoom, type LoomNode } from "@ender/battle";
 import { getState, subscribe, useStore } from "../../state/store";
-import { foeSpec, heroSpec, ranksFrom, type Ranks } from "./specs";
+import { paintedFigure } from "../painted";
+import { foeSpec, heroLookId, heroSpec, ranksFrom, type Ranks } from "./specs";
 import { onDeviceArt, request, usePainted, type Art } from "./store";
 
 /** The hero's Loom ranks as they fight now: the Expedition's locked snapshot, else the live Loom. */
@@ -23,7 +24,14 @@ export function useHeroArt(): Art | undefined {
   const loom = useStore((s) => s.loom);
   const snap = useStore((s) => s.expedition?.loom);
   const spec = useMemo(() => (onDeviceArt && hero ? heroSpec(hero, heroRanks()) : null), [hero, loom, snap]);
-  return usePainted(spec, 0);
+  const painted = usePainted(spec, 0);
+  // Until this device's paint is in (or where it can't paint), the same look pre-painted with the same model.
+  const base = useMemo(() => {
+    const id = hero ? heroLookId(hero) : null;
+    const url = id ? paintedFigure(id) : undefined;
+    return url ? { url, w: 0, h: 0 } : undefined;
+  }, [hero]);
+  return painted ?? base;
 }
 
 /** Where a foe was met, so the same place on the same Expedition always shows the same individual. */

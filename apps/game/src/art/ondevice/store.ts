@@ -13,7 +13,7 @@ import { gameReady } from "../../ready";
 /** What to paint: phrase keys from the painter's manifest plus a noise seed. `key` names the result. */
 export type ArtSpec = { key: string; traits: string[]; seed: number; kind: "hero" | "foe"; group?: string };
 /** A painted cut-out, cropped to its silhouette (feet or knees on the bottom edge). */
-export type Art = { bmp: ImageBitmap; w: number; h: number };
+export type Art = { bmp?: ImageBitmap; url?: string; w: number; h: number; at?: number };
 
 const BASE = import.meta.env.VITE_PAINTER_BASE as string | undefined;
 
@@ -57,7 +57,7 @@ const done = new Map<string, Art>();
 const listeners = new Set<() => void>();
 let version = 0;
 export function publish(key: string, art: Art) {
-  done.set(key, art);
+  done.set(key, { ...art, at: performance.now() });
   version++;
   for (const l of listeners) l();
 }
