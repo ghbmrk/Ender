@@ -500,6 +500,8 @@ export function BattleScreen({
     const t = battle.nextTurn();
     const d = play(t.events);
     const again = t.actor && t.actor.side === "foe" && lastActor.current === t.actor.id;
+    // A fast foe (the Hound) can open the fight before your first turn; players read the blow as landing on their turn.
+    const first = t.actor && t.actor.side === "foe" && lastActor.current === null;
     if (t.actor) lastActor.current = t.actor.id;
     if (battle.outcome !== "ongoing") return later(d + 450, () => finish(battle.outcome as "victory" | "defeat"));
     const u = t.actor;
@@ -529,7 +531,8 @@ export function BattleScreen({
       setPhase({ k: "wait" });
       // A faster foe sometimes goes twice in a row (end of one round, start of the next): say why before it swings.
       if (again) float(u, "Faster than you: acts again", "reaction", d);
-      later(d + (again ? 520 : 40), () => startDefend(plan));
+      else if (first) float(u, "Faster than you: strikes first", "reaction", d);
+      later(d + (again || first ? 520 : 40), () => startDefend(plan));
     }
   };
 
@@ -1457,21 +1460,21 @@ function ApBar({ u, live, max = RULES.apMax }: { u: Unit; live: boolean; max?: n
 /** The hero's corner badge: portrait and health along the curved edge (AP sits on the card row). */
 function HeroBadge({ u, others, impacts, art }: { u: Unit; others: Unit[]; impacts: DefendSeq | null; art?: Art }) {
   const pct = Math.max(0, Math.min(100, (100 * u.hp) / u.maxHp));
-  const arc = "M372 24 Q 372 420 14 432";
+  // A framed plate in the family of the turn bar, the AP bar and the foe's tag (Mark, 22:50): portrait, name, a
+  // health bar whose lost part drains a beat after the hit, and the numbers under it, as the foe's are.
   return (
-    <div className={`hero-badge ${u.alive ? "" : "down"}`} data-testid={`hero-${u.id}`}>
-      <svg className="hb-plate" viewBox="0 0 400 460" aria-hidden>
-        <path d="M0 0 H400 V12 Q 396 444 0 460 Z" fill="#14101cee" />
-        <path d={arc} fill="none" stroke="#0b0910" strokeWidth="34" strokeLinecap="round" />
-        <path d={arc} fill="none" stroke={pct > 50 ? "#3aa58a" : pct > 25 ? "#d9a441" : "#d9534f"} strokeWidth="22" strokeLinecap="round" pathLength={100} strokeDasharray={`${pct} 100`} />
-        <path d="M398 0 Q 398 446 0 458" fill="none" stroke="#ecc56a" strokeWidth="4" opacity="0.8" />
-      </svg>
+    <div className={`hero-badge ${u.alive ? "" : "down"} ${pct <= 25 ? "low" : pct <= 50 ? "mid" : ""}`} data-testid={`hero-${u.id}`}>
       <div className="hb-portrait">
-        <Head look={lookFor(u.kind)} figure={u.figure} size={210} art={art} />
+        <Head look={lookFor(u.kind)} figure={u.figure} size={128} art={art} />
+      </div>
+      <div className="hb-name">{u.name}</div>
+      <div className="hb-bar" aria-hidden>
+        <i className="hb-lag" style={{ width: `${pct}%` }} />
+        <i className="hb-fill" style={{ width: `${pct}%` }} />
       </div>
       <div className="hb-hp">
         <b>{Math.round(u.hp)}</b>
-        <small>of {u.maxHp} health</small>
+        <small> / {u.maxHp}</small>
       </div>
       {others.length > 0 && (
         <div className="hb-others">

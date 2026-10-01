@@ -1,5 +1,5 @@
 import { paintedBackdrop } from "../art/painted";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { startExpedition, refreshWorld } from "../game/flow";
 import { getState, setState, toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
@@ -7,12 +7,21 @@ import { bests } from "../game/records";
 import { finishTutorial } from "../game/tutorial";
 import { crowns, essenceColor, essenceGlyph } from "../economy/format";
 
+/** The first Realm choice, taught a part at a time: what a Realm gives you, what it's worth, the tags, then go. */
+const GATE_STEPS: { focus: string; text: ReactNode }[] = [
+  { focus: "realm", text: <>Each <b>Realm</b> is a run of fights that ends in a boss. Every win drops a <b>Form</b> for your <b>Loom</b>, so any Realm makes you stronger.</> },
+  { focus: "haul", text: <><b>≈ ◈ today</b> is what a run's <b>Essences</b> sell for at the <b>Bazaar</b>, which opens between any two fights. Prices change every day.</> },
+  { focus: "tags", text: <><b>Pays best</b> marks today's richest Realm. <b>Wanted</b> means an open contract pays extra for Forms found there.</> },
+  { focus: "next", text: <>Harder Realms hit harder. Start with the marked one: <b>tap it to set out</b>.</> },
+];
+
 export function RealmGate() {
   const world = useStore((s) => s.world);
   /** The prologue's last step: the Gate opened for you, with what Realms and the Bazaar are for. */
   const lesson = useStore((s) => s.tutorial === "gate");
   const [busy, setBusy] = useState(false);
   const [contracts, setContracts] = useState(false);
+  const [step, setStep] = useState(0);
   useEffect(() => {
     // Signing in has just read the world; a second read on open only delayed the Realm choice. Read it when missing.
     if (!getState().world) refreshWorld().catch((e) => toast(e.message, "loss"));
@@ -37,21 +46,29 @@ export function RealmGate() {
   };
   return (
     <Panel title="Choose a Realm" subtitle={world.headline} wide testId="realm-gate">
-      {lesson ? (
-        <p className="gate-why gate-lesson" data-testid="coach">
-          <span className="gl-mark">✦</span>Pick a <b>Realm</b> to set out. Each drops different <b>Essences</b>, which sell at the <b>Bazaar</b> between any two fights. Today's prices decide which Realm pays best; start with the marked one.
-        </p>
-      ) : (
-        <p className="gate-why">Each Realm drops different Essences. Today's prices set what a run there is worth.</p>
+      {/* The first Realm choice is walked through, one part of the cards at a time (Mark, 22:50). Each tap moves on;
+          tapping a Realm sets out at any point. */}
+      {lesson && (
+        <button className="gate-why gate-lesson" onClick={() => setStep((n) => Math.min(n + 1, GATE_STEPS.length - 1))} data-testid="coach">
+          <span className="gl-text">{GATE_STEPS[step]!.text}</span>
+          <span className="gl-foot">
+            <span className="gl-pips">
+              {GATE_STEPS.map((_, i) => (
+                <i key={i} className={i <= step ? "on" : ""} />
+              ))}
+            </span>
+            {step < GATE_STEPS.length - 1 && <span className="gl-next" data-testid="gate-next">Next ›</span>}
+          </span>
+        </button>
       )}
       {/* Every Realm on one screen, no scrolling (Mark, 22:31): one compact row each, the whole row enters. */}
-      <div className="realm-list">
+      <div className="realm-list" data-focus={lesson ? GATE_STEPS[step]!.focus : undefined}>
         {world.realms.map((r: any) => {
           const want = r.demand.find((d: any) => d.arrows !== "·");
           return (
             <button
               key={r.id}
-              className={`realm-row ${lesson && r.id === nextUp ? "coach-pulse" : ""} ${busy ? "going" : ""}`}
+              className={`realm-row ${r.id === nextUp ? "next-up" : ""} ${lesson && r.id === nextUp && step === GATE_STEPS.length - 1 ? "coach-pulse" : ""} ${busy ? "going" : ""}`}
               onClick={() => go(r.id)}
               data-testid={`enter-${r.id}`}
             >
@@ -82,21 +99,23 @@ export function RealmGate() {
       </div>
       {/* The Loom is never far: weave what the last run dropped before choosing the next. */}
       <div className="row gate-tools">
+        <button className="realm-more" onClick={() => setContracts(!contracts)}>
+          Contracts ({world.contracts.length}) {contracts ? "▴" : "▾"}
+        </button>
         <button onClick={() => setState({ screen: "loom", panel: null, loomEditable: true })} data-testid="gate-loom">
           The Loom
         </button>
       </div>
-      <div className="contracts-strip">
-        <button className="realm-more" onClick={() => setContracts(!contracts)}>
-          Open contracts ({world.contracts.length}) {contracts ? "▴" : "▾"}
-        </button>
-        {contracts && world.contracts.map((c: any) => (
-          <div key={c.id} className="contract-line">
-            <b>{c.title}</b> — {c.description} <span className="reward">{crowns(c.reward)}</span>
-            <div className="dim small">{c.reason}</div>
-          </div>
-        ))}
-      </div>
+      {contracts && (
+        <div className="contracts-strip">
+          {world.contracts.map((c: any) => (
+            <div key={c.id} className="contract-line">
+              <b>{c.title}</b> — {c.description} <span className="reward">{crowns(c.reward)}</span>
+              <div className="dim small">{c.reason}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </Panel>
   );
 }

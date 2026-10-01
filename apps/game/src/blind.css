@@ -60,19 +60,18 @@
 .stage .foe-tag .foe-count { margin-left: 14px; font-size: 36px; color: var(--gold-1); opacity: .85; letter-spacing: .04em; }
 /* Which lesson this is, under the hero's badge and above Skip: lessons hand straight on, so the count says a new one began. */
 .stage .battle .lesson-chip {
-  position: absolute; left: 24px; top: 470px; z-index: 30; pointer-events: none;
+  position: absolute; left: 16px; top: 316px; z-index: 30; pointer-events: none;
   padding: 6px 18px; border-radius: 22px; background: rgba(12, 9, 16, .78); border: 2px solid rgba(236, 197, 106, .55);
   color: var(--gold-1); font: 700 32px/1.2 "Alegreya SC", serif; letter-spacing: .04em; white-space: nowrap;
   animation: lesson-chip-in 320ms cubic-bezier(.2, 1.4, .4, 1) backwards;
 }
-.stage .battle .skip-tutorial { top: 560px; }
+.stage .battle .skip-tutorial { top: 396px; }
 @keyframes lesson-chip-in { from { transform: scale(1.35); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .stage .battle .lesson-chip { animation: none; } }
 .stage .battle .lesson-chip.away { opacity: 0; transition: opacity 120ms; }
 /* The Loom's bottom button takes taps in the strip just above it too: a thumb aiming at it from the panel above landed in the gap and did nothing. */
 .stage .loom-done::before { content: ""; position: absolute; left: 0; right: 0; top: -44px; height: 44px; }
 /* Max health in a face built for numbers, and bigger: two players read "of 120" as 150 and 110. */
-.stage .battle .hb-hp small { margin-left: 8px; font-family: var(--body); font-size: 32px; font-weight: 700; }
 
 /* Loom lesson: each open spot shows the new skill's damage there; the spots a Modifier boosts are gold with a ✦. */
 .loom-board .cell-dmg {
@@ -87,9 +86,21 @@
   fill: #ffd45e;
   font-size: 76px;
 }
+/* The skill a spot would make, named by what it touches. */
+.loom-board .cell-skill {
+  fill: #efe6d6;
+  font: 700 28px "Alegreya SC", var(--display, Georgia), serif;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #120c10;
+  stroke-width: 6px;
+}
+.loom-board .cell-skill.boosted {
+  fill: #ffd45e;
+}
 .loom-board .cell-boost {
   fill: #ffd45e;
-  font: 700 38px var(--display, Georgia), serif;
+  font: 700 26px var(--body, Georgia), sans-serif;
   pointer-events: none;
   paint-order: stroke;
   stroke: #120c10;
@@ -104,23 +115,77 @@
 @keyframes lesson-intro { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .stage .battle .lesson-intro { animation: none; } }
 
-/* The prologue's last step: the Gate opens itself and says what Realms and the Bazaar are for. */
-.gate-why.gate-lesson {
+/* The prologue's last step: the Gate opens itself and walks the Realm cards a part at a time. The panels sit
+   outside .stage, so these selectors don't start with it. */
+.panel button.gate-why.gate-lesson {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  margin: 0 0 10px;
   background: #f1e4c4;
   color: #2a1f12;
   border: 2px solid #c9a24a;
   border-radius: 12px;
-  padding: 10px 14px;
-  font-size: 16px;
-  line-height: 1.4;
-  font-style: normal;
+  padding: 10px 14px 8px;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.38;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  min-height: 0;
 }
-.gate-why.gate-lesson b {
+.panel button.gate-why.gate-lesson:active {
+  transform: scale(0.98);
+}
+.gate-lesson b {
   color: #6b2a10;
 }
-.gate-why.gate-lesson .gl-mark {
-  color: #8a5a12;
-  margin-right: 4px;
+.gate-lesson .gl-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gate-lesson .gl-pips {
+  display: flex;
+  gap: 6px;
+}
+.gate-lesson .gl-pips i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid #8a5a12;
+}
+.gate-lesson .gl-pips i.on {
+  background: #8a5a12;
+}
+.gate-lesson .gl-next {
+  font-family: var(--display, Georgia), serif;
+  font-weight: 700;
+  color: #6b2a10;
+  font-size: 16px;
+}
+/* The part of the cards the step is about glows; the rest of each card steps back. */
+.realm-list[data-focus] .rr-art,
+.realm-list[data-focus] .rr-top,
+.realm-list[data-focus] .rr-haul,
+.realm-list[data-focus] .rr-tags {
+  transition: opacity 160ms, box-shadow 160ms;
+}
+.realm-list[data-focus="haul"] :is(.rr-art, .rr-top, .rr-tags),
+.realm-list[data-focus="tags"] :is(.rr-art, .rr-top, .rr-haul),
+.realm-list[data-focus="realm"] :is(.rr-haul, .rr-tags) {
+  opacity: 0.4;
+}
+.realm-list[data-focus="haul"] .rr-haul,
+.realm-list[data-focus="tags"] .rr-tags {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px #ecc56a, 0 0 14px #ecc56a88;
+}
+.realm-list[data-focus="next"] .realm-row:not(.next-up) {
+  opacity: 0.45;
 }
 
 /* An Elite stop says it hits very hard before you pick it. */
@@ -128,9 +193,15 @@
   color: #ff9a7a;
   font-weight: 700;
 }
-.row.gate-tools {
-  justify-content: flex-end;
-  margin: 10px 0;
+.panel .row.gate-tools {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+}
+.panel .gate-tools .realm-more {
+  margin: 0;
 }
 .bz-onward {
   position: sticky;
@@ -138,22 +209,25 @@
   padding-top: 12px;
 }
 
-/* The Realm choice: every Realm in one compact row, all on one screen. */
+/* The Realm choice: every Realm in one compact row, all on one screen (Mark, 22:31 and 22:50): the painting a
+   square on the left, the facts on the right. */
 .realm-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
-.stage .panel button.realm-row {
+.panel .realm-list button.realm-row {
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 10px;
   align-items: stretch;
   width: 100%;
-  min-height: 92px;
-  padding: 8px;
-  border-radius: 14px;
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  padding: 6px;
+  border-radius: 12px;
   border: 2px solid #8a6a32;
   background: #241a14;
   color: #f3e6c8;
@@ -162,14 +236,18 @@
   text-transform: none;
   letter-spacing: 0;
 }
-.stage .panel button.realm-row:active {
+.panel .realm-list button.realm-row.next-up {
+  border-color: #ecc56a;
+}
+.panel .realm-list button.realm-row:active {
   transform: scale(0.98);
 }
 .realm-row .rr-art {
   display: block;
-  flex: 0 0 92px;
-  min-height: 76px;
-  border-radius: 10px;
+  flex: 0 0 84px;
+  width: 84px;
+  min-height: 84px;
+  border-radius: 8px;
   background: #3a2c22 center / cover no-repeat;
 }
 .realm-row .rr-body {
@@ -178,6 +256,7 @@
   align-items: flex-start;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 3px;
   min-width: 0;
 }
@@ -190,16 +269,19 @@
 }
 .realm-row .rr-name {
   font-family: var(--display, Georgia), serif;
-  font-size: 20px;
+  font-size: 19px;
   color: #f4d58c;
+  white-space: nowrap;
 }
 .realm-row .rr-diff {
-  font-size: 13px;
+  font-size: 12px;
   color: #c9b48a;
   white-space: nowrap;
 }
 .realm-row .rr-haul {
   font-size: 15px;
+  padding: 0 4px;
+  margin-left: -4px;
 }
 .realm-row .rr-haul i {
   font-style: normal;
@@ -209,11 +291,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  padding: 2px;
+  margin-left: -2px;
 }
 .realm-row .rr-tags > span {
   position: static;
-  font-size: 12px;
-  padding: 1px 8px;
+  font-size: 11px;
+  padding: 1px 7px;
   border-radius: 10px;
   white-space: nowrap;
 }

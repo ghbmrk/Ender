@@ -298,17 +298,70 @@
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: none; }
 }
-.stage button.chr-begin {
+/* Begin in the middle, the redo to its right; the empty left column keeps Begin centred. */
+.chr-actions {
   position: absolute;
   left: 24px;
   right: 24px;
-  height: 150px;
-  font-size: 58px;
+  display: grid;
+  grid-template-columns: 1fr 560px 1fr;
+  align-items: center;
   opacity: 0;
   animation: chr-rise 360ms 1250ms ease-out forwards;
 }
+.stage button.chr-begin {
+  grid-column: 2;
+  height: 150px;
+  font-size: 62px;
+}
+.stage button.chr-redo {
+  grid-column: 3;
+  justify-self: center;
+  width: 120px;
+  height: 120px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 4px solid #ecc56a;
+  background: #1a1218e6;
+  color: #f4d58c;
+  font-size: 68px;
+  line-height: 1;
+}
+.stage button.chr-redo:active {
+  transform: scale(0.94);
+}
 @media (prefers-reduced-motion: reduce) {
   .ch-halo, .ch-painting, .chr-rays { animation: none; opacity: 1; }
+}
+.ch-pick-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.ch-pick-head b {
+  font-family: var(--display);
+  font-size: 96px;
+  line-height: 1;
+  color: #f4d58c;
+  text-shadow: 0 4px 14px #000;
+}
+.ch-pips {
+  display: flex;
+  gap: 18px;
+}
+.ch-pips i {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 4px solid #ecc56a;
+  background: #1a1218cc;
+  transition: background 120ms, transform 120ms;
+}
+.ch-pips i.on {
+  background: #ecc56a;
+  transform: scale(1.15);
 }
 .ch-traits {
   display: grid;

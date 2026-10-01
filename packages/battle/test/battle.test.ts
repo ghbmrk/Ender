@@ -134,10 +134,13 @@ describe("the Loom (§6–13, §84)", () => {
     const after = compileLoom([a, near], 8);
     expect(before.actions[0]!.name).toBe("Crush");
     expect(after.actions[0]!.breakTotal).toBeGreaterThan(before.actions[0]!.breakTotal);
-    expect(diffLooms(before, after).some((s) => s.startsWith("Crush: Break"))).toBe(true);
+    // The Modifier it now touches also renames it: where a Form sits shapes the skill it makes.
+    expect(after.actions[0]!.name).toBe("Heavy Crush");
+    expect(diffLooms(before, after)).toContain("Crush → Heavy Crush");
+    expect(diffLooms(before, after).some((s) => s.startsWith("Heavy Crush: Break"))).toBe(true);
     // Replacing the Action's Form with a Reach one swaps Crush for Lance (§87).
     const lance = compileLoom([{ ...a, affinities: ["reach", "knots"] }, near], 8);
-    expect(lance.actions[0]!.name).toBe("Lance");
+    expect(lance.actions[0]!.name).toBe("Heavy Lance");
   });
   it("only the strongest Reaction per trigger executes", () => {
     const weak = node("reaction", 1, 0, ["burden", "veil"], 50);
@@ -391,8 +394,8 @@ describe("§97 required design test: builds differ materially", () => {
     const b = measure(buildB);
     expect(a.brk).toBeGreaterThanOrEqual(1.25 * b.brk);
     expect(b.ap).toBeGreaterThanOrEqual(1.2 * a.ap);
-    expect(buildA().actions[0]!.name).toBe("Crush");
-    expect(buildB().actions[0]!.name).toBe("Flurry");
+    expect(buildA().actions[0]!.template).toBe("crush");
+    expect(buildB().actions[0]!.template).toBe("flurry");
   });
 });
 

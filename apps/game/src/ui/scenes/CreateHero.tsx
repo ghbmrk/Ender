@@ -106,7 +106,7 @@ export function CreateHero() {
 
   const shadowTop = 230;
   // The shadow takes what the choices leave: title above, three rows of traits, the name and Reveal below.
-  const shadowH = Math.max(360, stageH - shadowTop - 1150);
+  const shadowH = Math.max(360, stageH - shadowTop - 1250);
   return (
     <div className="create-hero one-page" data-testid="create-hero">
       <div className="world" style={{ top: worldTop }}>
@@ -133,8 +133,14 @@ export function CreateHero() {
 
       <div className="ch-picks" style={{ top: shadowTop + shadowH + 30 }}>
         <div className="ch-row">
-          <div className="ch-label">
-            Pick {PICKS} <span className="ch-val">{left > 0 ? `${left} more` : "your hero is"}</span>
+          {/* The one choice on the page, so it leads: large and central, with a pip for each pick made (Mark, 22:50). */}
+          <div className="ch-pick-head">
+            <b>Pick {PICKS}</b>
+            <span className="ch-pips" aria-label={`${traits.length} of ${PICKS} picked`}>
+              {Array.from({ length: PICKS }, (_, i) => (
+                <i key={i} className={i < traits.length ? "on" : ""} />
+              ))}
+            </span>
           </div>
           <div className="ch-traits">
             {TRAITS.map((t) => (
@@ -173,9 +179,21 @@ export function CreateHero() {
             <small>{traits.map((id) => TRAITS.find((t) => t.id === id)?.name).join(" · ")}</small>
             <b>{name.trim() || "Hero"}</b>
           </div>
-          <button className="big primary chr-begin" style={{ top: stageH - 260 }} disabled={busy} onClick={(e) => (e.stopPropagation(), begin())} data-testid="hero-begin">
-            Begin
-          </button>
+          {/* Begin sits central; the redo beside it goes back to choosing (Mark, 22:50). */}
+          <div className="chr-actions" style={{ top: stageH - 260 }}>
+            <button className="big primary chr-begin" disabled={busy} onClick={(e) => (e.stopPropagation(), begin())} data-testid="hero-begin">
+              Begin
+            </button>
+            <button
+              className="chr-redo"
+              disabled={busy}
+              onClick={(e) => (e.stopPropagation(), sfx.tap(), setRevealed(false))}
+              aria-label="Choose again"
+              data-testid="hero-redo"
+            >
+              ↺
+            </button>
+          </div>
         </div>
       )}
     </div>

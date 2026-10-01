@@ -2003,32 +2003,34 @@
   right: 16px;
   top: 20px;
 }
+/* The hero's plate (Mark, 22:50): framed in gold like the turn bar and AP bar, with the foe tag's name, bar and
+   numbers, so both sides of the duel read the same way. */
 .battle .hero-badge {
   position: absolute;
   z-index: 3060;
-  left: 0;
-  top: 0;
-  width: 400px;
-  height: 460px;
+  left: 16px;
+  top: 16px;
+  width: 270px;
+  padding: 18px 18px 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 4px solid #ecc56a;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #2a2234f2, #120d18f2);
+  box-shadow: 0 0 0 3px #0b0910, inset 0 0 24px #000a, 0 12px 26px #000c;
   pointer-events: none;
 }
-.battle .hb-plate {
-  position: absolute;
-  inset: 0;
-  width: 400px;
-  height: 460px;
-  filter: drop-shadow(0 10px 18px #000c);
-}
 .battle .hb-portrait {
-  position: absolute;
-  left: 28px;
-  top: 26px;
-  width: 210px;
-  height: 210px;
+  width: 128px;
+  height: 128px;
   border-radius: 50%;
   overflow: hidden;
   background: radial-gradient(circle at 50% 35%, #3a3142, #15121a);
-  box-shadow: 0 0 0 7px #ecc56a, 0 0 0 13px #1d1822, 0 10px 24px #000c;
+  box-shadow: 0 0 0 5px #ecc56a, 0 0 0 9px #1d1822, 0 8px 18px #000c;
+  margin-bottom: 4px;
 }
 .battle .hb-portrait .head {
   width: 100% !important;
@@ -2037,36 +2039,59 @@
 .battle .hero-badge.down .hb-portrait {
   filter: grayscale(1) brightness(0.5);
 }
-.battle .hb-hp {
+.battle .hb-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 32px/1.1 "Alegreya SC", var(--display), serif;
+  color: #f4d58c;
+  text-shadow: 0 2px 0 #000;
+}
+.battle .hb-bar {
+  position: relative;
+  width: 100%;
+  height: 22px;
+  border-radius: 11px;
+  background: #0b0910;
+  box-shadow: 0 0 0 2px #8a6a32, inset 0 2px 4px #000;
+  overflow: hidden;
+}
+.battle .hb-bar i {
   position: absolute;
-  left: 34px;
-  top: 252px;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 58px;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 11px;
+}
+/* What a hit took stays pale for a beat, then drains. */
+.battle .hb-lag {
+  background: #f3e6c8;
+  transition: width 420ms ease-in 260ms;
+}
+.battle .hb-fill {
+  background: linear-gradient(180deg, #7fe0b0, #2e9a6a 55%, #1f7a52);
+  box-shadow: inset 0 2px 0 #ffffff55;
+  transition: width 140ms ease-out, background 200ms;
+}
+.battle .hero-badge.mid .hb-fill {
+  background: linear-gradient(180deg, #ffd98a, #d9a441 55%, #a87420);
+}
+.battle .hero-badge.low .hb-fill {
+  background: linear-gradient(180deg, #ff9a8a, #d9534f 55%, #a8302c);
+}
+.battle .hb-hp {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 34px;
   line-height: 1;
-  color: #eef5e8;
-  text-shadow: 0 4px 0 #000;
+  color: #e6f5ec;
+  text-shadow: 0 2px 0 #000, 0 0 10px #000;
+  font-variant-numeric: tabular-nums;
 }
 .battle .hb-hp small {
-  margin-left: 10px;
-  font-family: var(--serif-body);
-  font-size: 30px;
-  font-weight: 600;
+  font-size: 28px;
   color: #c9b48a;
-}
-.battle .hb-ap {
-  position: absolute;
-  left: 30px;
-  top: 326px;
-  width: 250px;
-  margin: 0;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.battle .hb-ap span {
-  width: 22px;
-  height: 22px;
 }
 .battle .hb-others {
   position: absolute;
@@ -2093,9 +2118,10 @@
 }
 .battle .hero-badge .impacts {
   position: absolute;
-  left: 250px;
-  top: 250px;
-  flex-direction: column;
+  left: 0;
+  right: 0;
+  top: calc(100% + 14px);
+  justify-content: center;
   gap: 10px;
 }
 

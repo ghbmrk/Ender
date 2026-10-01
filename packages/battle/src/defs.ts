@@ -83,6 +83,10 @@ export const RIDER_TEXT: Record<Affinity, string> = {
   flex: "Perfect command: next-turn initiative delay −8%",
   bond: "Successful use gives the lowest-AP ally +1 AP (once per turn)",
 };
+/** The word a touching Modifier adds to a skill's name: where a Form sits shapes the skill it makes ("Knotted Crush"). */
+export const MODIFIER_WORD: Record<Affinity, string> = { burden: "Heavy", veil: "Keen", reach: "Piercing", knots: "Knotted", flex: "Swift", bond: "Shared" };
+/** What a touching Modifier does to an Action, in a few words for a Loom spot. */
+export const MODIFIER_SHORT: Record<Affinity, string> = { burden: "+18% Break", veil: "+crits", reach: "+weak spot", knots: "+30% if weak", flex: "faster", bond: "shares AP" };
 export const MODIFIER_TEXT: Record<Affinity, { action: string; reaction: string }> = {
   burden: { action: "+18% Break, −8% damage", reaction: "Success grants a Barrier of 6% max HP" },
   veil: { action: "+10% crit chance against debuffed enemies", reaction: "Success Marks the attacker for 1 hit" },

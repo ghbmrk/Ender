@@ -62,8 +62,11 @@ function linkLayers(r: Rng, from: MapNode[], to: MapNode[]) {
 const NORMAL_KINDS: EnemyKind[] = ["husk", "wisp", "hound", "keeper", "seer", "swarm"];
 
 /** 1–3 normal foes from the Realm's weights (a Keeper counts double; a Swarm is one foe now). */
-function normalWave(r: Rng, realm: RealmTemplate, max: number): FoeKind[] {
-  const kinds = NORMAL_KINDS.filter((k) => realm.enemyWeights[k]);
+function normalWave(r: Rng, realm: RealmTemplate, max: number, avoid: ReadonlySet<FoeKind> = new Set()): FoeKind[] {
+  const all = NORMAL_KINDS.filter((k) => realm.enemyWeights[k]);
+  // A foe met at the stop before is not met again straight away: a second full-health Hound read as the first one healing.
+  const fresh = all.filter((k) => !avoid.has(k));
+  const kinds = fresh.length ? fresh : all;
   const weights = kinds.map((k) => realm.enemyWeights[k]!);
   const out: FoeKind[] = [];
   let left = r.int(1, max);
@@ -77,10 +80,10 @@ function normalWave(r: Rng, realm: RealmTemplate, max: number): FoeKind[] {
   return out;
 }
 
-function encounterFor(r: Rng, realm: RealmTemplate, kind: NodeKind, layer: number, seed: string): Encounter | undefined {
+function encounterFor(r: Rng, realm: RealmTemplate, kind: NodeKind, layer: number, seed: string, avoid?: ReadonlySet<FoeKind>): Encounter | undefined {
   const difficulty = realm.difficulty;
   // Every fight is one foe, one on one (Mark, 20:42).
-  if (kind === "combat" || kind === "mystery") return { waves: [normalWave(r, realm, 1).slice(0, 1)], difficulty, seed };
+  if (kind === "combat" || kind === "mystery") return { waves: [normalWave(r, realm, 1, avoid).slice(0, 1)], difficulty, seed };
   if (kind === "elite") return { waves: [[r.pick(["ironbound", "cinder", "matron"] as const)]], difficulty, seed };
   if (kind === "boss") return { waves: [[realm.boss]], difficulty, seed };
   return undefined;
@@ -91,6 +94,8 @@ export function generateRunPlan(ctx: Ctx, inp: { runId: string; snapshotId: stri
   const realm = realmById(inp.realmId);
   const key = `${inp.snapshotId}|${realm.id}|${inp.seed}`;
   const r = rng(key);
+  // The normal foes of the layer before: the next layer's plain fights pick others where the Realm has them.
+  let before = new Set<FoeKind>();
   const layers: MapNode[][] = LAYERS.map((spec, layer) => {
     const count = r.int(spec.count[0], spec.count[1]);
     const kinds = [...spec.always];
@@ -101,13 +106,16 @@ export function generateRunPlan(ctx: Ctx, inp: { runId: string; snapshotId: stri
       const j = Math.floor(r.next() * (i + 1));
       [kinds[i], kinds[j]] = [kinds[j]!, kinds[i]!];
     }
+    const avoid = before;
+    before = new Set();
     return kinds.slice(0, count).map((kind, i) => {
       const id = `L${layer}N${i}`;
       // A Mystery resolves deterministically: 40% it is an ambush (a normal fight), otherwise a small reward.
       const fight = kind === "mystery" ? r.chance(0.4) : FIGHT_KINDS.includes(kind);
       const node: MapNode = { id, layer, kind, links: [] };
-      const enc = fight ? encounterFor(r, realm, kind, layer, `${key}|${id}`) : undefined;
+      const enc = fight ? encounterFor(r, realm, kind, layer, `${key}|${id}`, avoid) : undefined;
       if (enc) node.encounter = enc;
+      if (enc && (kind === "combat" || kind === "mystery")) for (const f of enc.waves.flat()) before.add(f);
       return node;
     });
   });

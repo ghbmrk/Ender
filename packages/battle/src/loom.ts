@@ -2,6 +2,7 @@ import {
   CAPACITY_COST,
   KEYSTONES,
   MODIFIER_TEXT,
+  MODIFIER_WORD,
   REACTIONS,
   RIDER_TEXT,
   ROLE_LIMIT,
@@ -245,6 +246,12 @@ export function compileLoom(all: LoomNode[], rank: number): CompiledLoom {
 
 const cap = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 
+/** A skill is named by where it sits: the strongest touching Modifier lends its word ("Knotted Crush"). */
+export function skillName(base: string, mods: { affinity: Affinity; potency: number }[]): string {
+  const top = [...mods].sort((a, b) => b.potency - a.potency)[0];
+  return top ? `${MODIFIER_WORD[top.affinity]} ${base}` : base;
+}
+
 function compileAction(n: LoomNode, potency: number, mods: { affinity: Affinity; potency: number }[], key?: Affinity): CompiledAction {
   const [dominant, rider] = n.affinities;
   const tpl = TEMPLATES[templateFor(dominant)];
@@ -272,7 +279,7 @@ function compileAction(n: LoomNode, potency: number, mods: { affinity: Affinity;
     nodeId: n.id,
     formName: n.name,
     template: tpl.id,
-    name: tpl.name,
+    name: skillName(tpl.name, mods),
     dominant,
     rider,
     nodePotency: potency,

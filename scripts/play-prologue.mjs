@@ -48,6 +48,11 @@ await page.waitForTimeout(500);
 await shot("prologue-00-reveal-mid");
 await page.waitForTimeout(1300);
 await shot("prologue-00-reveal");
+// The redo beside Begin goes back to choosing; reveal again and begin.
+await page.click(tid("hero-redo"));
+await page.waitForSelector(tid("hero-reveal-scene"), { state: "detached" });
+await page.click(tid("hero-reveal"));
+await page.waitForTimeout(1800);
 await page.click(tid("hero-begin"));
 await page.waitForSelector(tid("battle"));
 
@@ -57,6 +62,13 @@ for (let step = 0; step < 1500; step++) {
   if (await visible(tid("crossing"))) {
     await page.waitForTimeout(400);
     await snapTip();
+    // The Gate walks its cards a part at a time: step through every tip.
+    while (await visible(tid("gate-next"))) {
+      await page.click(tid("gate-next"));
+      await page.waitForTimeout(250);
+      const t = (await page.textContent(".gate-lesson .gl-text"))?.trim();
+      if (t && !tips.includes(t)) (tips.push(t), await shot(`prologue-${String(++n).padStart(2, "0")}-gate`));
+    }
     break;
   }
   if (await visible(tid("lesson-fight"))) {

@@ -8,6 +8,7 @@ import {
   RIDER_TEXT,
   ROOTS,
   TEMPLATES,
+  MODIFIER_SHORT,
   boardCells,
   compileLoom,
   diffLooms,
@@ -269,18 +270,26 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
     return new Set(open.map(({ q, r }) => `${q},${r}`));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson, nodes, lessonMod?.id]);
-  /** The lesson skill's damage at each glowing spot, and whether a Modifier boosts it there. */
+  /** The skill the lesson Form would make at each glowing spot: its name (shaped by what it touches), damage, and
+   *  what a touching Modifier adds there (Mark, 22:50: the first skill is made by where it goes). */
   const lessonSpots = useMemo(() => {
-    const out = new Map<string, { dmg: number; boosted: boolean }>();
+    const out = new Map<string, { dmg: number; boosted: boolean; name: string; effect?: string }>();
     if (!lesson || !lessonForm || lessonPlaced) return out;
     for (const key of lessonCells) {
       const [q, r] = key.split(",").map(Number) as [number, number];
       const a = compileLoom([...nodes, { ...lessonForm, q, r }], rank).actions.find((x) => x.nodeId === lessonForm.id);
-      if (a) out.set(key, { dmg: Math.round(((ROOTS[mine].basic * a.damagePct) / 100) * a.hits), boosted: a.modifiers.length > 0 });
+      if (a)
+        out.set(key, {
+          dmg: Math.round(((ROOTS[mine].basic * a.damagePct) / 100) * a.hits),
+          boosted: a.modifiers.length > 0,
+          name: a.name,
+          effect: a.modifiers[0] ? MODIFIER_SHORT[a.modifiers[0].affinity] : undefined,
+        });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonCells, lessonForm?.id, lessonPlaced, rank]);
+  const goldSpot = [...lessonSpots.values()].find((x) => x.boosted);
   const boosted = !!lessonSkill && !!lessonMod && touches(lessonMod, nodes.find((n) => n.id === lessonForm!.id)!);
   const dmg = (a: { damagePct: number; hits: number }) => Math.round(((ROOTS[mine].basic * a.damagePct) / 100) * a.hits);
   const unboosted = boosted ? compileLoom(nodes.filter((n) => n.id !== lessonMod!.id), rank).actions.find((a) => a.nodeId === lessonForm!.id) : undefined;
@@ -297,7 +306,7 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
       : !lessonPlaced
         ? {
             text: lessonMod
-              ? `The Husk dropped a **Form**: the piece a skill is made of. Each spot shows its damage there. A spot touching **${modName}** also gets its boost: tap a **gold** one.`
+              ? `The Husk dropped a **Form**: the piece a skill is made of. **Where it goes shapes the skill**: each spot shows the skill it makes there. Touching **${modName}** makes it **${goldSpot?.name ?? "stronger"}**${goldSpot?.effect ? ` (${goldSpot.effect})` : ""}: tap a **gold** one.`
               : `The Husk dropped a **Form**: the piece a skill is made of. **Drag it** onto a **+** beside ${heroName}, or just tap a **+**.`,
           }
         : !lessonSkill
@@ -306,8 +315,8 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
             ? {
                 text:
                   unboosted && dmg(unboosted) !== dmg(lessonSkill)
-                    ? `**${lessonSkill.name}** is now a skill, and **${modName}** touches it: damage **${dmg(unboosted)}** → **${dmg(lessonSkill)}**. Forms that touch work together. Tap **Fight** to try it.`
-                    : `**${lessonSkill.name}** is now a skill, and **${modName}** touches it: the gold **+** between them is its boost. Forms that touch work together. Tap **Fight** to try it.`,
+                    ? `Your first skill: **${lessonSkill.name}**. **${modName}** touches it, so damage **${dmg(unboosted)}** → **${dmg(lessonSkill)}**. Move it and the skill changes. Tap **Fight** to try it.`
+                    : `Your first skill: **${lessonSkill.name}**. **${modName}** touches it, so it gains **${MODIFIER_SHORT[lessonSkill.modifiers[0]!.affinity]}**. Move it and the skill changes. Tap **Fight** to try it.`,
               }
             : lessonMod
               ? { text: `**${lessonSkill.name}** is now a skill. Drag it beside **${modName}** too: a Modifier powers up every skill it touches.` }
@@ -423,15 +432,17 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
               <path d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />
               {/* An empty cell that takes the Form says so, so it never reads as just decoration. */}
               {glow && lessonSpots.has(`${q},${r}`) ? (
-                // In the lesson each spot shows the skill's damage there; the boosted ones are gold with a ✦.
+                // In the lesson each spot shows the skill it would make there: name, damage and, beside a Modifier, what it adds.
                 <>
-                  <text x={x} y={y + (lessonSpots.get(`${q},${r}`)!.boosted ? -HEX * 0.02 : HEX * 0.16)} className={`cell-dmg ${lessonSpots.get(`${q},${r}`)!.boosted ? "boosted" : ""}`} textAnchor="middle">
+                  <text x={x} y={y - HEX * (lessonSpots.get(`${q},${r}`)!.boosted ? 0.34 : 0.2)} className={`cell-skill ${lessonSpots.get(`${q},${r}`)!.boosted ? "boosted" : ""}`} textAnchor="middle">
+                    {lessonSpots.get(`${q},${r}`)!.name}
+                  </text>
+                  <text x={x} y={y + (lessonSpots.get(`${q},${r}`)!.boosted ? HEX * 0.06 : HEX * 0.2)} className={`cell-dmg ${lessonSpots.get(`${q},${r}`)!.boosted ? "boosted" : ""}`} textAnchor="middle">
                     {lessonSpots.get(`${q},${r}`)!.dmg}
                   </text>
-                  {/* A boosted spot names what the touching Modifier adds, so the better spot says why it is better. */}
-                  {lessonSpots.get(`${q},${r}`)!.boosted && (
-                    <text x={x} y={y + HEX * 0.36} className="cell-boost" textAnchor="middle">
-                      {modName}
+                  {lessonSpots.get(`${q},${r}`)!.effect && (
+                    <text x={x} y={y + HEX * 0.4} className="cell-boost" textAnchor="middle">
+                      {lessonSpots.get(`${q},${r}`)!.effect}
                     </text>
                   )}
                 </>
@@ -613,7 +624,7 @@ function hitTest(x: number, y: number, rank: number): { q: number; r: number } |
 }
 
 /** What a Modifier adds to the Actions beside it, in a word or two that fits on its hex. */
-const MOD_SHORT: Record<string, string> = { burden: "+Break", veil: "+Crits", reach: "+Weak spot", knots: "+Damage", flex: "+Speed", bond: "+AP share" };
+const MOD_SHORT: Record<string, string> = { burden: "+Break", veil: "+Crits", reach: "+Weak spot", knots: "+Finisher", flex: "+Speed", bond: "+AP share" };
 
 function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, landed }: { landed?: boolean; n: LoomNode; x: number; y: number; dormant?: boolean; reason?: string; selected?: boolean; small?: boolean; lifted?: boolean; ghost?: boolean }) {
   const [a, b] = n.affinities;
