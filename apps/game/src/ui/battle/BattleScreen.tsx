@@ -829,6 +829,7 @@ export function BattleScreen({
               <b>{battle.stats.perfects}</b>Perfects
             </span>
           </div>
+          {phase.outcome === "defeat" && !lesson && <p className="end-tip">{defeatTip(battle)}</p>}
           <button className={`big ${phase.outcome === "victory" ? "primary" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onEnd({ outcome: phase.outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats })} data-testid="battle-continue">
             {lesson && phase.outcome === "defeat" ? "Try again" : "Continue"}
           </button>
@@ -836,6 +837,16 @@ export function BattleScreen({
       )}
     </div>
   );
+}
+
+/** One thing to try next time, picked from how the fight went. */
+function defeatTip(battle: Battle): string {
+  const foe = battle.foes().find((f) => f.alive) ?? battle.foes()[0];
+  const blurb = foe ? FOES[foe.kind as FoeKind]?.blurb.replace(/^Boss\.\s*/, "") : undefined;
+  if (battle.stats.perfects === 0) return "Tap as the closing ring meets the mark: a Perfect strike hits much harder.";
+  if (battle.stats.parries === 0) return `Try Parry when you know the beat. It's tight, but it gives AP and Breaks the foe.${blurb ? ` ${foe!.name}: ${blurb}` : ""}`;
+  if (blurb) return `${foe!.name}: ${blurb}`;
+  return "Weave the Forms you find on the Loom. New skills hit harder.";
 }
 
 // ───────────── pieces ─────────────

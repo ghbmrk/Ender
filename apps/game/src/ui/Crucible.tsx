@@ -137,34 +137,41 @@ export function Crucible() {
                 {a.tier === "veiled" && (
                   <button className="primary" disabled={busy} onClick={() => act("Attune", () => api.attune(a.id))} data-testid="act-attune">
                     Attune · 1 ✦
+                    <small className="act-hint">reveal what it is</small>
                   </button>
                 )}
                 {a.tier === "attuned" && (
                   <button className="primary" disabled={busy} onClick={() => act("Trial", () => api.trial(a.id))} data-testid="act-trial">
                     Trial · free
+                    <small className="act-hint">learn its exact worth</small>
                   </button>
                 )}
                 {(a.tier === "trialed" || a.tier === "witnessed") && (
                   <button disabled={busy} onClick={() => act("Trial", () => api.trial(a.id))} data-testid="act-retrial">
                     Re-Trial at today's prices
+                    <small className="act-hint">re-price at today's market</small>
                   </button>
                 )}
                 {a.tier === "trialed" && (
                   <button className={mode === "mirror" ? "primary" : ""} disabled={busy} onClick={() => act("Mirror", () => api.mirror(a.id))} data-testid="act-mirror">
                     Mirror · 2 ✦
+                    <small className="act-hint">prove it holds up</small>
                   </button>
                 )}
                 {a.tier !== "veiled" && (
                   <>
                     <button disabled={busy} onClick={() => act("Fracture", () => api.fracture(a.id))} data-testid="act-fracture">
                       Fracture · 1 ✦
+                    <small className="act-hint">find its weak spot</small>
                     </button>
                     <button disabled={busy} onClick={startTemper} data-testid="act-temper">
                       Temper · {temperCost} ✦
+                    <small className="act-hint">reshape it into a near cousin</small>
                     </button>
                     {a.tier !== "witnessed" && (
                       <button disabled={busy} onClick={() => act("Deep Trial", () => api.deepTrial(a.id))} data-testid="act-deep">
                         Deep Trial · 3 ✦
+                    <small className="act-hint">a harder, surer test</small>
                       </button>
                     )}
                   </>
@@ -177,7 +184,7 @@ export function Crucible() {
               </div>
               {a.tier !== "veiled" && (
                 <div className="bind" data-testid="inscribe">
-                  <h4>Inscribe {a.inscribedRole && <span className="dim small">· now a {a.inscribedRole}</span>}</h4>
+                  <h4>Inscribe {a.inscribedRole && <span className="dim small">· now {/^[aeiou]/i.test(a.inscribedRole) ? "an" : "a"} {a.inscribedRole}</span>}</h4>
                   <div className="dim small">
                     Inscribing turns this Form into a Loom node. It costs the Form's Essence recipe
                     {a.evaluation?.recipe ? ` (${Object.entries(a.evaluation.recipe).map(([e, q]) => `${fmt(q as number, 1)} ${essenceName(e)}`).join(", ")})` : ""}; changing it later costs the recipe again.
