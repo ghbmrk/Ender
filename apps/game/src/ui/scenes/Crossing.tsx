@@ -24,6 +24,7 @@ import { useWorldTop } from "../Stage";
 import { Coach } from "../Coach";
 import { finishTutorial } from "../../game/tutorial";
 import { weaves } from "../loom/Weave";
+import { startOver } from "../../game/reset";
 
 /**
  * The hub opens up as you play: at first only the Gate and the Loom; the other stations appear as you weave,
@@ -78,6 +79,7 @@ const LABEL: Record<string, { name: string; sub: string }> = {
 /** The hub between Expeditions: painted stations you tap. */
 export function Crossing() {
   const c = useStore((s) => s.character);
+  const [resetArmed, setResetArmed] = useState(false);
   const worldTop = useWorldTop();
   /** Last prologue step: point at the Gate and keep the other stations quiet. */
   const lesson = useStore((s) => s.tutorial === "gate");
@@ -146,6 +148,18 @@ export function Crossing() {
             {has("crucible") && <> · Focus {c?.focus ?? 0}</>}
           </div>
         </div>
+        {/* Start over as a brand-new player. It erases everything, so the first tap only arms it. */}
+        <button
+          className={`hub-reset ${resetArmed ? "armed" : ""}`}
+          onClick={() => {
+            if (resetArmed) return startOver();
+            setResetArmed(true);
+            setTimeout(() => setResetArmed(false), 3000);
+          }}
+          data-testid="start-over"
+        >
+          {resetArmed ? "Tap again: erase all" : "Start over"}
+        </button>
         {/* Counts appear with the places that use them: Essences with the Bazaar, Focus with the Crucible. */}
         <div className={`hub-ess ${has("bazaar") ? "" : "solo"}`}>
           <span className="hub-crowns" title="Crowns">

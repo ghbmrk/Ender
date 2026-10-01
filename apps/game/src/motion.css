@@ -61,7 +61,6 @@
   opacity: 0;
   transition: opacity 200ms ease-out;
   pointer-events: none;
-  will-change: opacity;
 }
 .battle .unit.foe.windup .menace,
 .battle .unit.foe.rewind .menace {
@@ -2901,4 +2900,24 @@
 .weave-sheet .ws-eval i {
   font-size: 26px;
   opacity: 0.8;
+}
+
+/* Crossing header: Start over, a quiet button that turns red once armed. */
+.stage .hub-top button.hub-reset {
+  flex: none;
+  min-width: 0;
+  min-height: 88px;
+  margin-right: 20px;
+  padding: 0 22px;
+  border: 3px solid #8f642088;
+  border-radius: 14px;
+  background: #1d182299;
+  color: #e6d6c8;
+  font: 600 30px var(--serif-body);
+  box-shadow: none;
+}
+.stage .hub-top button.hub-reset.armed {
+  border-color: #ff6b6b;
+  background: #5a1418;
+  color: #fff4dc;
 }

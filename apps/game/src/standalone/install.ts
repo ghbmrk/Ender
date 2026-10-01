@@ -29,6 +29,7 @@ import marketSeed from "@data/seed/markets/ecb-exr.json";
 const fixtureFiles = Object.values(import.meta.glob("@data/inference-fixtures/*/*.json", { eager: true, import: "default" })) as FixtureFile[];
 const START_DATE = "2023-08-04";
 const IDB = { name: "ender", store: "db", key: "sqlite" };
+export const FRESH_KEY = "ender:fresh";
 
 function sqlJsDb(sdb: Database): Db {
   const norm = (ps: unknown[]) => ps.map((p) => (p === undefined ? null : p)) as never[];
@@ -96,7 +97,15 @@ export async function installInPageServer() {
   // If the save couldn't be read, play on without one, and never write over it: the old save stays intact.
   const canSave = read !== TIMED_OUT;
   if (!canSave) (window as { __enderNoSave?: boolean }).__enderNoSave = true;
-  const saved = read === TIMED_OUT ? undefined : read;
+  // "Start over" (game/reset.ts) leaves this mark: the old save is ignored, and the first write replaces it.
+  let fresh = false;
+  try {
+    fresh = localStorage.getItem(FRESH_KEY) === "1";
+    localStorage.removeItem(FRESH_KEY);
+  } catch {
+    /* storage blocked */
+  }
+  const saved = read === TIMED_OUT || fresh ? undefined : read;
   const sdb = saved ? new SQL.Database(saved) : new SQL.Database();
   sdb.exec(SCHEMA);
   const server = createInPageServer({
@@ -109,7 +118,7 @@ export async function installInPageServer() {
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   const save = () => {
-    if (!canSave) return;
+    if (!canSave || (window as { __enderNoSave?: boolean }).__enderNoSave) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => void idb("readwrite", (s) => s.put(sdb.export(), IDB.key)), 400);
   };

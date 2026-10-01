@@ -878,7 +878,7 @@ export function BattleScreen({
               >
                 <div className="shadow" />
                 <div className="hit" style={hitBox(u)} />
-                {u.side === "foe" && <div className="menace" style={hitBox(u)} />}
+                {s?.k === "defend" && u.id === s.plan.actor && <div className="menace" style={hitBox(u)} />}
                 {isTarget && (
                   <div className="reticle">
                     <div />
