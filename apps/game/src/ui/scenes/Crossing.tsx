@@ -91,7 +91,8 @@ export function Crossing() {
   const painted = !!paintedBackdrop("crossing");
   const stations = (painted ? PAINTED_STATIONS : (mod?.STATIONS ?? [])) as readonly { id: string; x: number; y: number }[];
   const visited = seen();
-  const shown = stations.filter((st) => unlocked(st.id, c?.mirrorCharges ?? 0));
+  // The Gate has no sign of its own: Set out is the one way through it, so the two never read as different things.
+  const shown = stations.filter((st) => st.id !== "gate" && unlocked(st.id, c?.mirrorCharges ?? 0));
   const has = (id: string) => shown.some((st) => st.id === id);
   const [risen] = useState(() => (lesson ? [] : announce(shown.map((st) => st.id).filter((id) => id !== "gate" && id !== "loom"))));
   useEffect(() => {

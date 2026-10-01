@@ -19,7 +19,9 @@ export function RealmGate() {
   // The first Realm you haven't cleared is where to go next; a new player sees "Start here" on the easiest.
   const nextUp = (world?.realms ?? []).find((r: any) => !best[r.id]?.cleared)?.id;
   const fresh = !Object.keys(best).length;
-  if (!world) return <Panel title="Realm Gate">Listening to the Gate…</Panel>;
+  if (!world) return <Panel title="Choose a Realm">Listening to the Gate…</Panel>;
+  // Which Realm's Essences are worth the most at today's prices: the reason to pick one Realm over another.
+  const richest = [...world.realms].sort((a: any, b: any) => b.haulValue - a.haulValue)[0]?.id;
   const go = async (id: string) => {
     if (busy) return;
     setBusy(true);
@@ -31,7 +33,8 @@ export function RealmGate() {
     }
   };
   return (
-    <Panel title="Realm Gate" subtitle={world.headline} wide testId="realm-gate">
+    <Panel title="Choose a Realm" subtitle={world.headline} wide testId="realm-gate">
+      <p className="gate-why">Each Realm drops different Essences. Today's prices set what a run there is worth.</p>
       <div className="realm-grid">
         {world.realms.map((r: any) => (
           <div key={r.id} className="realm-card" data-testid={`realm-${r.id}`}>
@@ -46,6 +49,24 @@ export function RealmGate() {
               )}
             </div>
             <p className="dim">{r.tagline}</p>
+            {/* What this Realm gives you right now, before you choose it. */}
+            <div className="realm-why">
+              <span className="haul">
+                ≈ <b>{crowns(r.haulValue)}</b> in Essences today
+              </span>
+              {r.id === richest && world.realms.length > 1 && <span className="why-tag">Pays best</span>}
+              {r.demand
+                .filter((d: any) => d.arrows !== "·")
+                .slice(0, 1)
+                .map((d: any) => (
+                  <span key={d.contractId} className="why-tag want">
+                    Wanted: {d.label} · {crowns(d.reward)}
+                  </span>
+                ))}
+              {r.events.slice(0, 1).map((e: string) => (
+                <span key={e} className="why-event">{e}</span>
+              ))}
+            </div>
             <div className="realm-chips">
               <span className="chips-label">Drops</span>
               {r.expectedEssences.slice(0, 3).map((e: any) => (
@@ -86,20 +107,15 @@ export function RealmGate() {
                 ))}
               </div>
             </div>
-            {r.events.map((e: string) => (
-              <div key={e} className="event">
-                {e}
-              </div>
-            ))}
               </div>
             )}
-            {/* Details sits beside Set out, so the Essences get their row to themselves. */}
+            {/* Details sits beside Enter, so the Essences get their row to themselves. */}
             <div className="realm-actions">
                 <button className="realm-more" onClick={() => setOpen(open === r.id ? null : r.id)} data-testid={`realm-more-${r.id}`}>
                   {open === r.id ? "Less" : "Details"}
                 </button>
               <button className={`primary ${busy ? "going" : ""}`} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
-                Set out
+                Enter
               </button>
             </div>
           </div>
