@@ -2749,12 +2749,13 @@
 }
 
 /* ═════════════ AP on the card row ═════════════ */
-/* AP sits right on top of the cards that spend it, spanning the three skill columns, in the same blue as each
-   card's cost. Dodge's circle sits just above it. */
+/* AP sits right on top of the skill cards that spend it, from the right edge, packed, in the same blue as each
+   card's cost. Basic, which fills it, is the card at the left end of the row (Mark, 20:26). */
 .stage .battle .bpanel.arc .ap-bar {
   position: absolute;
-  left: 16px;
-  width: calc(75% - 18px);
+  right: 16px;
+  width: fit-content;
+  max-width: calc(100% - 32px);
   top: -96px;
   height: 84px;
   display: flex;
@@ -2782,10 +2783,10 @@
   text-align: center;
   text-shadow: 0 0 12px #86c6f2;
 }
+/* Gems sit packed together, so the bar reads as one count rather than a spread of slots. */
 .ap-bar .ap-gems {
-  flex: 1;
   display: flex;
-  justify-content: space-between;
+  gap: 4px;
 }
 .ap-bar .ap-gem {
   width: 46px;
@@ -3202,4 +3203,50 @@
 .loom-warm * {
   visibility: hidden !important;
   animation: none !important;
+}
+
+/* Under a hit's number, what made it bigger or smaller: Perfect, Off-beat, Marked, Broken, Crit. */
+.battle .floater.why {
+  font-size: 34px;
+  font-weight: 700;
+  color: #f0d79c;
+  letter-spacing: 0.02em;
+}
+
+/* Basic leads the card row, at the left end (Mark, 20:26). */
+.stage .battle .cards > .card.basic {
+  order: -1;
+}
+
+/* A Parry's counter has its own move: the hero darts in with a twist and springs back, and a gold crescent sweeps
+   through the foe. Transform and opacity only. */
+.battle .unit.riposte .bob {
+  animation: riposte-body 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes riposte-body {
+  0% { transform: none; }
+  30% { transform: translate(70px, -50px) rotate(-10deg) scale(1.06); }
+  55% { transform: translate(90px, -64px) rotate(12deg) scale(1.1, 0.94); }
+  100% { transform: none; }
+}
+.battle .fx.riposte {
+  animation: riposte-sweep 380ms cubic-bezier(0.15, 0.85, 0.3, 1) both;
+}
+@keyframes riposte-sweep {
+  0% { opacity: 0; transform: rotate(-80deg) scale(0.7); }
+  25% { opacity: 1; }
+  70% { opacity: 0.95; transform: rotate(18deg) scale(1.05); }
+  100% { opacity: 0; transform: rotate(40deg) scale(1.12); }
+}
+.battle .floater.counter-call {
+  font-family: var(--display);
+  font-size: 72px;
+  font-weight: 800;
+  color: #ffd45e;
+  letter-spacing: 0.06em;
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px #ffb52e;
+  animation-name: floatup-big;
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .unit.riposte .bob { animation: none; }
 }

@@ -72,7 +72,7 @@ const RECOVER_MS = 140;
 const ringR = (left: number) => Math.max(14, MARK_R + RING_V * left);
 
 type Floater = { id: number; x: number; y: number; text: string; cls: string; delay: number };
-type Fx = { id: number; kind: "slash" | "claw" | "splat" | "spark" | "bloom" | "whoosh" | "shards"; x: number; y: number; color: string; delay: number };
+type Fx = { id: number; kind: "slash" | "claw" | "splat" | "spark" | "bloom" | "whoosh" | "shards" | "riposte"; x: number; y: number; color: string; delay: number };
 
 type AttackSeq = {
   k: "attack";
@@ -311,6 +311,8 @@ export function BattleScreen({
    * shards burst from the point of contact and the camera kicks. Heavy blows hold longer and shake harder.
    */
   const [stop, setStop] = useState(0);
+  /** A hero answering a perfect Parry: its own move, a spinning riposte, not a replay of the attack. */
+  const [riposte, setRiposte] = useState<string | null>(null);
   const impact = (at: [number, number], color: string, heavy: boolean) => {
     const n = ++uid;
     setStop(n);
@@ -331,6 +333,7 @@ export function BattleScreen({
           const txt = `${e.amount}${e.crit ? "!" : ""}`;
           float(t, txt, `dmg ${t.side} ${e.crit ? "crit" : ""} ${e.weakPoint ? "weak" : ""} ${e.dot ?? ""}`, d);
           if (e.absorbed) float(t, `⛨ ${e.absorbed}`, "barrier", d + 60);
+          if (e.why && t.side === "foe") float(t, e.why.join(" · "), "why", d + 30);
           if (!e.dot) {
             spawnFx("splat", chest(t), t.side === "foe" ? "#1d1822" : "#6b1a28", d);
             flinch(t.id, d);
@@ -399,10 +402,21 @@ export function BattleScreen({
           float(battle.unit(e.target), "FULL PARRY", "full", d);
           d += 120;
           break;
-        case "counter":
-          float(battle.unit(e.source), "Counter", "reaction", d);
-          d += 100;
+        case "counter": {
+          // The riposte: the hero twists in, a gold crescent sweeps through the foe, and the call reads COUNTER.
+          const hero = e.source;
+          const foe = battle.unit(e.target);
+          later(d, () => {
+            setRiposte(hero);
+            sfx.perfect();
+          });
+          later(d + 420, () => setRiposte((v) => (v === hero ? null : v)));
+          spawnFx("riposte", chest(foe), "#ffd45e", d + 120);
+          spawnFx("spark", chest(foe), "#fff4dc", d + 180);
+          float(foe, "COUNTER", "counter-call", d + 120);
+          d += 220;
           break;
+        }
         case "reaction":
           float(battle.unit(e.unit), e.name, "reaction", d);
           d += 120;
@@ -937,7 +951,7 @@ export function BattleScreen({
             return (
               <div
                 key={u.id}
-                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${u.enraged && u.alive ? "enraged" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe || u.id === coilHero ? "windup" : ""} ${u.id === rewindingFoe ? "rewind" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
+                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${u.enraged && u.alive ? "enraged" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe || u.id === coilHero ? "windup" : ""} ${u.id === rewindingFoe ? "rewind" : ""} ${u.id === riposte ? "riposte" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
                 // A foe lunging in comes in front of the hero (still under the rings), so the blow lands where it can be seen.
                 style={{ left: x, top: y, zIndex: u.id === lungingFoe || u.id === rewindingFoe ? 3000 : Math.round(y), ...(strikeVec(u) ?? lungeVec(u)) }}
                 onPointerDown={(e) => {
@@ -1459,7 +1473,7 @@ function Commands({
           {basicOnly ? "Skills you weave appear here" : "Weave more skills on the Loom"}
         </div>
       )}
-      {/* Basic sits at the right end of the row, under the right thumb. */}
+      {/* Basic leads the row at the left end (CSS order), as Mark asked. */}
       <button className={`card basic ${pulse === "basic" || (!idle && actions.length > 0 && actions.every((a) => b.costOf(actor, a.nodeId) > u.ap)) ? "coach-pulse" : ""}`} onPointerDown={(e) => { e.stopPropagation(); onAim?.(-2); }} onPointerLeave={() => onAim?.(0)} onPointerCancel={() => onAim?.(0)} onClick={() => onPick(actor, "basic")} data-testid={idle ? undefined : "cmd-basic"}>
         <div className="card-top">
           <span className="card-name">Basic</span>
@@ -1467,7 +1481,7 @@ function Commands({
             <i className="ap-gem" aria-hidden />+2 AP
           </span>
         </div>
-        <div className="card-line">{u.power} damage · timed</div>
+        <div className="card-line">{u.power} damage · {Math.round(u.power * RULES.gradeMult.perfect)} on Perfect</div>
         <div className="card-line dim">Builds AP for crafted Actions</div>
       </button>
       {actions.length === 0 && !basicOnly && <div className="card empty">No Actions woven. Inscribe a Form as an Action and place it on this Loom.</div>}
@@ -1576,6 +1590,14 @@ function FxMark({ f }: { f: Fx }) {
   switch (f.kind) {
     case "slash":
       return <path className="fx slash" style={style} d={`M${f.x - 150} ${f.y - 110} C${f.x - 40} ${f.y - 40} ${f.x + 40} ${f.y + 10} ${f.x + 160} ${f.y + 100}`} stroke={f.color} strokeWidth={22} strokeLinecap="round" fill="none" />;
+    case "riposte":
+      // A gold crescent that sweeps through the foe: the counter's own mark, unlike any attack's slash.
+      return (
+        <g className="fx riposte" style={{ ...style, transformOrigin: `${f.x}px ${f.y}px` }}>
+          <path d={`M${f.x - 170} ${f.y + 40} A 180 180 0 0 1 ${f.x + 150} ${f.y - 90} A 150 150 0 0 0 ${f.x - 170} ${f.y + 40} Z`} fill={f.color} />
+          <path d={`M${f.x - 150} ${f.y + 30} A 165 165 0 0 1 ${f.x + 130} ${f.y - 82}`} stroke="#fffbe8" strokeWidth={8} strokeLinecap="round" fill="none" />
+        </g>
+      );
     case "shards":
       // Shards of the blow, flung out from the point of contact (each flies along its own --dx/--dy).
       return (

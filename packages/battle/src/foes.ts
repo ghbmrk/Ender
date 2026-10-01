@@ -65,7 +65,7 @@ export const FOES: Record<FoeKind, FoeDef> = {
     kind: "hound", figure: "hound", name: "Hound", hp: 160, atk: 12, speed: 120, breakTaken: 1, tier: "normal", blurb: "Fast. Its pounce comes early.",
     attacks: [
       { id: "pounce", name: "Pounce", tell: "crouches low", target: "one", hits: h([700, 1.2]), weight: 3 },
-      { id: "savage", name: "Savage", tell: "snarls and circles", target: "one", hits: h([850, 1.28]), weight: 2 },
+      { id: "savage", name: "Savage", tell: "snarls and circles", target: "one", hits: h([1250, 1.28]), weight: 2 },
       { id: "bloodfrenzy", name: "Blood Frenzy", tell: "foams at the mouth", target: "one", hits: h([1450, 1.61]), weight: 4, rage: true },
     ],
   },

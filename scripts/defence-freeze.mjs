@@ -34,6 +34,8 @@ for (const step of ["dodge", "parry"]) {
     await p.waitForTimeout(250);
     r.answered = await p.evaluate(() => [...document.querySelectorAll(".judge")].map((e) => e.textContent).join(" | "));
     r.unfrozen = !(await p.$(".battle.frozen"));
+    // What follows the answer (a Parry's counter plays here).
+    for (const n of [1, 2, 3]) { await p.waitForTimeout(160); await p.screenshot({ path: `${root}/art-shots/freeze-${step}-after-${n}.png` }); }
   }
   r.errors = errors;
   out[step] = r;

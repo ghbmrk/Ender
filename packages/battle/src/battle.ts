@@ -47,6 +47,8 @@ export type Unit = {
   phase: number;
   /** A foe below a third of its health fights harder, once per fight. */
   enraged?: boolean;
+  /** A foe's last move, so it doesn't repeat it straight away. */
+  lastAttack?: string;
   // hero state
   loom?: CompiledLoom;
   pattern: number;
@@ -63,7 +65,7 @@ const ENRAGE_AT = 1 / 3;
 const ENRAGE_POWER = 1.2;
 
 export type BattleEvent =
-  | { type: "damage"; source: string; target: string; amount: number; crit: boolean; grade?: Grade; weakPoint?: boolean; absorbed?: number; dot?: StatusId }
+  | { type: "damage"; source: string; target: string; amount: number; crit: boolean; grade?: Grade; weakPoint?: boolean; absorbed?: number; dot?: StatusId; why?: string[] }
   | { type: "heal"; source: string; target: string; amount: number }
   | { type: "barrier"; target: string; amount: number }
   | { type: "ap"; unit: string; delta: number; ap: number; reason: string }
@@ -374,7 +376,7 @@ export class Battle {
   }
 
   /** Raw damage after Barrier; handles KO. */
-  private hurt(src: Unit, t: Unit, raw: number, events: BattleEvent[], extra: { crit?: boolean; grade?: Grade; weakPoint?: boolean; dot?: StatusId } = {}) {
+  private hurt(src: Unit, t: Unit, raw: number, events: BattleEvent[], extra: { crit?: boolean; grade?: Grade; weakPoint?: boolean; dot?: StatusId; why?: string[] } = {}) {
     let amount = Math.max(1, Math.round(raw));
     let absorbed = 0;
     if (t.barrier > 0) {
@@ -384,25 +386,37 @@ export class Battle {
     }
     t.hp = Math.max(0, t.hp - amount);
     if (src.side === "party" && t.side === "foe") this.stats.damageDealt += amount;
-    events.push({ type: "damage", source: src.id, target: t.id, amount, crit: !!extra.crit, grade: extra.grade, weakPoint: extra.weakPoint, absorbed: absorbed || undefined, dot: extra.dot });
+    events.push({ type: "damage", source: src.id, target: t.id, amount, crit: !!extra.crit, grade: extra.grade, weakPoint: extra.weakPoint, absorbed: absorbed || undefined, dot: extra.dot, why: extra.why?.length ? extra.why : undefined });
     if (t.hp <= 0 && t.alive) this.kill(t, events);
   }
 
   /** A damaging hit on a foe: Marked, Broken and crits apply. */
-  private strike(src: Unit, t: Unit, raw: number, events: BattleEvent[], opts: { grade?: Grade; weakPoint?: boolean; critBonus?: number } = {}) {
+  private strike(src: Unit, t: Unit, raw: number, events: BattleEvent[], opts: { grade?: Grade; weakPoint?: boolean; critBonus?: number; counter?: boolean } = {}) {
     if (!t.alive) return;
     let dmg = raw;
+    // Why this hit is the size it is, so a number that swings says what swung it.
+    const why: string[] = [];
+    // A counter has its own call (COUNTER), so its grade adds no tag here.
+    if (!opts.counter && opts.grade === "perfect") why.push("Perfect");
+    else if (!opts.counter && opts.grade === "miss") why.push("Off-beat");
     if (t.status.marked > 0) {
       dmg *= 1 + (this.keystone(src) === "veil" ? RULES.hiddenEdgeMarkBonus : RULES.markBonus);
       t.status.marked--;
+      why.push("Marked");
     }
-    if (t.broken) dmg *= RULES.brokenTakenMult;
+    if (t.broken) {
+      dmg *= RULES.brokenTakenMult;
+      why.push("Broken");
+    }
     const crit = this.rng.chance(RULES.critChance + (opts.critBonus ?? 0));
     if (crit) {
       if (this.keystone(src) === "veil") this.mark(t, 2, events);
-      else dmg *= RULES.critMult;
+      else {
+        dmg *= RULES.critMult;
+        why.push("Crit");
+      }
     }
-    this.hurt(src, t, dmg, events, { crit, grade: opts.grade, weakPoint: opts.weakPoint });
+    this.hurt(src, t, dmg, events, { crit, grade: opts.grade, weakPoint: opts.weakPoint, why });
   }
 
   private addBreak(src: Unit, t: Unit, amount: number, events: BattleEvent[]) {
@@ -558,8 +572,15 @@ export class Battle {
     const wounded = this.living("foe")
       .filter((f) => f.id !== actor.id && f.hp < f.maxHp * 0.6)
       .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-    const options = def.attacks.filter((a) => (a.minPhase ?? 1) <= actor.phase + 1 && (!a.healAlly || wounded) && (!a.rage || !!actor.enraged));
-    const attack = this.rng.weighted(options, options.map((a) => a.weight));
+    const allowed = def.attacks.filter((a) => (a.minPhase ?? 1) <= actor.phase + 1 && (!a.healAlly || wounded) && (!a.rage || !!actor.enraged));
+    // Never the same move twice running when there is another, so a duel alternates instead of repeating one beat.
+    const fresh = allowed.filter((a) => a.id !== actor.lastAttack);
+    const options = fresh.length ? fresh : allowed;
+    const picked = this.rng.weighted(options, options.map((a) => a.weight));
+    actor.lastAttack = picked.id;
+    // Each use lands a little early or late (the ring follows), so timing is read each time, not memorised once.
+    const k = 1 + (this.rng.next() * 2 - 1) * RULES.foeTempoJitter;
+    const attack = picked.hits.length ? { ...picked, hits: picked.hits.map((h) => ({ ...h, t: Math.round(h.t * k) })) } : picked;
     if (attack.healAlly) return { actor: actor.id, attack, targets: [], healTarget: wounded!.id };
     const party = this.living("party");
     const targets = attack.target === "all" ? party.map((p) => p.id) : [this.rng.pick(party).id];
@@ -578,7 +599,7 @@ export class Battle {
     const tgt = foe.alive && !anyEnemy ? foe : anyEnemy ? this.living("foe").sort((a, b) => a.hp - b.hp)[0] : undefined;
     if (!tgt) return;
     events.push({ type: "counter", source: t.id, target: tgt.id });
-    this.strike(t, tgt, (t.power * RULES.counterPotency) / Math.max(1, blows), events, { grade: "perfect" });
+    this.strike(t, tgt, (t.power * RULES.counterPotency) / Math.max(1, blows), events, { grade: "perfect", counter: true });
   }
 
   resolveFoe(plan: FoePlan, defenses: Defense[]): BattleEvent[] {
