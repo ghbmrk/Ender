@@ -18,7 +18,7 @@ const LAYER_KINDS: MapNode["kind"][][] = [
   ["mystery", "shrine", "combat", "bazaar"],
   ["combat", "mystery"],
   ["attunement", "shrine", "mystery"],
-  ["elite"],
+  ["elite", "combat"],
   ["bazaar", "contract", "shrine"],
   ["boss"],
 ];
@@ -42,6 +42,7 @@ describe("expedition map (§76–77)", () => {
           for (const n of layer) expect(LAYER_KINDS[l]).toContain(n.kind);
         });
         expect(p.map.layers[3]!.map((n) => n.kind)).toEqual(expect.arrayContaining(["attunement", "shrine"]));
+        expect(p.map.layers[4]!.map((n) => n.kind)).toEqual(expect.arrayContaining(["elite", "combat"]));
         expect(p.map.layers[5]!.map((n) => n.kind)).toEqual(expect.arrayContaining(["bazaar", "contract"]));
         expect(p.boss).toBe(realm.boss);
         expect(p.map.layers[6]![0]!.encounter!.waves).toEqual([[realm.boss]]);
@@ -128,7 +129,7 @@ describe("loot cadence (§78)", () => {
 
   it("elites always drop a Veiled Form and Essences; bosses two Forms, a high-tier bundle and a Mirror charge", () => {
     for (const p of plans.slice(0, 300)) {
-      for (const n of p.map.layers[4]!) {
+      for (const n of p.map.layers[4]!.filter((x) => x.kind === "elite")) {
         const l = rollNodeLoot(h.ctx, p, n);
         expect(l.forms.length).toBe(1);
         expect(Object.values(l.essences).reduce((a, b) => a + b!, 0)).toBeGreaterThanOrEqual(5);

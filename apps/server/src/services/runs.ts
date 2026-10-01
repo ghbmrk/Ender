@@ -36,7 +36,8 @@ const LAYERS: { count: [number, number]; always: NodeKind[]; fill: NodeKind[] }[
   { count: [2, 3], always: [], fill: ["mystery", "shrine", "combat", "bazaar"] },
   { count: [2, 3], always: ["combat", "combat"], fill: ["combat", "mystery"] },
   { count: [2, 3], always: ["attunement", "shrine"], fill: ["mystery"] },
-  { count: [2, 2], always: ["elite", "elite"], fill: [] },
+  // An Elite is a choice, not a wall: there is always a plain fight beside it for a party that isn't ready.
+  { count: [2, 3], always: ["elite", "combat"], fill: ["elite"] },
   { count: [2, 3], always: ["bazaar", "contract"], fill: ["shrine"] },
   { count: [1, 1], always: ["boss"], fill: [] },
 ];
