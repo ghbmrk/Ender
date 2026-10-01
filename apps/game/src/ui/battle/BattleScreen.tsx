@@ -847,16 +847,27 @@ export function BattleScreen({
       {phase.k === "end" && (
         <div className={`battle-end ${phase.outcome}`} data-testid="battle-end">
           <h1>{phase.outcome === "victory" ? "Victory" : lesson ? "Not this time" : "Defeated"}</h1>
+          {phase.outcome === "victory" && praise(battle) && <p className="end-praise">{praise(battle)}</p>}
+          {/* What you did, not what you missed: a zero never shows on a win. */}
           <div className="end-stats">
             <span>
-              <b>{Math.round(battle.stats.breakDealt)}</b>Break
+              <b>{Math.round(battle.stats.damageDealt)}</b>Damage
             </span>
-            <span>
-              <b>{best.current}</b>Best chain
-            </span>
-            <span>
-              <b>{battle.stats.perfects}</b>Perfects
-            </span>
+            {(phase.outcome === "defeat" || battle.stats.parries > 0) && (
+              <span>
+                <b>{battle.stats.parries}</b>Parr{battle.stats.parries === 1 ? "y" : "ies"}
+              </span>
+            )}
+            {(phase.outcome === "defeat" || battle.stats.perfects > 0) && (
+              <span>
+                <b>{battle.stats.perfects}</b>Perfect{battle.stats.perfects === 1 ? "" : "s"}
+              </span>
+            )}
+            {best.current > 1 && (
+              <span>
+                <b>{best.current}</b>Best chain
+              </span>
+            )}
           </div>
           {phase.outcome === "defeat" && !lesson && <p className="end-tip">{defeatTip(battle)}</p>}
           <button className={`big ${phase.outcome === "victory" ? "primary" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onEnd({ outcome: phase.outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats, foe: lastFoe(battle) })} data-testid="battle-continue">
@@ -866,6 +877,16 @@ export function BattleScreen({
       )}
     </div>
   );
+}
+
+/** One line of praise for the best thing about a win, if anything stood out. */
+function praise(battle: Battle): string {
+  const hero = battle.party()[0];
+  if (hero && hero.hp >= hero.maxHp) return "Untouched!";
+  if (battle.stats.perfects >= 3) return "Flawless timing";
+  if (battle.stats.parries >= 3) return "Iron guard";
+  if (hero && hero.hp < hero.maxHp * 0.2) return "By a thread";
+  return "";
 }
 
 /** One thing to try next time, picked from how the fight went. */

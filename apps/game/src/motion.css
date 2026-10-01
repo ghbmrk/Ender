@@ -1883,3 +1883,14 @@
 @keyframes realm-next{to{box-shadow:0 0 0 2px #2a1a08,0 0 30px rgba(255,214,120,.9)}}
 @media (prefers-reduced-motion:reduce){.realm-card .realm-head .realm-next{animation:none}}
 .realm-chips .ess-chip,.realm-details .ess-chip{font-family:var(--serif-body)}
+
+/* Loop 54: a win lights the hero instead of sinking them into the dark, and names what stood out. */
+.battle-end.victory{padding-bottom:700px;background:linear-gradient(180deg,#0b0a10f0 0%,#0b0a10c8 22%,#0b0a10a0 40%,#0b0a1018 54%,#0b0a1030 73%,#0b0a10f4 80%,#0b0a10f4 100%)}
+.battle:has(.battle-end.victory) .unit.party .fig{filter:drop-shadow(0 0 2px #2a1a08) drop-shadow(0 0 26px rgba(255,214,120,.75)) brightness(1.08)}
+.battle:has(.battle-end.victory) .unit.party .bob{animation:hero-cheer .9s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes hero-cheer{0%{transform:translateY(0)}35%{transform:translateY(-34px)}100%{transform:translateY(0)}}
+.battle:has(.battle-end) .hero-tag{display:none}
+.battle-end .end-praise{margin:-6px 0 18px;font-family:var(--display);font-size:44px;color:#fbe8b0;letter-spacing:.04em;text-shadow:0 2px 0 #000,0 0 18px rgba(255,200,100,.6);animation:praise-in .5s .25s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes praise-in{from{opacity:0;transform:scale(.6)}}
+@media (prefers-reduced-motion:reduce){.battle:has(.battle-end.victory) .unit.party .bob,.battle-end .end-praise{animation:none}}
+.battle:has(.battle-end.victory) .unit.foe .shadow{opacity:0;transition:opacity .3s}
