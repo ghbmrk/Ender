@@ -179,6 +179,10 @@ export function MapScreen() {
             ? `That ${stopName(n)} is further on. Go by ${glowing(via)} first.`
             : `No path from here reaches that ${stopName(n)}. Tap ${glowing(reach)}.`,
         );
+      } else if (reach.length) {
+        // Your own stop, or one left behind: still answer, so the tap never reads as the map ignoring you.
+        setNudge((k) => k + 1);
+        toast(n.id === ex.at ? `You are here. Tap ${glowing(reach)} to go on.` : `That ${stopName(n)} is behind you. Tap ${glowing(reach)}.`);
       }
       return;
     }
