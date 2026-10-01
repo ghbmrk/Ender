@@ -63,10 +63,21 @@ function noise(dur: number, gain: number, freq: number, q = 1, delay = 0) {
   s.start(t);
 }
 
+/** A short buzz on phones that support it (Android; iOS Safari ignores it). Follows the mute switch. */
+function buzz(pattern: number | number[]) {
+  if (muted) return;
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    /* unsupported */
+  }
+}
+
 export const sfx = {
   unlock: () => void ctx(),
   tap: () => tone(660, 0.06, "triangle", 0.08),
   perfect: () => {
+    buzz(12);
     tone(1320, 0.18, "sine", 0.12);
     tone(1980, 0.22, "sine", 0.06, undefined, 0.03);
   },
@@ -81,17 +92,23 @@ export const sfx = {
     tone(90, 0.3, "sine", 0.35, 40);
   },
   hurt: () => {
+    buzz(45);
     noise(0.18, 0.4, 600, 0.6);
     tone(180, 0.18, "square", 0.06, 90);
   },
   parry: () => {
+    buzz([18, 30, 18]);
     tone(1560, 0.25, "square", 0.05, 1400);
     tone(2340, 0.3, "sine", 0.08);
     noise(0.08, 0.25, 3200, 2);
   },
-  dodge: () => noise(0.22, 0.25, 1800, 0.5),
+  dodge: () => {
+    buzz(8);
+    noise(0.22, 0.25, 1800, 0.5);
+  },
   telegraph: () => tone(300, 0.3, "sine", 0.06, 420),
   brk: () => {
+    buzz([30, 40, 60]);
     tone(200, 0.5, "sawtooth", 0.08, 50);
     noise(0.4, 0.4, 300, 0.5);
   },

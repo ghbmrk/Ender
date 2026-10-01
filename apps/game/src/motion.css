@@ -707,3 +707,47 @@
 .map-node.passed {
   opacity: 0.35;
 }
+
+/* A lone hero's plaque: big portrait, chunky health and AP, filling the column top to bottom. */
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps {
+  justify-content: space-evenly;
+  gap: 10px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps .head {
+  width: 150px !important;
+  height: 150px !important;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps-name {
+  flex-direction: column;
+  font-size: 40px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps-hp {
+  font-size: 34px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .gbar {
+  height: 22px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ap-pips {
+  gap: 6px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ap-pips span {
+  width: 32px;
+  height: 32px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps-name {
+  align-items: center;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* A lone card (the first fights): bigger rules text, centred in the card. */
+.bpanel.thumb .cards:has(> .card:only-child) .card-top + .card-line {
+  margin-top: auto;
+  font-size: 46px;
+}
+.bpanel.thumb .cards:has(> .card:only-child) .card-line.dim {
+  margin-bottom: auto;
+  font-size: 38px;
+}
