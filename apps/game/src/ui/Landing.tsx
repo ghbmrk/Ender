@@ -5,8 +5,6 @@ import { paintedBackdrop, paintedFigure } from "../art/painted";
 import { Fig } from "./battle/Figure";
 import { sfx } from "./battle/sfx";
 import { OpenAIMark } from "./OpenAIMark";
-import { useStore } from "../state/store";
-import { heroFigure } from "../game/hero";
 
 /**
  * The first screen anyone sees: the title and the button over a full-bleed painting in the spirit of
@@ -54,7 +52,6 @@ export function Landing() {
 
 /** The painting: a dedicated cover piece when one has been rendered, else one composed from the game's art. */
 export function CoverPainting() {
-  const hero = useStore((s) => s.hero);
   const cover = paintedBackdrop("cover");
   const hall = paintedBackdrop("throne");
   const idol = paintedFigure("king");
@@ -63,11 +60,8 @@ export function CoverPainting() {
     <div className="cv-paint">
       {cover ? (
         <>
+          {/* The cover holds its own lone knight before the demon, so nothing is drawn over it. */}
           <img className="cv-bg" src={cover} alt="" draggable={false} />
-          {/* One hero, seen from behind in silhouette, squaring up to what waits on the dais. */}
-          <div className="cv-lone">
-            <Fig bake figure={hero ? heroFigure(hero.root) : "warden"} look={hero?.look} scale={4.6} />
-          </div>
         </>
       ) : (
         <>
