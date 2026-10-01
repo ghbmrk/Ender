@@ -162,6 +162,8 @@ export const RULES = {
   duelBreath: 0.12,
   /** How far a foe's blow may land early or late on any one use (a fraction of its wind-up). */
   foeTempoJitter: 0.12,
+  /** No foe blow lands sooner than this after its wind-up starts (ms). */
+  minWindup: 800,
 };
 export type StatusId = "marked" | "slow" | "fracture" | "burn" | "poison";
 export const STATUS_NAMES: Record<StatusId, string> = { marked: "Marked", slow: "Slow", fracture: "Fracture", burn: "Burn", poison: "Poison" };

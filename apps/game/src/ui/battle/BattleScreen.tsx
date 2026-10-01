@@ -422,7 +422,8 @@ export function BattleScreen({
           d += 120;
           break;
         case "status":
-          float(battle.unit(e.target), `${STATUS_GLYPH[e.status]} ${STATUS_NAMES[e.status]}`, `fl-status s-${e.status}`, d);
+          // A damage-over-time status says what it will cost, since nothing drops until the next turn.
+          float(battle.unit(e.target), `${STATUS_GLYPH[e.status]} ${STATUS_NAMES[e.status]}${e.dmg ? ` −${e.dmg} a turn` : ""}`, `fl-status s-${e.status}`, d);
           d += 90;
           break;
         case "advance":
@@ -632,7 +633,7 @@ export function BattleScreen({
     const c = cues();
     c?.drop(s.pressed.length - 1, g !== "miss");
     // Perfect and Good must read apart at a glance: Perfect is bigger, gold and says what it adds.
-    c?.judge(g === "perfect" ? `PERFECT +${Math.round((RULES.gradeMult.perfect - 1) * 100)}%` : g === "good" ? "Good" : "MISS", `grade ${g}`, [chest(t)[0], chest(t)[1] - 140]);
+    c?.judge(g === "perfect" ? `PERFECT +${Math.round((RULES.gradeMult.perfect - 1) * 100)}%` : g === "good" ? "Good" : "Off-beat", `grade ${g}`, [chest(t)[0], chest(t)[1] - 140]);
     c?.pulse(markEl.current, g);
     (g === "perfect" ? sfx.perfect : g === "good" ? sfx.good : sfx.miss)();
     const color = s.action ? AFF_COLOR[s.action.dominant] : "#efe3c8";

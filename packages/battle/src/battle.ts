@@ -77,7 +77,7 @@ export type BattleEvent =
   | { type: "full-parry"; target: string }
   | { type: "counter"; source: string; target: string }
   | { type: "reaction"; unit: string; name: string }
-  | { type: "status"; target: string; status: StatusId; value: number }
+  | { type: "status"; target: string; status: StatusId; value: number; dmg?: number }
   | { type: "advance"; unit: string }
   | { type: "summon"; units: string[] }
   | { type: "wave"; index: number; units: string[] }
@@ -372,7 +372,8 @@ export class Battle {
     if (s === "slow" || s === "fracture") t.status[s] = RULES.statusRounds;
     else if (s === "burn") t.status.burn = { rounds: RULES.dotRounds, dmg: Math.max(1, Math.round(potency * RULES.burnPct)) };
     else t.status.poison = { rounds: RULES.dotRounds, dmg: Math.max(1, Math.round(Math.min(t.maxHp * RULES.poisonMaxHpPct, potency * RULES.burnPct))) };
-    events.push({ type: "status", target: t.id, status: s, value: s === "burn" || s === "poison" ? RULES.dotRounds : RULES.statusRounds });
+    const dot = s === "burn" ? t.status.burn?.dmg : s === "poison" ? t.status.poison?.dmg : undefined;
+    events.push({ type: "status", target: t.id, status: s, value: s === "burn" || s === "poison" ? RULES.dotRounds : RULES.statusRounds, dmg: dot });
   }
 
   /** Raw damage after Barrier; handles KO. */
@@ -394,11 +395,8 @@ export class Battle {
   private strike(src: Unit, t: Unit, raw: number, events: BattleEvent[], opts: { grade?: Grade; weakPoint?: boolean; critBonus?: number; counter?: boolean } = {}) {
     if (!t.alive) return;
     let dmg = raw;
-    // Why this hit is the size it is, so a number that swings says what swung it.
+    // Why this hit is the size it is, so a number that swings says what swung it (the timing call already names the grade).
     const why: string[] = [];
-    // A counter has its own call (COUNTER), so its grade adds no tag here.
-    if (!opts.counter && opts.grade === "perfect") why.push("Perfect");
-    else if (!opts.counter && opts.grade === "miss") why.push("Off-beat");
     if (t.status.marked > 0) {
       dmg *= 1 + (this.keystone(src) === "veil" ? RULES.hiddenEdgeMarkBonus : RULES.markBonus);
       t.status.marked--;
@@ -580,7 +578,9 @@ export class Battle {
     actor.lastAttack = picked.id;
     // Each use lands a little early or late (the ring follows), so timing is read each time, not memorised once.
     const k = 1 + (this.rng.next() * 2 - 1) * RULES.foeTempoJitter;
-    const attack = picked.hits.length ? { ...picked, hits: picked.hits.map((h) => ({ ...h, t: Math.round(h.t * k) })) } : picked;
+    // The first blow never lands quicker than a fair reaction window; later blows keep their spacing after it.
+    const shift = picked.hits.length ? Math.max(0, RULES.minWindup - Math.round(picked.hits[0]!.t * k)) : 0;
+    const attack = picked.hits.length ? { ...picked, hits: picked.hits.map((h) => ({ ...h, t: Math.round(h.t * k) + shift })) } : picked;
     if (attack.healAlly) return { actor: actor.id, attack, targets: [], healTarget: wounded!.id };
     const party = this.living("party");
     const targets = attack.target === "all" ? party.map((p) => p.id) : [this.rng.pick(party).id];
