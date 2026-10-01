@@ -126,6 +126,15 @@ export function BattleScreen({
   const [caption, setCaption] = useState<{ name: string; tell: string; foe: string } | null>(null);
   const [hurt, setHurt] = useState<Record<string, number>>({});
   const [clock, setClock] = useState(0);
+  /** Clean timings in a row (strikes and defences alike); a miss or a hit taken resets it. Pure feedback. */
+  const [streak, setStreak] = useState(0);
+  const best = useRef(0);
+  const bumpStreak = (clean: boolean) =>
+    setStreak((n) => {
+      const next = clean ? n + 1 : 0;
+      best.current = Math.max(best.current, next);
+      return next;
+    });
   const lastPose = useRef("");
   const seq = useRef<Seq | null>(null);
   const [coach, setCoach] = useState<{ key: CoachKey; text: string } | null>(null);
@@ -458,6 +467,7 @@ export function BattleScreen({
       kick("punch", chest(t));
     }
     (g === "perfect" ? sfx.perfect : g === "good" ? sfx.good : sfx.miss)();
+    bumpStreak(g !== "miss");
     say(g);
   };
 
@@ -531,6 +541,7 @@ export function BattleScreen({
     s.shown[i] = r;
     const victim = battle.unit(s.plan.targets[0]!);
     say(r === "hit" ? "hit" : r.includes("parry") ? "parried" : "dodged");
+    bumpStreak(r !== "hit");
     if (r === "hit") return;
     float([chest(victim)[0] + 60, chest(victim)[1] - 120], DEF_LABEL[r], `def ${r}`);
     if (r.includes("parry")) {
@@ -699,6 +710,12 @@ export function BattleScreen({
         clock >= 0 &&
         s.weakPts.map((p, i) => <div key={i} className="weak-point" style={{ left: p.x - p.r, top: p.y - p.r, width: p.r * 2, height: p.r * 2 }} />)}
 
+      {streak >= 2 && (
+        <div key={streak} className={`streak ${streak >= 5 ? "hot" : streak >= 3 ? "warm" : ""}`} data-testid="streak">
+          <b>×{streak}</b>
+          <span>{streak >= 5 ? "Unstoppable" : streak >= 3 ? "In the flow" : "Chain"}</span>
+        </div>
+      )}
       {floaters.map((f) => (
         <div key={f.id} className={`floater ${f.cls}`} style={{ left: f.x, top: f.y, animationDelay: `${f.delay}ms` }}>
           {f.text}
@@ -786,7 +803,7 @@ export function BattleScreen({
               <b>{Math.round(battle.stats.breakDealt)}</b>Break
             </span>
             <span>
-              <b>{battle.stats.parries}</b>Parries
+              <b>{best.current}</b>Best chain
             </span>
             <span>
               <b>{battle.stats.perfects}</b>Perfects
