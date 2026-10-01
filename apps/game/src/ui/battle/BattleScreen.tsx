@@ -848,17 +848,18 @@ export function BattleScreen({
         <div className={`battle-end ${phase.outcome}`} data-testid="battle-end">
           <h1>{phase.outcome === "victory" ? "Victory" : lesson ? "Not this time" : "Defeated"}</h1>
           {phase.outcome === "victory" && praise(battle) && <p className="end-praise">{praise(battle)}</p>}
-          {/* What you did, not what you missed: a zero never shows on a win. */}
+          {phase.outcome === "defeat" && !lesson && lastFoe(battle) && <p className="end-left">{leftLine(lastFoe(battle)!)}</p>}
+          {/* What you did, not what you missed: a zero never shows. */}
           <div className="end-stats">
             <span>
               <b>{Math.round(battle.stats.damageDealt)}</b>Damage
             </span>
-            {(phase.outcome === "defeat" || battle.stats.parries > 0) && (
+            {battle.stats.parries > 0 && (
               <span>
                 <b>{battle.stats.parries}</b>Parr{battle.stats.parries === 1 ? "y" : "ies"}
               </span>
             )}
-            {(phase.outcome === "defeat" || battle.stats.perfects > 0) && (
+            {battle.stats.perfects > 0 && (
               <span>
                 <b>{battle.stats.perfects}</b>Perfect{battle.stats.perfects === 1 ? "" : "s"}
               </span>
@@ -877,6 +878,12 @@ export function BattleScreen({
       )}
     </div>
   );
+}
+
+/** How close the fight was, from the foe's health when you fell. */
+function leftLine(f: { name: string; left: number }): string {
+  const pct = Math.max(1, Math.round(f.left * 100));
+  return pct <= 25 ? `So close! ${f.name} had only ${pct}% health left.` : `${f.name} had ${pct}% health left.`;
 }
 
 /** One line of praise for the best thing about a win, if anything stood out. */

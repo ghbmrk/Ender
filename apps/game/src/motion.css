@@ -1894,3 +1894,9 @@
 @keyframes praise-in{from{opacity:0;transform:scale(.6)}}
 @media (prefers-reduced-motion:reduce){.battle:has(.battle-end.victory) .unit.party .bob,.battle-end .end-praise{animation:none}}
 .battle:has(.battle-end.victory) .unit.foe .shadow{opacity:0;transition:opacity .3s}
+
+/* Loop 55: a loss shows the foe that beat you above the card, and how close it was. */
+.battle-end.defeat{justify-content:flex-end;padding-bottom:330px;background:linear-gradient(180deg,#0b0a1060 0%,#0b0a1030 18%,#0b0a1060 34%,#0b0a10d8 48%,#0b0a10f2 100%)}
+.battle:has(.battle-end.defeat) .unit.foe .fig{filter:drop-shadow(0 0 2px #1a0505) drop-shadow(0 0 28px rgba(200,60,70,.7))}
+.battle:has(.battle-end) .boss-bar,.battle:has(.battle-end) .timeline{opacity:.25;transition:opacity .3s}
+.battle-end .end-left{margin:0 0 22px;font-family:var(--serif-body);font-size:42px;color:#f3d9d0;text-align:center;text-shadow:0 2px 0 #000}
