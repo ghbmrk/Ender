@@ -151,7 +151,7 @@ export function Prebake({ figures }: { figures: { figure: string; look?: HeroLoo
   return (
     <div className="fig-prebake" style={{ display: "none" }} aria-hidden>
       {figures.map((f, i) => (
-        <BakedFig key={`${f.figure}${i}`} figure={f.figure} scale={1} className={f.flip ? "flip" : undefined} look={f.look} />
+        <BakedFig key={`${f.figure}${i}`} figure={f.figure} scale={1} className={f.flip ? "flip" : undefined} look={f.look} only="bake" />
       ))}
     </div>
   );
@@ -159,19 +159,28 @@ export function Prebake({ figures }: { figures: { figure: string; look?: HeroLoo
 
 /** Shows a baked pose: a canvas copy (one fast draw), or the image fallback. */
 function BakedImage({ baked }: { baked: Baked }) {
-  const ref = useRef<HTMLCanvasElement>(null);
+  const box = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    const c = ref.current;
-    if (!c || typeof baked === "string") return;
-    c.width = baked.width;
-    c.height = baked.height;
-    c.getContext("2d")?.drawImage(baked, 0, 0);
+    const host = box.current;
+    if (!host || typeof baked === "string") return;
+    // The baked canvas itself goes on screen when nothing else shows it (the usual case: no copy at all);
+    // a second figure in the same pose gets a copy.
+    let c = baked;
+    if (baked.isConnected) {
+      c = document.createElement("canvas");
+      c.width = baked.width;
+      c.height = baked.height;
+      c.getContext("2d")?.drawImage(baked, 0, 0);
+    }
+    c.className = "fig-svg fig-baked";
+    host.appendChild(c);
+    return () => c.remove();
   }, [baked]);
   if (typeof baked === "string") return <img src={baked} className="fig-svg fig-baked" alt="" draggable={false} />;
-  return <canvas ref={ref} className="fig-svg fig-baked" />;
+  return <div ref={box} className="fig-baked" />;
 }
 
-function BakedFig({ figure, pose = "idle", scale, className, look }: { figure: string; pose?: Pose; scale?: number; className?: string; look?: HeroLook }) {
+function BakedFig({ figure, pose = "idle", scale, className, look, only }: { figure: string; pose?: Pose; scale?: number; className?: string; look?: HeroLook; only?: "bake" }) {
   const F = figureFor(figure).default;
   const b = figureBox(figure, scale);
   const flip = /\bflip\b/.test(className ?? "");
@@ -203,7 +212,7 @@ function BakedFig({ figure, pose = "idle", scale, className, look }: { figure: s
   return (
     <div className={className} style={{ position: "absolute", left: -b.feetX, top: -b.feetY, width: b.w, height: b.h }}>
       {/* Until the bake lands, the figure shows without its costly filter (fig-unbaked), so the first frame is quick. */}
-      {baked ? <BakedImage baked={baked} /> : <F pose={pose} className="fig-svg fig-unbaked" look={look} />}
+      {only === "bake" ? null : baked ? <BakedImage baked={baked} /> : <F pose={pose} className="fig-svg fig-unbaked" look={look} />}
       {missing.length > 0 && (
         // Off-screen sources for the bake: display:none, so they cost nothing to draw.
         <div ref={src} className="fig-bake-src" style={{ display: "none" }}>
