@@ -2859,3 +2859,46 @@
 .realm-card .realm-head.has-art {
   will-change: transform;
 }
+
+/* Loom: a Modifier's boost to the skills it touches. */
+.loom-board .boost-link {
+  pointer-events: none;
+  animation: boost-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+.loom-board .boost-plus {
+  fill: #1d1822;
+  font: 800 52px var(--display);
+}
+@keyframes boost-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+/* Weave sheet: what a reveal found, in two numbers with what each means. */
+.weave-sheet .ws-eval {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin: 6px 0 18px;
+}
+.weave-sheet .ws-eval > span {
+  display: grid;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: #1d182214;
+  border: 2px solid #8f642055;
+}
+.weave-sheet .ws-eval small {
+  font: 700 26px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.weave-sheet .ws-eval b {
+  font: 800 56px/1.1 var(--display);
+}
+.weave-sheet .ws-eval i {
+  font-size: 26px;
+  opacity: 0.8;
+}

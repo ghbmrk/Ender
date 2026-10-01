@@ -160,7 +160,7 @@ export function Crossing() {
             ))}
         </div>
       </header>
-      {lesson && <Coach text="You're ready. Tap **Set out** to begin an Expedition. You can rework your Loom here, or at Shrines along the way." style={{ bottom: 250 }} />}
+      {lesson && <Coach text="You're ready. Tap **Set out**. Every fight drops **Forms**: reveal them with **Focus**, weave the best into your Loom, and sell the rest at the **Bazaar**." style={{ bottom: 250 }} />}
       {/* The two things done most here, Set out and the Loom, sit in the bottom-right thumb zone. */}
       <div className="hub-party hub-bar">
         {partyRoots().map((r) => (

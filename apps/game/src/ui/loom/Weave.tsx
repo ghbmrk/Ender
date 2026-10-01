@@ -4,7 +4,7 @@ import { FOCUS_COST } from "@ender/domain";
 import { api } from "../../api";
 import { refreshCharacter, refreshLoom } from "../../game/flow";
 import { toast, useStore } from "../../state/store";
-import { essenceColor, essenceGlyph, essenceName } from "../../economy/format";
+import { crowns, essenceColor, essenceGlyph, essenceName, fmt } from "../../economy/format";
 import { announceProgress } from "../craftActions";
 import { sfx } from "../battle/sfx";
 
@@ -111,7 +111,11 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
         <div className="ws-head">
           <div>
             <h2>{a.tier === "veiled" ? "A veiled Form" : a.name}</h2>
-            <div className="ws-sub">{a.tier === "veiled" ? "Reveal it to see what it can become." : "Choose what it becomes. It goes straight onto your Loom."}</div>
+            <div className="ws-sub">
+              {a.tier === "veiled"
+                ? "A fight dropped it. Spend Focus to reveal what it is: a better Form makes a stronger skill and sells for more."
+                : "Choose what it becomes. It goes straight onto your Loom."}
+            </div>
           </div>
           <button className="ws-close" onClick={onClose} aria-label="Close">
             ✕
@@ -124,6 +128,21 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
           </button>
         ) : (
           <>
+            {/* What the reveal found: how hard it will hit as a skill, and what it would sell for. */}
+            {justRevealed && a.evaluation && (
+              <div className="ws-eval" data-testid="weave-eval">
+                <span>
+                  <small>Power</small>
+                  <b>{fmt(a.evaluation.power, 0)}</b>
+                  <i>how hard it hits as a skill</i>
+                </span>
+                <span>
+                  <small>Worth</small>
+                  <b>{crowns(a.evaluation.marketValue)}</b>
+                  <i>what it sells for</i>
+                </span>
+              </div>
+            )}
             {cost.length > 0 && (
               <div className={`ws-cost ${afford ? "" : "short"}`}>
                 Costs{" "}

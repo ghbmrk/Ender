@@ -254,23 +254,48 @@ export function LoomScreen() {
   const lessonPlaced = !!lessonForm && hero === mine && nodes.some((n) => n.id === lessonForm.id);
   const lessonSkill = lessonPlaced ? compiled.actions.find((a) => a.nodeId === lessonForm!.id) : undefined;
   const pending = pool.find((n) => n.formId === placing);
+  // The lesson teaches how Forms work together: the new skill goes where it touches the hero and a Modifier.
+  const touches = (a: { q: number; r: number }, b: { q: number; r: number }) => hexDist(a.q - b.q, a.r - b.r) === 1;
+  const lessonMod = lesson ? nodes.find((n) => n.role === "modifier" && compiled.activeNodeIds.includes(n.id)) : undefined;
+  const modName = lessonMod ? MOD_SHORT[lessonMod.affinities[0]] : "";
+  const lessonCells = useMemo(() => {
+    if (!lesson) return new Set<string>();
+    const open = boardCells(2).filter(({ q, r }) => hexDist(q, r) === 1 && !nodes.some((n) => n.q === q && n.r === r));
+    const best = lessonMod ? open.filter((c) => touches(c, lessonMod)) : [];
+    return new Set((best.length ? best : open).map(({ q, r }) => `${q},${r}`));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson, nodes, lessonMod?.id]);
+  const boosted = !!lessonSkill && !!lessonMod && touches(lessonMod, nodes.find((n) => n.id === lessonForm!.id)!);
+  const dmg = (a: { damagePct: number; hits: number }) => Math.round(((ROOTS[mine].basic * a.damagePct) / 100) * a.hits);
+  const unboosted = boosted ? compileLoom(nodes.filter((n) => n.id !== lessonMod!.id), rank).actions.find((a) => a.nodeId === lessonForm!.id) : undefined;
   const coach = !lesson
     ? placing && pending
       ? { text: `Tap a **glowing cell** to place ${pending.name}. Beside the Root, or touching a matching colour, it wakes up.` }
       : afterFight && raw.length && weaves() < 3
-        ? { text: raw[0].tier === "veiled" ? "You found a **Form**. Tap it to reveal what it can become." : "Tap the **Form** to weave it into your skills." }
+        ? { text: raw[0].tier === "veiled" ? "The fight dropped a new **Form**. Tap it and spend **Focus** to reveal what it is." : "Tap the **Form** to weave it into your skills." }
         : null
     : hero !== mine
       ? { text: `Open **${heroName}** to place the new Form.` }
       : !lessonPlaced && pending
         ? { text: `**${pending.name}** is in hand. Tap a cell with a **+** to place it.` }
       : !lessonPlaced
-        ? { text: `You found a Form: **${lessonForm?.name ?? "a new piece"}**, in the tray below. Forms are the pieces of your skills. **Drag it** onto a **+** cell beside ${heroName}, or just tap a **+**.` }
+        ? {
+            text: lessonMod
+              ? `The Husk dropped a **Form**: the piece a skill is made of. Tap a **+**: there it touches ${heroName} and **${modName}**.`
+              : `The Husk dropped a **Form**: the piece a skill is made of. **Drag it** onto a **+** beside ${heroName}, or just tap a **+**.`,
+          }
         : !lessonSkill
           ? { text: "It's **dormant**: a node must touch the Root, or share an Affinity with a neighbour. Drag it beside the Root." }
-          : {
-              text: `**${lessonSkill.name}** is now ${heroName}'s skill. Your Loom is your skill tree: move a Form and the skills change. Tap **Fight** to try it.`,
-            };
+          : boosted
+            ? {
+                text:
+                  unboosted && dmg(unboosted) !== dmg(lessonSkill)
+                    ? `**${lessonSkill.name}** is now a skill, and **${modName}** touches it: damage **${dmg(unboosted)}** → **${dmg(lessonSkill)}**. Forms that touch work together. Tap **Fight** to try it.`
+                    : `**${lessonSkill.name}** is now a skill, and **${modName}** touches it: the gold **+** between them is its boost. Forms that touch work together. Tap **Fight** to try it.`,
+              }
+            : lessonMod
+              ? { text: `**${lessonSkill.name}** is now a skill. Drag it beside **${modName}** too: a Modifier powers up every skill it touches.` }
+              : { text: `**${lessonSkill.name}** is now ${heroName}'s skill. Move a Form and the skills change. Tap **Fight** to try it.` };
 
   const cells = boardCells(2);
   const radius = rank >= 8 ? 2 : 1;
@@ -304,7 +329,7 @@ export function LoomScreen() {
     const p = toStage(e.clientX, e.clientY);
     if (p.y >= TRAY_TOP) return;
     const near = cells
-      .filter(({ q, r }) => hexDist(q, r) === 1 && !byCell.has(`${q},${r}`))
+      .filter(({ q, r }) => lessonCells.has(`${q},${r}`))
       .map(({ q, r }) => ({ q, r, dist: Math.hypot(cellXY(q, r)[0] - p.x, cellXY(q, r)[1] - p.y) }))
       .sort((a, b) => a.dist - b.dist)[0];
     if (!near) return;
@@ -368,7 +393,7 @@ export function LoomScreen() {
           const locked = hexDist(q, r) > radius;
           const hover = drag?.moved && drag.over && drag.over !== "tray" && drag.over.q === q && drag.over.r === r;
           const open = !locked && !byCell.has(`${q},${r}`) && hexDist(q, r) > 0;
-          const glow = (lesson && hero === mine && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`)) || (!!held && !locked && hexDist(q, r) > 0 && goodCells.has(`${q},${r}`) && !(drag?.moved && hover));
+          const glow = lesson && hero === mine && !lessonPlaced ? lessonCells.has(`${q},${r}`) : (!!held && !locked && hexDist(q, r) > 0 && goodCells.has(`${q},${r}`) && !(drag?.moved && hover));
           return (
             <g key={`${q},${r}`}>
               <path d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />
@@ -401,6 +426,21 @@ export function LoomScreen() {
           const [x, y] = cellXY(q, r);
           return <NodeHex key={n.id} landed={landed === n.id} n={n} x={x} y={y} dormant={dormant.has(n.id)} reason={shownC.dormancy[n.id]} selected={selected === n.id} ghost={drag?.moved && drag.node.id === n.id} />;
         })}
+        {/* A Modifier's boost: a gold badge on the edge it shares with every skill it touches, so what powers what is visible. */}
+        {shown
+          .filter((m) => m.role === "modifier" && shownC.activeNodeIds.includes(m.id))
+          .flatMap((m) => shown.filter((n) => (n.role === "action" || n.role === "reaction") && shownC.activeNodeIds.includes(n.id) && touches(m, n)).map((n) => [m, n] as const))
+          .map(([m, n]) => {
+            const [ax, ay] = cellXY(m.q, m.r);
+            const [bx, by] = cellXY(n.q, n.r);
+            const [mx, my] = [(ax + bx) / 2, (ay + by) / 2];
+            return (
+              <g key={`boost-${m.id}-${n.id}`} className="boost-link" style={{ transformOrigin: `${mx}px ${my}px` }}>
+                <circle cx={mx} cy={my} r={34} fill="#ecc56a" stroke="#1d1822" strokeWidth={8} />
+                <text x={mx} y={my + 16} textAnchor="middle" className="boost-plus">+</text>
+              </g>
+            );
+          })}
         {hexDist(0, 0) === 0 && <circle cx={CX} cy={CY - 10} r={0} />}
       </svg>
       <div className="root-head" style={{ left: CX - 50, top: CY - 70 }}>
