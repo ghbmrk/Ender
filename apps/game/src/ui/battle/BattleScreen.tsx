@@ -1091,9 +1091,43 @@ function Commands({
   );
 }
 
+/** What each status does, said once the first time you see it. The number on a status is what is left. */
+const STATUS_EXPLAIN: Record<string, string> = {
+  poison: "Poison: loses a little health each round. The number is rounds left.",
+  burn: "Burn: takes fire damage each round. The number is rounds left.",
+  marked: "Marked: the next hits on it deal 12% more. The number is hits left.",
+  slow: "Slow: acts later in the turn order. The number is rounds left.",
+  fracture: "Fracture: takes 20% more Break. The number is rounds left.",
+};
+const SEEN_KEY = "ender:statuses-seen";
+const seenStatuses = (): string[] => {
+  try {
+    return JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+};
+
 function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq | null; b: Battle; top: number }) {
+  // A status seen for the first time is explained at the start of your turn, once ever.
+  const fresh = useMemo(() => {
+    if (phase.k !== "command") return null;
+    const seen = seenStatuses();
+    for (const u of b.units) {
+      if (!u.alive) continue;
+      for (const [k, v] of Object.entries(u.status)) {
+        if (!(typeof v === "number" ? v > 0 : !!v) || seen.includes(k) || !STATUS_EXPLAIN[k]) continue;
+        try {
+          localStorage.setItem(SEEN_KEY, JSON.stringify([...seen, k]));
+        } catch {}
+        return k;
+      }
+    }
+    return null;
+  }, [phase]);
   let text = "";
-  if (phase.k === "command") {
+  if (fresh) text = `${STATUS_GLYPH[fresh]} ${STATUS_EXPLAIN[fresh]}`;
+  else if (phase.k === "command") {
     const u = b.unit(phase.actor);
     const acts = b.actionsOf(phase.actor);
     const cheapest = Math.min(...acts.map((a) => b.costOf(phase.actor, a.nodeId)));
@@ -1101,7 +1135,7 @@ function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq 
   } else if (phase.k === "defend" && s?.k === "defend") text = s.impacts.length > 1 ? `${s.impacts.length} blows: defend each one` : "Dodge is forgiving. Parry is tight but earns AP.";
   if (!text) return null;
   return (
-    <div className="hint" style={{ top }}>
+    <div className={`hint ${fresh ? "fresh" : ""}`} style={{ top }} key={fresh ?? "hint"}>
       {text}
     </div>
   );

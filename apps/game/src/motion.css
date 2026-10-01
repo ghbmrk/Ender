@@ -1872,3 +1872,7 @@
 .hero-tag .st{display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:999px;background:#140f16e6;border-color:currentColor;font-family:var(--serif-body);font-weight:700}
 .st .st-g{font-style:normal;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif}
 .hero-tag .st .st-n{color:#f3e6c8;font-weight:600}
+
+/* Loop 49: a status seen for the first time is explained on a plate, so it reads over any scene. */
+.hint.fresh{left:40px;right:40px;padding:16px 26px;border-radius:16px;background:#140f16e8;border:2px solid #c9953a;box-shadow:0 8px 24px #000a;text-shadow:none;text-align:center;line-height:1.25;transform:translateY(calc(-100% + 50px));animation:hint-in .28s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes hint-in{from{opacity:0;transform:translateY(calc(-100% + 70px)) scale(.94)}}
