@@ -140,8 +140,18 @@ function bakeSvg(svg: SVGSVGElement, w: number, h: number, flip: boolean): Promi
 let bakeChain: Promise<unknown> = Promise.resolve();
 const idle = () =>
   new Promise<void>((r) => ("requestIdleCallback" in window ? requestIdleCallback(() => r(), { timeout: 400 }) : setTimeout(r, 16)));
+/** While a timing ring is closing, bakes wait: one can take a few hundred ms on a phone and would stall the beat. */
+let held = false;
+export const holdBakes = (on: boolean) => {
+  held = on;
+};
+const unheld = () =>
+  new Promise<void>((r) => {
+    const check = () => (held ? setTimeout(check, 120) : r());
+    check();
+  });
 function queueBake<T>(job: () => Promise<T>): Promise<T> {
-  const run = bakeChain.then(idle).then(job);
+  const run = bakeChain.then(unheld).then(idle).then(unheld).then(job);
   bakeChain = run.catch(() => undefined);
   return run;
 }

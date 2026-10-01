@@ -23,13 +23,14 @@ import { SceneBackdrop } from "../../art/SceneBackdrop";
 import { paintedCard } from "../../art/painted";
 import { STAGE_H, useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH } from "../affinity";
-import { FIG_SCALE, Fig, Head, figureBox } from "./Figure";
+import { FIG_SCALE, Fig, Head, figureBox, holdBakes } from "./Figure";
 import { ARC, BOSS_ADDS, BOSS_POS, DUEL_FOE_DEPTH, DUEL_HERO_SHARE, FOE_POS, HERO_POS, PANEL_TOP, duelLayout } from "./layout";
 import { sfx } from "./sfx";
 import { debug } from "../../game/debug";
 import type { CoachKey, Lesson } from "../../game/tutorial";
 import { Coach } from "../Coach";
 import { lookFor } from "../../game/hero";
+import { Cues } from "./cues";
 
 export type BattleResult = {
   outcome: "victory" | "defeat";
@@ -50,6 +51,8 @@ const IMPACT_LEAD = 900;
 const RING_FROM = 330;
 const MARK_R = 70;
 const RING_V = (RING_FROM - MARK_R) / RING_LEAD;
+/** How long a ring keeps closing past its mark before it fades (the late edge of the widest window). */
+const RING_TAIL = 150;
 /** A ring's radius when `left` ms remain until its beat or impact (negative once past). */
 const ringR = (left: number) => Math.max(14, MARK_R + RING_V * left);
 
@@ -152,6 +155,13 @@ export function BattleScreen({
     });
   const lastPose = useRef("");
   const seq = useRef<Seq | null>(null);
+  // Timing rings and tap judgements live outside React (see cues.ts), so they stay smooth and answer at once.
+  const cueBox = useRef<HTMLDivElement>(null);
+  const markEl = useRef<HTMLDivElement>(null);
+  const cuesRef = useRef<Cues | null>(null);
+  const cues = () => (cuesRef.current ??= cueBox.current ? new Cues(cueBox.current, { from: RING_FROM, mark: MARK_R, lead: RING_LEAD, tail: RING_TAIL }) : null);
+  /** Juice (sparks, camera, coach lines) waits one frame, so the judgement itself paints first. */
+  const soon = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
   const [coach, setCoach] = useState<{ key: CoachKey; text: string } | null>(null);
   const said = useRef(new Set<CoachKey>());
   const slowLeft = useRef(lesson?.slow ?? 0);
@@ -377,6 +387,7 @@ export function BattleScreen({
   // ───────────── flow ─────────────
   const finish = (outcome: "victory" | "defeat") => {
     seq.current = null;
+    cues()?.clear();
     if (outcome === "victory" && lesson?.straightOn) {
       // No victory screen: the fight hands straight on to the next lesson.
       setCaption(null);
@@ -434,6 +445,12 @@ export function BattleScreen({
   }, []);
 
   // Real-time clock during timed sequences.
+  // No figure bakes while a ring is closing (see holdBakes).
+  useEffect(() => {
+    holdBakes(phase.k === "attack" || phase.k === "defend");
+    return () => holdBakes(false);
+  }, [phase.k]);
+
   useEffect(() => {
     if (phase.k !== "attack" && phase.k !== "defend") return;
     let raf = 0;
@@ -506,6 +523,11 @@ export function BattleScreen({
     if (s.weakHit === null) return;
     const bt = t - s.beatsAt;
     const lateBy = RULES.timing.good;
+    const k = debug.timeScale * s.scale;
+    const color = s.action ? AFF_COLOR[s.action.dominant] ?? "#efe3c8" : "#efe3c8";
+    s.beats.forEach((beat, i) => {
+      if (s.pressed.length <= i && beat - bt <= RING_LEAD + 60) cues()?.ensure(i, chest(battle.unit(s.target)), s.t0 + (s.beatsAt + beat - RING_LEAD) * k, k, color);
+    });
     for (const _ of s.tracker.expire(bt)) gradeFeedback(s, "miss");
     if (debug.autoplay) {
       const next = s.beats.findIndex((b, i) => s.tracker.result()[i] === "miss" && s.pressed.length <= i && bt >= b);
@@ -518,17 +540,23 @@ export function BattleScreen({
   const gradeFeedback = (s: AttackSeq, g: Grade) => {
     const t = battle.unit(s.target);
     s.pressed.push({ t: performance.now(), grade: g });
-    float([chest(t)[0], chest(t)[1] - 140], g === "perfect" ? "PERFECT" : g === "good" ? "GOOD" : "MISS", `grade ${g}`);
-    const color = s.action ? AFF_COLOR[s.action.dominant] : "#efe3c8";
-    spawnFx("slash", chest(t), color);
-    if (g === "perfect") {
-      spawnFx("bloom", chest(t), color);
-      flashAt(chest(t), "#fff4dc");
-      kick("punch", chest(t));
-    }
+    // Instant: the word, the ring, the mark and the sound, all without a React render.
+    const c = cues();
+    c?.drop(s.pressed.length - 1, g !== "miss");
+    c?.judge(g === "perfect" ? "PERFECT" : g === "good" ? "GOOD" : "MISS", `grade ${g}`, [chest(t)[0], chest(t)[1] - 140]);
+    c?.pulse(markEl.current, g);
     (g === "perfect" ? sfx.perfect : g === "good" ? sfx.good : sfx.miss)();
-    bumpStreak(g !== "miss");
-    say(g);
+    const color = s.action ? AFF_COLOR[s.action.dominant] : "#efe3c8";
+    soon(() => {
+      spawnFx("slash", chest(t), color);
+      if (g === "perfect") {
+        spawnFx("bloom", chest(t), color);
+        flashAt(chest(t), "#fff4dc");
+        kick("punch", chest(t));
+      }
+      bumpStreak(g !== "miss");
+      say(g);
+    });
   };
 
   const pressAttack = (s: AttackSeq, t: number, at?: { x: number; y: number }) => {
@@ -544,10 +572,17 @@ export function BattleScreen({
     }
     const r = s.tracker.press(t - s.beatsAt);
     if (r) gradeFeedback(s, r.grade);
+    else {
+      // Pressed with no beat near: say so at once rather than ignore the tap.
+      const tt = chest(battle.unit(s.target));
+      cues()?.judge("EARLY", "grade miss small", [tt[0], tt[1] - 140]);
+      cues()?.pulse(markEl.current, "miss");
+    }
   };
 
   const resolveAttack = (s: AttackSeq) => {
     seq.current = null;
+    cues()?.clear();
     setPhase({ k: "wait" });
     const events = battle.resolveHero({ actor: s.actor, command: s.command, target: s.target, ally: s.ally, grades: s.tracker.result(), weakPoint: !!s.weakHit });
     events.push(...battle.settle());
@@ -600,18 +635,25 @@ export function BattleScreen({
   const defendFeedback = (s: DefendSeq, i: number, r: Defense) => {
     s.shown[i] = r;
     const victim = battle.unit(s.plan.targets[0]!);
-    say(r === "hit" ? "hit" : r.includes("parry") ? "parried" : "dodged");
-    bumpStreak(r !== "hit");
+    const c = cues();
+    c?.drop(i, r !== "hit");
+    soon(() => {
+      say(r === "hit" ? "hit" : r.includes("parry") ? "parried" : "dodged");
+      bumpStreak(r !== "hit");
+    });
     if (r === "hit") return;
-    float([chest(victim)[0] + 60, chest(victim)[1] - 120], DEF_LABEL[r], `def ${r}`);
+    c?.judge(DEF_LABEL[r], `def ${r}`, [chest(victim)[0] + 60, chest(victim)[1] - 120]);
+    c?.pulse(markEl.current, r.includes("parry") ? "parry" : "dodge");
     if (r.includes("parry")) {
       sfx.parry();
-      spawnFx("spark", chest(victim), "#ecc56a");
-      flashAt(chest(victim), "#ecc56a");
-      kick(r === "perfect-parry" ? "punch" : "shake", chest(victim));
+      soon(() => {
+        spawnFx("spark", chest(victim), "#ecc56a");
+        flashAt(chest(victim), "#ecc56a");
+        kick(r === "perfect-parry" ? "punch" : "shake", chest(victim));
+      });
     } else {
       sfx.dodge();
-      spawnFx("whoosh", chest(victim), "#b3cbf5");
+      soon(() => spawnFx("whoosh", chest(victim), "#b3cbf5"));
     }
   };
 
@@ -621,6 +663,10 @@ export function BattleScreen({
       if (i >= 0 && t >= s.impacts[i]! - 20) pressDefend(s, t, "parry");
     }
     s.tracker.expire(t);
+    const k = debug.timeScale * s.scale;
+    s.impacts.forEach((imp, i) => {
+      if (!s.tracker.resultAt(i) && imp - t <= IMPACT_LEAD + 60) cues()?.ensure(i, chest(battle.unit(s.plan.targets[0]!)), s.t0 + (imp - IMPACT_LEAD) * k, k, "#ff6b6b");
+    });
     s.impacts.forEach((at, i) => {
       const r = s.tracker.resultAt(i);
       if (r && s.shown[i] === null) defendFeedback(s, i, r);
@@ -642,14 +688,25 @@ export function BattleScreen({
   const pressDefend = (s: DefendSeq, t: number, kind: "parry" | "dodge") => {
     sfx.unlock();
     const r = s.tracker.press(t, kind);
-    if (!r) return;
-    // Say which way the press missed, so the next one can be corrected.
+    const [vx, vy] = chest(battle.unit(s.plan.targets[0]!));
+    // Every press answers at once: a clean one now (not on the next tick), a mistimed one with which way it missed.
+    if (!r) {
+      cues()?.judge("TOO EARLY", "def hit", [vx + 60, vy - 120]);
+      cues()?.pulse(markEl.current, "miss");
+      return;
+    }
+    if (r.result !== "hit") {
+      if (s.shown[r.index] === null) defendFeedback(s, r.index, r.result);
+      return;
+    }
     const late = t > s.impacts[r.index]!;
-    if (r.result === "hit") float([chest(battle.unit(s.plan.targets[0]!))[0] + 60, chest(battle.unit(s.plan.targets[0]!))[1] - 120], late ? "TOO LATE" : "TOO EARLY", "def hit");
+    cues()?.judge(late ? "TOO LATE" : "TOO EARLY", "def hit", [vx + 60, vy - 120]);
+    cues()?.pulse(markEl.current, "miss");
   };
 
   const resolveDefend = (s: DefendSeq) => {
     seq.current = null;
+    cues()?.clear();
     setPhase({ k: "wait" });
     const events = battle.resolveFoe(s.plan, s.tracker.result());
     events.push(...battle.settle());
@@ -766,7 +823,7 @@ export function BattleScreen({
         {fx.map((f) => (
           <FxMark key={f.id} f={f} />
         ))}
-        {s && <CueRings seq={seq} at={s.k === "attack" ? chest(battle.unit(s.target)) : chest(battle.unit(s.plan.targets[0]!))} />}
+        {s && <CueBands kind={s.k} at={s.k === "attack" ? chest(battle.unit(s.target)) : chest(battle.unit(s.plan.targets[0]!))} />}
       </svg>
       {s?.k === "attack" &&
         s.weakHit === null &&
@@ -779,6 +836,14 @@ export function BattleScreen({
           <span>{streak >= 5 ? "Unstoppable" : streak >= 3 ? "In the flow" : "Chain"}</span>
         </div>
       )}
+      {/* Rings, the mark and tap judgements: driven imperatively (cues.ts), never re-rendered per frame. */}
+      <div className="cue-layer" ref={cueBox}>
+        {s && (() => {
+          const [cx, cy] = s.k === "attack" ? chest(battle.unit(s.target)) : chest(battle.unit(s.plan.targets[0]!));
+          return <div ref={markEl} className={`cue-mark ${s.k}`} style={{ left: cx - MARK_R, top: cy - MARK_R, width: MARK_R * 2, height: MARK_R * 2 }} />;
+        })()}
+        {s?.k === "attack" && s.weakHit === null && <div className="weak-bar" style={{ animationDuration: `${s.weakMs * debug.timeScale * s.scale}ms` }} />}
+      </div>
       {floaters.map((f) => (
         <div key={f.id} className={`floater ${f.cls}`} style={{ left: f.x, top: f.y, animationDelay: `${f.delay}ms` }}>
           {f.text}
@@ -1240,51 +1305,8 @@ function poseKey(s: Seq, t: number) {
  * smoothly at one constant speed. The mark shows the scoring window: the gold band is where a press counts,
  * the bright rim is Perfect (attacks) or Parry (defence), and the ring keeps closing past it so lateness shows.
  */
-function CueRings({ seq, at: [cx, cy] }: { seq: React.MutableRefObject<Seq | null>; at: [number, number] }) {
-  const g = useRef<SVGGElement>(null);
-  const bar = useRef<SVGRectElement>(null);
-  const kind = seq.current?.k;
-  useEffect(() => {
-    let raf = 0;
-    const draw = () => {
-      const s = seq.current;
-      const rings = g.current ? (Array.from(g.current.querySelectorAll("circle.ring")) as SVGCircleElement[]) : [];
-      let n = 0;
-      const put = (left: number, fade: number) => {
-        const c = rings[n++];
-        if (!c) return;
-        c.setAttribute("r", ringR(left).toFixed(1));
-        c.setAttribute("opacity", fade.toFixed(2));
-        c.style.display = "";
-      };
-      if (s) {
-        const t = elapsed(s);
-        if (s.k === "attack") {
-          if (bar.current) bar.current.setAttribute("width", s.weakHit === null ? String(800 * Math.max(0, 1 - t / s.weakMs)) : "0");
-          if (s.weakHit !== null) {
-            const bt = t - s.beatsAt;
-            const res = s.tracker.result();
-            s.beats.forEach((beat, i) => {
-              if (s.pressed.length > i || res[i] !== "miss") return;
-              const left = beat - bt;
-              if (left > RING_LEAD || left < -RULES.timing.good) return;
-              put(left, Math.min(1, 0.4 + 0.6 * (1 - left / RING_LEAD)));
-            });
-          }
-        } else {
-          s.impacts.forEach((imp, i) => {
-            const left = imp - t;
-            if (left > IMPACT_LEAD || left < -140 || s.tracker.resultAt(i)) return;
-            put(left, Math.min(1, 0.4 + 0.6 * (1 - left / IMPACT_LEAD)));
-          });
-        }
-      }
-      for (; n < rings.length; n++) rings[n]!.style.display = "none";
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [seq]);
+/** The scoring bands around the mark (static for the whole sequence; the moving rings are in cues.ts). */
+function CueBands({ kind, at: [cx, cy] }: { kind: "attack" | "defend"; at: [number, number] }) {
   const attack = kind === "attack";
   // Scoring bands, as radii: a press counts while the ring is inside the outer band.
   const band = attack
@@ -1292,19 +1314,11 @@ function CueRings({ seq, at: [cx, cy] }: { seq: React.MutableRefObject<Seq | nul
     : { outer: [ringR(-RULES.dodge[0]), ringR(-RULES.dodge[1])], inner: [ringR(-RULES.parry[0]), ringR(-RULES.parry[1])] };
   const mid = (b: number[]) => (b[0]! + b[1]!) / 2;
   const wid = (b: number[]) => b[0]! - b[1]!;
-  const color = attack ? "#efe3c8" : "#ff6b6b";
   return (
     <g className="cues">
-      {attack && <rect ref={bar} x="140" y="1340" width="0" height="10" rx="5" fill="#86c6f2" opacity="0.8" />}
-      <circle cx={cx} cy={cy} r={mid(band.outer)} fill="none" stroke={attack ? "#ecc56a" : "#86c6f2"} strokeWidth={wid(band.outer)} opacity={0.16} />
-      <circle cx={cx} cy={cy} r={mid(band.inner)} fill="none" stroke="#ecc56a" strokeWidth={wid(band.inner)} opacity={0.3} />
+      <circle cx={cx} cy={cy} r={mid(band.outer)} fill="none" stroke={attack ? "#ecc56a" : "#86c6f2"} strokeWidth={wid(band.outer)} opacity={0.22} />
+      <circle cx={cx} cy={cy} r={mid(band.inner)} fill="none" stroke="#ecc56a" strokeWidth={wid(band.inner)} opacity={0.4} />
       <circle cx={cx} cy={cy} r={MARK_R} fill="none" stroke="#1d1822" strokeWidth={12} opacity={0.85} />
-      <circle cx={cx} cy={cy} r={MARK_R} fill="none" stroke="#ecc56a" strokeWidth={4} />
-      <g ref={g}>
-        {[0, 1, 2, 3].map((i) => (
-          <circle key={i} className="ring" cx={cx} cy={cy} r={RING_FROM} fill="none" stroke={color} strokeWidth={10} style={{ display: "none" }} />
-        ))}
-      </g>
     </g>
   );
 }
@@ -1313,7 +1327,7 @@ function FxMark({ f }: { f: Fx }) {
   const style = { animationDelay: `${f.delay}ms` };
   switch (f.kind) {
     case "slash":
-      return <path className="fx slash" style={style} d={`M${f.x - 150} ${f.y - 110} C${f.x - 40} ${f.y - 40} ${f.x + 40} ${f.y + 10} ${f.x + 160} ${f.y + 100}`} stroke={f.color} strokeWidth={22} strokeLinecap="round" fill="none" filter="url(#wc)" />;
+      return <path className="fx slash" style={style} d={`M${f.x - 150} ${f.y - 110} C${f.x - 40} ${f.y - 40} ${f.x + 40} ${f.y + 10} ${f.x + 160} ${f.y + 100}`} stroke={f.color} strokeWidth={22} strokeLinecap="round" fill="none" />;
     case "splat":
       return (
         <g className="fx splat" style={{ ...style, transformOrigin: `${f.x}px ${f.y}px` }}>

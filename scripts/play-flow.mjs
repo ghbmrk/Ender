@@ -48,6 +48,8 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
   if (await visible(tid("rewards-ok"))) {
     if (fights === 1) await shot("flow-rewards");
     await page.click(tid("rewards-ok"));
+    // Screen and panel changes land a frame after the tap (state/store.ts), so wait for it to go.
+    await page.waitForSelector(tid("rewards-ok"), { state: "detached" });
     continue;
   }
   if (await visible(tid("run-summary"))) {
