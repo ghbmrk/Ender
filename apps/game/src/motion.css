@@ -2682,6 +2682,7 @@
 }
 .backdrop.grounded-box > .grounded {
   margin-top: 400px;
+  will-change: transform;
   object-fit: cover;
   pointer-events: none;
 }
