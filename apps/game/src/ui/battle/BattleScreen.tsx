@@ -124,7 +124,7 @@ export function BattleScreen({
   const [floaters, setFloaters] = useState<Floater[]>([]);
   const [fx, setFx] = useState<Fx[]>([]);
   const [banner, setBanner] = useState<{ id: number; text: string; sub?: string; ms: number; lore?: string } | null>(null);
-  const [caption, setCaption] = useState<{ name: string; tell: string; foe: string } | null>(null);
+  const [caption, setCaption] = useState<{ name: string; tell: string; foe: string; rage?: boolean } | null>(null);
   const [hurt, setHurt] = useState<Record<string, number>>({});
   const [clock, setClock] = useState(0);
   /** Clean timings in a row (strikes and defences alike); a miss or a hit taken resets it. Pure feedback. */
@@ -525,7 +525,7 @@ export function BattleScreen({
   // ───────────── enemy attacks ─────────────
   const startDefend = (plan: FoePlan) => {
     const foe = battle.unit(plan.actor);
-    setCaption({ name: plan.attack.name, tell: plan.attack.tell, foe: foe.name });
+    setCaption({ name: plan.attack.name, tell: plan.attack.tell, foe: foe.name, rage: plan.attack.rage });
     if (plan.healTarget || !plan.attack.hits.length) {
       setPhase({ k: "wait" });
       sfx.telegraph();
@@ -755,7 +755,7 @@ export function BattleScreen({
       {bossUnit && bossUnit.alive && <BossBar u={bossUnit} />}
 
       {caption && (
-        <div className="tell" key={caption.name + caption.foe}>
+        <div className={`tell ${caption.rage ? "rage" : ""}`} key={caption.name + caption.foe}>
           <div className="tell-name">{caption.name}</div>
           <div className="tell-sub">
             {caption.foe} {caption.tell}

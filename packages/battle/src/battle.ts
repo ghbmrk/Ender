@@ -550,7 +550,7 @@ export class Battle {
     const wounded = this.living("foe")
       .filter((f) => f.id !== actor.id && f.hp < f.maxHp * 0.6)
       .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-    const options = def.attacks.filter((a) => (a.minPhase ?? 1) <= actor.phase + 1 && (!a.healAlly || wounded));
+    const options = def.attacks.filter((a) => (a.minPhase ?? 1) <= actor.phase + 1 && (!a.healAlly || wounded) && (!a.rage || !!actor.enraged));
     const attack = this.rng.weighted(options, options.map((a) => a.weight));
     if (attack.healAlly) return { actor: actor.id, attack, targets: [], healTarget: wounded!.id };
     const party = this.living("party");

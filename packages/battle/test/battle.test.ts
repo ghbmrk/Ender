@@ -178,6 +178,15 @@ describe("combat rules (§61–72)", () => {
     expect(soft.unit("husk-1").power).toBeCloseTo(full.unit("husk-1").power * 0.4);
     expect(soft.party().map((u) => u.maxHp)).toEqual(full.party().map((u) => u.maxHp));
   });
+  it("rage moves come only once a foe has enraged", () => {
+    const b = new Battle({ seed: "rg", party: party(), waves: [["husk"]], difficulty: 1 });
+    const calm = Array.from({ length: 40 }, () => b.planFoe("husk-1").attack);
+    expect(calm.some((a) => a.rage)).toBe(false);
+    b.unit("husk-1").enraged = true;
+    const angry = Array.from({ length: 40 }, () => b.planFoe("husk-1").attack);
+    expect(angry.some((a) => a.rage)).toBe(true);
+    for (const def of Object.values(FOES)) if (def.tier !== "boss") expect(def.attacks.some((a) => a.rage)).toBe(true);
+  });
   it("AP: start 3, +1 at the start of your turn, Basic +2, max 9", () => {
     const b = new Battle({ seed: "ap", party: party(), waves: [["keeper"]], difficulty: 1 });
     let t = b.nextTurn();
