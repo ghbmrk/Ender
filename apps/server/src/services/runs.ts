@@ -79,7 +79,8 @@ function normalWave(r: Rng, realm: RealmTemplate, max: number): FoeKind[] {
 function encounterFor(r: Rng, realm: RealmTemplate, kind: NodeKind, layer: number, seed: string): Encounter | undefined {
   const difficulty = realm.difficulty;
   if (kind === "combat" || kind === "mystery") {
-    const waves = [normalWave(r, realm, layer >= 2 ? 3 : 2)];
+    // The first stop of a run is one foe: blind new players kept limping out of a two-foe opener.
+    const waves = [normalWave(r, realm, layer === 0 ? 1 : layer >= 2 ? 3 : 2)];
     if (layer >= 2 && r.chance(0.3)) waves.push(normalWave(r, realm, 2));
     return { waves, difficulty, seed };
   }
