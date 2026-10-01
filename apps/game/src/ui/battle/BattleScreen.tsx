@@ -211,7 +211,11 @@ export function BattleScreen({
   const [stray, setStray] = useState(0);
   // Whether the player has chosen a first move: until then a new lesson's banner stays up, so a glance can't miss it.
   const [acted, setActed] = useState(false);
-  useEffect(() => setStray(0), [phase]);
+  const lessonStrays = useRef(0);
+  useEffect(() => {
+    setStray(0);
+    if (phase.k !== "command") lessonStrays.current = 0;
+  }, [phase]);
   const say = (key: CoachKey) => {
     const text = (drillRef.current === "parry" && lesson?.parryCoach?.[key]) || lesson?.coach[key];
     if (!text || said.current.has(key)) return;
@@ -902,7 +906,12 @@ export function BattleScreen({
   };
 
   const strayTap = () => {
-    // In a lesson the tip says it, and a tap on the tip takes Basic.
+    // In a lesson the tip says it, and a tap on the tip takes Basic; a lesson never strands anyone, so after a few
+    // misses the next tap takes Basic too.
+    if (lesson && phase.k === "command" && (lessonStrays.current = lessonStrays.current + 1) >= 4) {
+      lessonStrays.current = 0;
+      return chooseCommand(phase.actor, "basic");
+    }
     if (lesson) setCoach({ key: "command", text: lesson.commands === "basic" ? "Your turn: tap **Basic**, bottom left, to strike." : "Your turn: tap a card below to act." });
     else setStray((n) => n + 1);
   };

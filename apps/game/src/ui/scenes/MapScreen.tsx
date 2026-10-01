@@ -200,7 +200,11 @@ export function MapScreen() {
           const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
           if (d < r.width * 1.25 && (!best || d < best.d)) best = { n, d };
         }
-        if (best) go(best.n);
+        if (best) return go(best.n);
+        // Open ground far from any stop: still answer, so no tap on the map is dead.
+        if (performance.now() - shownAt.current < 200 || reveal) return;
+        setNudge((k) => k + 1);
+        toast(`Tap ${glowing(reach)} to choose your path.`);
       }}
     >
       <div className="backdrop dimmed">
