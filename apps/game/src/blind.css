@@ -58,3 +58,14 @@
 }
 /* Which foe of the fight this is, beside its name: "2 of 2" says a new foe stepped in, not that the old one changed. */
 .stage .foe-tag .foe-count { margin-left: 14px; font-size: 36px; color: var(--gold-1); opacity: .85; letter-spacing: .04em; }
+/* Which lesson this is, under the hero's badge and above Skip: lessons hand straight on, so the count says a new one began. */
+.stage .battle .lesson-chip {
+  position: absolute; left: 24px; top: 470px; z-index: 30; pointer-events: none;
+  padding: 6px 18px; border-radius: 22px; background: rgba(12, 9, 16, .78); border: 2px solid rgba(236, 197, 106, .55);
+  color: var(--gold-1); font: 700 32px/1.2 "Alegreya SC", serif; letter-spacing: .04em; white-space: nowrap;
+  animation: lesson-chip-in 320ms cubic-bezier(.2, 1.4, .4, 1) backwards;
+}
+.stage .battle .skip-tutorial { top: 560px; }
+@keyframes lesson-chip-in { from { transform: scale(1.35); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .stage .battle .lesson-chip { animation: none; } }
+.stage .battle .lesson-chip.away { opacity: 0; transition: opacity 120ms; }

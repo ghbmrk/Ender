@@ -1036,6 +1036,13 @@ export function BattleScreen({
       ) : (
         <Hint duel={duel} phase={phase} s={s} b={battle} top={PANEL_TOP + stageH - STAGE_H - 70} />
       )}
+      {/* Which practice fight this is, always on show: lessons hand straight on to each other, so without it a new foe reads as the old one coming back. */}
+      {lesson && LESSON_NO[lesson.step] && (
+        // Kept mounted so it pops in once per lesson; it fades while a foe's move card holds that corner.
+        <div className={`lesson-chip ${phase.k === "command" ? "" : "away"}`} data-testid="lesson-chip">
+          Lesson {LESSON_NO[lesson.step]} of 4 · {LESSON_NAME[lesson.step]}
+        </div>
+      )}
       {lesson && onSkip && phase.k === "command" && (
         // Skipping loses every lesson, so it asks once more; a stray tap only arms it.
         <button
@@ -1205,6 +1212,10 @@ function Statuses({ u, named }: { u: Unit; named?: boolean }) {
     </div>
   );
 }
+
+/** The practice fights in order, as the lesson chip numbers them. */
+const LESSON_NO: Partial<Record<Lesson["step"], number>> = { strike: 1, dodge: 2, parry: 3, skill: 4 };
+const LESSON_NAME: Partial<Record<Lesson["step"], string>> = { strike: "Strike", dodge: "Dodge", parry: "Parry", skill: "Skills" };
 
 /** Matches .foe-tag's width in frame.css, so tags near the edges stay on screen. */
 const FOE_TAG_W = 300;
