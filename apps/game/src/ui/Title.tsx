@@ -2,13 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { enterGame } from "../game/launch";
 import { savedStep, tutorialDone } from "../game/tutorial";
-import { heroFigure } from "../game/hero";
 import { setState, toast, useStore } from "../state/store";
-import { crossingBackdrop } from "../art/registry";
-import { SceneBackdrop } from "../art/SceneBackdrop";
-import { Fig } from "./battle/Figure";
 import { sfx } from "./battle/sfx";
-import { useWorldTop } from "./Stage";
+import { CoverPainting } from "./Landing";
 
 const SHOW_DEV = new URLSearchParams(location.search).has("dev");
 
@@ -47,35 +43,15 @@ export function Title() {
     }
     setState({ devMode: v });
   };
-  const Back = crossingBackdrop()?.default;
-  const worldTop = useWorldTop();
   return (
-    <div className="title-screen">
-      <div className="world" style={{ top: worldTop }}>
-      <div className="backdrop dimmed">
-        <SceneBackdrop id="title" Drawn={Back} />
+    <div className="title-screen landing painted">
+      {/* The same painting as the landing, so the two read as one: the hero, alone, before the monster. */}
+      <div className="cover-fill">
+        <CoverPainting />
       </div>
-      {me ? (
-        <div className="title-party">
-          <div style={{ position: "absolute", left: 540, top: 1360 }}>
-            <Fig bake figure={heroFigure(me.root)} look={me.look} scale={1.9} />
-          </div>
-        </div>
-      ) : (
-      <div className="title-party">
-        <div style={{ position: "absolute", left: 260, top: 1260 }}>
-          <Fig bake figure="binder" scale={1.6} />
-        </div>
-        <div style={{ position: "absolute", left: 800, top: 1270 }}>
-          <Fig bake figure="ranger" scale={1.6} className="flip" />
-        </div>
-        <div style={{ position: "absolute", left: 540, top: 1360 }}>
-          <Fig bake figure="warden" scale={1.75} />
-        </div>
-      </div>
-      )}
-      </div>
-      <div className="title-card">
+      <div className="landing-fade top" />
+      <div className="landing-fade bottom" />
+      <div className="title-card landing-card">
         <h1>ENDER</h1>
         <p className="tagline">You never earn a skill. You make one.</p>
       </div>

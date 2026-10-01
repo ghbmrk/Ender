@@ -3,6 +3,9 @@ import { enterGame, signIn } from "../game/launch";
 import { paintedBackdrop, paintedFigure } from "../art/painted";
 import { Fig } from "./battle/Figure";
 import { sfx } from "./battle/sfx";
+import { OpenAIMark } from "./OpenAIMark";
+import { useStore } from "../state/store";
+import { heroFigure } from "../game/hero";
 
 /**
  * The first screen anyone sees: the title and the button over a full-bleed painting in the spirit of
@@ -32,8 +35,10 @@ export function Landing() {
         <p className="tagline">You never earn a skill. You make one.</p>
       </div>
       <div className="title-actions landing-actions">
-        <button className="big primary landing-signin" disabled={busy} onClick={begin} data-testid="sign-in">
-          Sign in with ChatGPT
+        {/* The mark is the button; "Sign in" sits in its heart. It names ChatGPT for screen readers. */}
+        <button className="landing-signin" disabled={busy} onClick={begin} aria-label="Sign in with ChatGPT" data-testid="sign-in">
+          <OpenAIMark size={330} className="signin-mark" />
+          <span className="signin-text">Sign in</span>
         </button>
       </div>
     </div>
@@ -41,7 +46,8 @@ export function Landing() {
 }
 
 /** The painting: a dedicated cover piece when one has been rendered, else one composed from the game's art. */
-function CoverPainting() {
+export function CoverPainting() {
+  const hero = useStore((s) => s.hero);
   const cover = paintedBackdrop("cover");
   const hall = paintedBackdrop("throne");
   const idol = paintedFigure("king");
@@ -51,17 +57,9 @@ function CoverPainting() {
       {cover ? (
         <>
           <img className="cv-bg" src={cover} alt="" draggable={false} />
-          {/* A small party at the foot of the stair, looking up at what waits on the dais. */}
-          <div className="cv-party on-cover">
-            <div style={{ position: "absolute", left: 300, bottom: 0 }}>
-              <Fig bake figure="warden" scale={1.15} />
-            </div>
-            <div style={{ position: "absolute", left: 170, bottom: -12 }}>
-              <Fig bake figure="binder" scale={1.25} />
-            </div>
-            <div style={{ position: "absolute", left: 420, bottom: -6 }}>
-              <Fig bake figure="ranger" scale={1.1} />
-            </div>
+          {/* One hero, seen from behind in silhouette, squaring up to what waits on the dais. */}
+          <div className="cv-lone">
+            <Fig bake figure={hero ? heroFigure(hero.root) : "warden"} look={hero?.look} scale={4.6} />
           </div>
         </>
       ) : (
