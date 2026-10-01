@@ -9,6 +9,7 @@ import "./styles.css";
 import "./frame.css";
 import "./painted.css";
 import "./motion.css";
+import "./blind.css";
 
 /**
  * Two-part start: the title shows as soon as this small first part runs, while the rest of the game (the in-page

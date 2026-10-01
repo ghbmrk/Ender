@@ -2167,3 +2167,7 @@ table,
   line-height: 1.1;
   text-align: center;
 }
+.stage .battle .skip-tutorial.armed {
+  color: #ffe9a8;
+  border-color: #ecc56a;
+}

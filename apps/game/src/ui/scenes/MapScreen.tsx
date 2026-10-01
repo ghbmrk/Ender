@@ -90,10 +90,17 @@ export function MapScreen() {
     const w = ((n.id.charCodeAt(n.id.length - 1) * 37) % 60) - 30;
     return [x + w, y];
   };
-  const next = new Set(reachable().map((n) => n.id));
+  const reach = reachable();
+  const next = new Set(reach.map((n) => n.id));
+  // A tap on a stop you can't reach yet says where you can go, and the reachable stops flash.
+  const [nudge, setNudge] = useState(0);
   const Back = backdropFor(ex.plan.realmId, false)?.default;
   const go = (n: MapNode) => {
-    if (!next.has(n.id) || reveal) return;
+    if (reveal) return;
+    if (!next.has(n.id)) {
+      if (n.layer > anchor) setNudge((k) => k + 1);
+      return;
+    }
     sfx.step();
     // A Mystery is a moment: a sealed card you turn over before finding out what it holds.
     if (n.kind === "mystery") return setReveal({ node: n, open: false });
@@ -111,7 +118,11 @@ export function MapScreen() {
           <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
           <div className="map-sub">
             {ex.at ? `Step ${anchor + 1} of ${layers.length}. ` : ""}
-            {layers.length - 1 - anchor <= 1 && ex.at ? "The Boss is next." : "Choose your path."}
+            {layers.length - 1 - anchor <= 1 && ex.at
+              ? "The Boss is next."
+              : reach.length === 1
+                ? `Tap the glowing ${KIND[reach[0]!.kind]?.name ?? "stop"} to go on.`
+                : "Tap a glowing stop to choose your path."}
           </div>
         </div>
         {/* Withdrawing is rare and final, so it sits up top, out of the thumb's way. */}
@@ -143,10 +154,10 @@ export function MapScreen() {
         return (
           <button
             key={n.id}
-            className={`map-node k-${n.kind} ${n.layer < anchor ? "past" : n.layer === anchor && ex.at !== n.id ? "passed" : ""} ${next.has(n.id) ? "next" : ""} ${visited ? "visited" : ""} ${ex.at === n.id ? "here" : ""}`}
+            className={`map-node k-${n.kind} ${n.layer < anchor ? "past" : n.layer === anchor && ex.at !== n.id ? "passed" : ""} ${next.has(n.id) ? "next" : ""} ${visited ? "visited" : ""} ${ex.at === n.id ? "here" : ""} ${next.has(n.id) && nudge ? `nudge-${nudge % 2}` : ""} ${!next.has(n.id) && n.layer > anchor ? "ahead" : ""}`}
             style={{ left: x, top: y }}
             onClick={() => go(n)}
-            disabled={!next.has(n.id)}
+            aria-disabled={!next.has(n.id)}
             data-testid={`map-node-${n.id}`}
             data-kind={n.kind}
           >

@@ -163,6 +163,7 @@ export function BattleScreen({
   /** Juice (sparks, camera, coach lines) waits one frame, so the judgement itself paints first. */
   const soon = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
   const [coach, setCoach] = useState<{ key: CoachKey; text: string } | null>(null);
+  const [skipArmed, setSkipArmed] = useState(false);
   const said = useRef(new Set<CoachKey>());
   const slowLeft = useRef(lesson?.slow ?? 0);
   /** Coach the player once per moment (lessons only). */
@@ -422,8 +423,12 @@ export function BattleScreen({
           const acts = battle.actionsOf(u.id);
           if (acts.some((a) => battle.costOf(u.id, a.nodeId) <= u.ap)) say("skill");
           else if (acts.length) say("ap");
-        } else if (u.ap > 0 && lesson?.coach.ap) say("ap");
-        else say("command");
+        } else if (u.ap > 0 && lesson?.coach.ap && !said.current.has("ap")) say("ap");
+        else if (lesson?.coach.command) {
+          // Each turn starts with a pick, so the tip says so again rather than leaving last swing's "missed" over the cards.
+          said.current.delete("command");
+          say("command");
+        }
       });
     } else {
       const plan = battle.planFoe(u.id);
@@ -879,8 +884,14 @@ export function BattleScreen({
         <Hint duel={duel} phase={phase} s={s} b={battle} top={PANEL_TOP + stageH - STAGE_H - 70} />
       )}
       {lesson && onSkip && phase.k === "command" && (
-        <button className="skip-tutorial" onPointerDown={(e) => e.stopPropagation()} onClick={onSkip} data-testid="skip-tutorial">
-          Skip tutorial
+        // Skipping loses every lesson, so it asks once more; a stray tap only arms it.
+        <button
+          className={`skip-tutorial ${skipArmed ? "armed" : ""}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => (skipArmed ? onSkip() : setSkipArmed(true))}
+          data-testid="skip-tutorial"
+        >
+          {skipArmed ? "Tap again to skip" : "Skip tutorial"}
         </button>
       )}
 
