@@ -97,6 +97,9 @@ export function reachable(): MapNode[] {
   return (here?.links ?? []).map((id) => nodeById(id)!).filter(Boolean);
 }
 
+/** The share of max health a Shrine mends. */
+const SHRINE_MEND = 1 / 3;
+
 export async function stepTo(node: MapNode) {
   const ex = getState().expedition!;
   setState({ expedition: { ...ex, at: node.id, visited: [...ex.visited, node.id] } });
@@ -108,7 +111,18 @@ export async function stepTo(node: MapNode) {
   noteForms(out?.rewards);
   await refreshCharacter();
   if (node.kind === "shrine") {
-    toast("A Shrine: rearrange your Loom freely here.", "info");
+    // A Shrine is a rest: it mends a third of your health, so a hurt hero has a reason to route through one.
+    const cur = getState().expedition!;
+    const healed: Partial<Record<RootId, number>> = {};
+    let gained = 0;
+    for (const r of partyRoots()) {
+      const max = ROOTS[r].hp;
+      const hp = cur.partyHp[r] ?? max;
+      healed[r] = Math.min(max, hp + Math.round(max * SHRINE_MEND));
+      gained += healed[r]! - hp;
+    }
+    setState({ expedition: { ...cur, partyHp: { ...cur.partyHp, ...healed } } });
+    toast(gained > 0 ? `A Shrine: you rest and recover ${gained} health. Rework your Loom freely here.` : "A Shrine: rework your Loom freely here.", gained > 0 ? "gain" : "info");
     setState({ loomEditable: true, screen: "loom" });
   } else if (node.kind === "attunement") {
     // Crafting lives on the Loom now: an Attunement opens it so any Forms you carry can be woven.

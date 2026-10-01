@@ -21,7 +21,7 @@ const KIND: Record<string, { glyph: string; name: string }> = {
 };
 /** What a reachable node holds, in a few words, for the nodes that aren't fights. */
 const PEEK: Record<string, string> = {
-  shrine: "rework your Loom",
+  shrine: "rest and heal",
   attunement: "weave your Forms",
   bazaar: "buy and sell",
   contract: "take a paid job",
