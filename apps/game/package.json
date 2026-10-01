@@ -10,7 +10,7 @@
     "dev:web": "vite --mode web",
     "build:web": "vite build --mode web --outDir dist-web --base ./",
     "build:split": "vite build --mode split --outDir dist-split --base ./",
-    "build:pages": "VITE_PAINTER_BASE=../model/ vite build --mode split --outDir dist-pages --base ./"
+    "build:pages": "VITE_PAINTER_BASE=./model/ vite build --mode split --outDir dist-pages --base ./"
   },
   "dependencies": {
     "@ender/battle": "workspace:*",
