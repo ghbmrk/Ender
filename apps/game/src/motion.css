@@ -1085,7 +1085,7 @@
 .stage .card.has-art:not(.empty)::after {
   background:
     var(--tex-grain),
-    linear-gradient(90deg, #f1e3c0 34%, rgba(241, 227, 192, 0.82) 50%, rgba(241, 227, 192, 0) 82%),
+    linear-gradient(90deg, #f1e3c0 40%, rgba(241, 227, 192, 0.78) 62%, rgba(241, 227, 192, 0.55) 100%),
     var(--card-art) right 40% / 60% auto no-repeat,
     radial-gradient(ellipse at 45% 35%, #fbf2da, #ecdcb4 55%, #d6bf8e);
 }
@@ -1862,3 +1862,6 @@
 
 /* Spoils: what you now hold in all, under each gain. */
 .loot-tile .lt-have{font-family:var(--serif-body);font-size:22px;color:rgba(240,225,190,.62);margin-top:-2px}
+
+/* Loop 47: card art is a faint wash behind the rules so every word stays readable; boosts sit by the name. */
+.stage .card .card-boost{margin-left:.3em;font-size:.75em;color:#ffe9a0;text-shadow:0 0 2px #4a2205,0 0 2px #4a2205,0 0 10px rgba(255,214,120,.9);vertical-align:.12em;letter-spacing:.05em}

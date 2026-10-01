@@ -1063,6 +1063,12 @@ function Commands({
             <div className="card-top">
               <span className="card-name">
                 <span className="glyph">{AFF_GLYPH[a.dominant]}</span> {a.name}
+                {/* Boosted by Modifiers on the Loom: a star per Modifier, beside the name. */}
+                {a.modifiers.length > 0 && (
+                  <span className="card-boost" title="Boosted by a Modifier">
+                    {"✦".repeat(Math.min(3, a.modifiers.length))}
+                  </span>
+                )}
               </span>
               <span className={`card-ap ${cost < a.apCost ? "cheap" : ""}`}>{cost} AP</span>
             </div>
@@ -1073,7 +1079,6 @@ function Commands({
             <div className="card-line dim">
               {/* Alone, Bond's "ally" is the hero, so its AP comes back to you. */}
               <span style={{ color: AFF_COLOR[a.rider] }}>{AFF_GLYPH[a.rider]}</span> {a.rider === "bond" && b.party().length === 1 ? "1 AP back" : RIDER_SHORT[a.rider]}
-              {a.modifiers.length > 0 && <span> · boosted{a.modifiers.length > 1 ? ` ×${a.modifiers.length}` : ""}</span>}
             </div>
             <div className="card-form">{a.formName}</div>
           </button>
