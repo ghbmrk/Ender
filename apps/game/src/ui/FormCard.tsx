@@ -70,7 +70,8 @@ export function EvalLine({ ev }: { ev: any }) {
           {crowns(ev.marketValue)}
         </b>
       </span>
-      <span className={`ev-verdict ${ev.margin >= 0 ? "good" : "bad"}`}>{ev.margin >= 0 ? `Pays ${t}${fmt(ev.margin)}` : "Costs more than it's worth"}</span>
+      <span className={`ev-verdict ${ev.margin >= 0 ? "good" : "bad"}`}>{/* Worth less the Essences it takes to make: what selling it would leave you. */}
+        {ev.margin >= 0 ? `${t}${crowns(ev.margin)} profit if sold` : "Sells at a loss"}</span>
     </div>
   );
 }
