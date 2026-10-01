@@ -10,6 +10,8 @@ import { Fig } from "./battle/Figure";
 import { sfx } from "./battle/sfx";
 import { useWorldTop } from "./Stage";
 
+const SHOW_DEV = new URLSearchParams(location.search).has("dev");
+
 export function Title() {
   const dev = useStore((s) => s.devMode);
   const me = useStore((s) => s.hero);
@@ -89,9 +91,12 @@ export function Title() {
         <button className={`big ${hasSave || me ? "" : "primary"}`} disabled={busy} onClick={() => go(async () => setState({ screen: "create" }))} data-testid="new-hero">
           New hero
         </button>
-        <button className={`small ${dev ? "toggled" : "ghost"}`} onClick={toggleDev} data-testid="dev-toggle">
-          Developer provenance: {dev ? "on" : "off"}
-        </button>
+        {/* Developer provenance is for building the game; it only shows with ?dev in the address. */}
+        {SHOW_DEV && (
+          <button className={`small ${dev ? "toggled" : "ghost"}`} onClick={toggleDev} data-testid="dev-toggle">
+            Developer provenance: {dev ? "on" : "off"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -7,6 +7,9 @@ import { crowns, essenceColor, essenceGlyph } from "../economy/format";
 export function RealmGate() {
   const world = useStore((s) => s.world);
   const [busy, setBusy] = useState(false);
+  /** Each Realm reads as one line and a button; the market detail opens on request. */
+  const [open, setOpen] = useState<string | null>(null);
+  const [contracts, setContracts] = useState(false);
   useEffect(() => {
     refreshWorld().catch((e) => toast(e.message, "loss"));
   }, []);
@@ -30,6 +33,18 @@ export function RealmGate() {
               <span className="diff">Difficulty {r.difficultyLabel}</span>
             </div>
             <p className="dim">{r.tagline}</p>
+            <div className="realm-chips">
+              {r.expectedEssences.slice(0, 3).map((e: any) => (
+                <span key={e.essence} className="ess-chip" style={{ color: essenceColor(e.essence), borderColor: essenceColor(e.essence) }}>
+                  {essenceGlyph(e.essence)} {e.name}
+                </span>
+              ))}
+              <button className="realm-more" onClick={() => setOpen(open === r.id ? null : r.id)} data-testid={`realm-more-${r.id}`}>
+                {open === r.id ? "Less" : "Details"}
+              </button>
+            </div>
+            {open === r.id && (
+              <div className="realm-details">
             <div className="kv">
               <div className="k">Forms here are</div>
               <div className="v">{r.bias.join(" · ")}</div>
@@ -65,15 +80,19 @@ export function RealmGate() {
                 {e}
               </div>
             ))}
+              </div>
+            )}
             <button className="primary" disabled={busy} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
-              Set out for {r.name}
+              Set out
             </button>
           </div>
         ))}
       </div>
       <div className="contracts-strip">
-        <h4>Open contracts</h4>
-        {world.contracts.map((c: any) => (
+        <button className="realm-more" onClick={() => setContracts(!contracts)}>
+          Open contracts ({world.contracts.length}) {contracts ? "▴" : "▾"}
+        </button>
+        {contracts && world.contracts.map((c: any) => (
           <div key={c.id} className="contract-line">
             <b>{c.title}</b> — {c.description} <span className="reward">{crowns(c.reward)}</span>
             <div className="dim small">{c.reason}</div>

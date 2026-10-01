@@ -751,3 +751,48 @@
   margin-bottom: auto;
   font-size: 38px;
 }
+
+/* Realm Gate: one line per Realm, the market detail behind Details. */
+.realm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 14px;
+}
+.stage .realm-card button.realm-more,
+.stage button.realm-more {
+  min-height: 64px;
+  padding: 0 22px;
+  margin-left: auto;
+  font-size: 30px;
+  background: none;
+  border: 2px solid #8f6420aa;
+  box-shadow: none;
+  color: #6b4a1a;
+}
+.contracts-strip .realm-more {
+  margin: 0 auto;
+  color: #c9b48a;
+}
+.realm-details {
+  margin-bottom: 14px;
+  animation: ws-role 220ms ease-out both;
+}
+.stage .realm-card button.primary {
+  min-height: 120px;
+  font-size: 48px;
+}
+.stage .title-actions {
+  bottom: calc(110px + var(--safe-b, 0px));
+}
+.stage .panel .realm-card button.realm-more,
+.stage .panel button.realm-more {
+  background: none;
+  border: 2px solid #8f6420aa;
+  box-shadow: none;
+  color: #6b4a1a;
+}
+.stage .panel .contracts-strip button.realm-more {
+  color: #c9b48a;
+}
