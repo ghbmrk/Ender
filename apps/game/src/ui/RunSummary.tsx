@@ -1,7 +1,7 @@
 import { returnToCrossing } from "../game/flow";
 import { useStore } from "../state/store";
 import { Panel } from "./Panel";
-import { essenceName } from "../economy/format";
+import { essenceColor, essenceGlyph, essenceName } from "../economy/format";
 
 export function RunSummary() {
   const s = useStore((st) => st.runSummary);
@@ -12,15 +12,26 @@ export function RunSummary() {
       <div className="summary">
         {s.outcome === "death" && <p className="dim">You keep everything you found. Rest at the Crossing and try again.</p>}
         {s.totals && (
-          <div>
-            Gathered: <b>{s.totals.crowns ?? 0} Crowns</b>
+          <div className="loot">
+            <div className="loot-tile crowns">
+              <span className="lt-glyph">◈</span>
+              <b>{s.totals.crowns ?? 0}</b>
+              <span className="lt-name">Crowns</span>
+            </div>
             {Object.entries(s.totals.essences ?? {}).map(([e, q]) => (
-              <span key={e}>
-                {" "}
-                · {q as number} {essenceName(e)}
-              </span>
+              <div key={e} className="loot-tile" style={{ ["--c" as string]: essenceColor(e) }}>
+                <span className="lt-glyph">{essenceGlyph(e)}</span>
+                <b>{q as number}</b>
+                <span className="lt-name">{essenceName(e)}</span>
+              </div>
             ))}
-            {s.totals.forms != null && <span> · {s.totals.forms} Forms</span>}
+            {!!s.totals.forms && (
+              <div className="loot-tile form">
+                <span className="lt-glyph">?</span>
+                <b>{s.totals.forms}</b>
+                <span className="lt-name">{s.totals.forms === 1 ? "Form found" : "Forms found"}</span>
+              </div>
+            )}
           </div>
         )}
         {s.worldTurned && (

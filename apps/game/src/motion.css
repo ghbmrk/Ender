@@ -876,3 +876,44 @@
     animation: none;
   }
 }
+/* Compact loot tiles: four to a row, so a whole haul and its button fit on one screen. */
+.loot {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.loot-tile {
+  padding: 12px 4px 10px;
+  border-width: 3px;
+  border-radius: 16px;
+}
+.loot-tile .lt-glyph {
+  font-size: 46px;
+}
+.loot-tile b {
+  font-size: 40px;
+}
+.loot-tile .lt-name {
+  font-size: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.loot-tile.form {
+  grid-column: span 2;
+}
+/* Tiles share the row evenly, however many there are. */
+.loot.loot {
+  display: flex;
+  flex-wrap: wrap;
+}
+.loot .loot-tile.loot-tile {
+  flex: 1 1 0;
+  min-width: 22%;
+}
+.loot .loot-tile .lt-name.lt-name {
+  font-size: 26px;
+}
+.loot .loot-tile.loot-tile.form {
+  flex-basis: 40%;
+}

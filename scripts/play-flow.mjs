@@ -47,7 +47,11 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
     await page.click(tid("rewards-ok"));
     continue;
   }
-  if (await visible(tid("run-summary"))) break;
+  if (await visible(tid("run-summary"))) {
+    await page.waitForTimeout(900);
+    await shot("flow-summary");
+    break;
+  }
   if (await visible(".panel-backdrop")) {
     await page.keyboard.press("Escape");
     continue;

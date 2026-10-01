@@ -66,10 +66,19 @@ export async function leaveShrine() {
   setState({ expedition: { ...ex, loom: out.loom ?? ex.loom }, loomEditable: false, screen: "map" });
 }
 
+/** What the hero carried when the Expedition began, so the summary can show the haul. */
+let runStart: { crowns: number; essences: Record<string, number> } | null = null;
+let runForms = 0;
+/** Count Forms as they drop during an Expedition. */
+export const noteForms = (r: any) => void (runForms += r?.forms?.length ?? 0);
+
 export async function startExpedition(realmId: string) {
   const out = await api.startRun(realmId);
   if (out.focusConverted) toast(`Unspent Focus became ${out.focusConverted} Crowns`, "gain");
   await Promise.all([refreshCharacter(), refreshLoom()]);
+  const c = getState().character;
+  runStart = { crowns: c?.crowns ?? 0, essences: { ...(c?.essences ?? {}) } };
+  runForms = 0;
   setState({ expedition: { plan: out.plan, visited: [], at: null, partyHp: {}, loom: out.loom ?? null }, screen: "map", panel: null, loomEditable: false });
 }
 
@@ -95,6 +104,7 @@ export async function stepTo(node: MapNode) {
     return;
   }
   const out = await api.runNode(ex.plan.runId, { nodeId: node.id, outcome: "skip" });
+  noteForms(out?.rewards);
   await refreshCharacter();
   if (node.kind === "shrine") {
     toast("A Shrine: rearrange your Loom freely here.", "info");
@@ -136,6 +146,7 @@ export async function endBattle(r: BattleResult) {
     return;
   }
   const out = await api.runNode(ex.plan.runId, { nodeId: b.nodeId, outcome: "victory", kills: r.kills });
+  noteForms(out?.rewards);
   const partyHp = r.partyHp;
   setState({ expedition: { ...ex, partyHp }, battle: null, screen: "map" });
   await refreshCharacter();
@@ -161,7 +172,14 @@ export async function finishExpedition(outcome: "victory" | "death" | "abandon")
   if (!ex) return;
   const out = await api.completeRun(ex.plan.runId, { outcome });
   await Promise.all([refreshCharacter(), refreshWorld(), refreshLoom()]);
-  setState({ runSummary: { ...out, outcome, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
+  const c = getState().character;
+  const essences: Record<string, number> = {};
+  for (const [e, q] of Object.entries((c?.essences ?? {}) as Record<string, number>)) {
+    const d = q - (runStart?.essences[e] ?? 0);
+    if (d > 0) essences[e] = d;
+  }
+  const totals = out.totals ?? (runStart ? { crowns: Math.max(0, (c?.crowns ?? 0) - runStart.crowns), essences, forms: runForms } : undefined);
+  setState({ runSummary: { ...out, totals, outcome, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
 }
 
 export function returnToCrossing() {
