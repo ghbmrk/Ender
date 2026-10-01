@@ -2,6 +2,18 @@ import { useEffect, useState } from "react";
 import { PARTY, ROOTS } from "@ender/battle";
 import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { crossingBackdrop } from "../../art/registry";
+import { paintedBackdrop } from "../../art/painted";
+import { SceneBackdrop } from "../../art/SceneBackdrop";
+
+/** Where each station's sign hangs on the painted square, in world (1080x1920) units. */
+const PAINTED_STATIONS = [
+  { id: "mirror", x: 250, y: 720 },
+  { id: "crucible", x: 830, y: 720 },
+  { id: "bazaar", x: 250, y: 990 },
+  { id: "grimoire", x: 830, y: 990 },
+  { id: "gate", x: 790, y: 1270 },
+  { id: "loom", x: 330, y: 1520 },
+] as const;
 import { refreshLoom } from "../../game/flow";
 import { setState, toast, useStore } from "../../state/store";
 import { essenceColor, essenceGlyph } from "../../economy/format";
@@ -69,7 +81,9 @@ export function Crossing() {
   const lesson = useStore((s) => s.tutorial === "gate");
   const mod = crossingBackdrop();
   const Back = mod?.default;
-  const stations = (mod?.STATIONS ?? []) as readonly { id: string; x: number; y: number }[];
+  // The painted square is a lane of lit doorways; each station hangs its sign on one of them.
+  const painted = !!paintedBackdrop("crossing");
+  const stations = (painted ? PAINTED_STATIONS : (mod?.STATIONS ?? [])) as readonly { id: string; x: number; y: number }[];
   const visited = seen();
   const shown = stations.filter((st) => unlocked(st.id, c?.mirrorCharges ?? 0));
   const has = (id: string) => shown.some((st) => st.id === id);
@@ -101,7 +115,9 @@ export function Crossing() {
   return (
     <div className="crossing" data-testid="crossing">
       <div className="world" style={{ top: worldTop }}>
-        <div className="backdrop">{Back && <Back className="backdrop-svg" />}</div>
+        <div className={`backdrop ${painted ? "hub-painted" : ""}`}>
+          <SceneBackdrop id="crossing" Drawn={Back} />
+        </div>
         {shown.map((s) => (
           <button
             key={s.id}

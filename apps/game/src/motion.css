@@ -1900,3 +1900,8 @@
 .battle:has(.battle-end.defeat) .unit.foe .fig{filter:drop-shadow(0 0 2px #1a0505) drop-shadow(0 0 28px rgba(200,60,70,.7))}
 .battle:has(.battle-end) .boss-bar,.battle:has(.battle-end) .timeline{opacity:.25;transition:opacity .3s}
 .battle-end .end-left{margin:0 0 22px;font-family:var(--serif-body);font-size:42px;color:#f3d9d0;text-align:center;text-shadow:0 2px 0 #000}
+
+/* Loop 56: the Crossing uses its painted square, darkened at the edges so the station signs read. */
+.crossing .backdrop.hub-painted::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 55% 60%,transparent 40%,#0b0a1088 100%),linear-gradient(180deg,#0b0a1066 0%,transparent 20%,transparent 80%,#0b0a10aa 100%);pointer-events:none}
+.crossing:has(.hub-painted) .station{width:400px;box-sizing:border-box}
+.crossing:has(.hub-painted) .station .st-name{white-space:nowrap}
