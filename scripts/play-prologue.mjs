@@ -58,7 +58,7 @@ for (let step = 0; step < 1500; step++) {
   }
   if (await visible(tid("loom"))) {
     const item = await page.$(".tray-item.coach-pulse");
-    const cell = await page.$(".cell.coach-cell");
+    const cell = (await page.$("g:has(.cell-dmg.boosted) .cell.coach-cell")) ?? (await page.$(".cell.coach-cell"));
     if (item && cell) {
       const a = await item.boundingBox();
       const b = await cell.boundingBox();

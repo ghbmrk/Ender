@@ -72,7 +72,7 @@ const RECOVER_MS = 140;
 const ringR = (left: number) => Math.max(14, MARK_R + RING_V * left);
 
 type Floater = { id: number; x: number; y: number; text: string; cls: string; delay: number };
-type Fx = { id: number; kind: "slash" | "claw" | "splat" | "spark" | "bloom" | "whoosh" | "shards" | "riposte"; x: number; y: number; color: string; delay: number };
+type Fx = { id: number; kind: "slash" | "claw" | "splat" | "spark" | "bloom" | "whoosh" | "shards" | "riposte" | "ash" | "dust"; x: number; y: number; color: string; delay: number };
 
 type AttackSeq = {
   k: "attack";
@@ -200,9 +200,14 @@ export function BattleScreen({
   const slowLeft = useRef(lesson?.slow ?? 0);
   /** A defence lesson holding time at the point of contact until the player presses. */
   const [frozen, setFrozen] = useState(false);
+  /** A drill lesson's current defence (Dodge, then Parry), or null outside one. */
+  const [drillAt, setDrillAt] = useState(0);
+  const drill = lesson?.drills?.[drillAt] ?? null;
+  const drillRef = useRef(drill);
+  drillRef.current = drill;
   /** Coach the player once per moment (lessons only). */
   const say = (key: CoachKey) => {
-    const text = lesson?.coach[key];
+    const text = (drillRef.current === "parry" && lesson?.parryCoach?.[key]) || lesson?.coach[key];
     if (!text || said.current.has(key)) return;
     said.current.add(key);
     setCoach({ key, text });
@@ -291,6 +296,8 @@ export function BattleScreen({
   const [finale, setFinale] = useState(0);
   /** Units whose knock-out has played. A unit only falls when its KO lands, not when the turn resolves. */
   const [downed, setDowned] = useState<Record<string, true>>({});
+  /** Fallen foes whose death has finished playing, and can leave the field. */
+  const [gone, setGone] = useState<Record<string, true>>({});
   const [cam, setCam] = useState<{ k: CamKick; n: number; at: [number, number] } | null>(null);
   const kick = (k: CamKick, at: [number, number] = [540, 1100], delay = 0) =>
     later(delay, () => {
@@ -381,6 +388,13 @@ export function BattleScreen({
           later(d, sfx.ko);
           const u = battle.unit(e.target);
           later(d, () => setDowned((m) => ({ ...m, [u.id]: true })));
+          later(d + 1200, () => setGone((m) => ({ ...m, [u.id]: true })));
+          if (u.side === "foe") {
+            // A foe's death: it reels back and folds, its body scatters as embers, and dust kicks up where it falls.
+            const [fx, fy] = posOf(u);
+            spawnFx("ash", chest(u), "#ff9a4a", d + 260);
+            spawnFx("dust", [fx, fy], "#c9b48a", d + 480);
+          }
           if (u.side === "foe" && battle.outcome === "victory") {
             // The killing blow: the camera leans in on the fallen foe, the world drains of colour, then a white bloom.
             kick("finale", chest(u), d);
@@ -751,7 +765,7 @@ export function BattleScreen({
   const tickDefend = (s: DefendSeq, t: number) => {
     if (debug.autoplay) {
       const i = s.tracker.result().findIndex((_, j) => s.tracker.resultAt(j) === null);
-      if (i >= 0 && t >= s.impacts[i]! - 20) pressDefend(s, t, "parry");
+      if (i >= 0 && t >= s.impacts[i]! - 20) pressDefend(s, t, drillRef.current ?? "parry");
     }
     const k = debug.timeScale * s.scale;
     // Defence lessons: a blow the player hasn't answered stops at the point of contact, and the tip says to press
@@ -814,9 +828,23 @@ export function BattleScreen({
     seq.current = null;
     cues()?.clear();
     setPhase({ k: "wait" });
-    const events = battle.resolveFoe(s.plan, s.tracker.result());
+    const result = s.tracker.result();
+    const events = battle.resolveFoe(s.plan, result);
     events.push(...battle.settle());
     const d = play(events.filter((e) => e.type !== "defend"));
+    // A drill lesson moves on once its defence lands: from Dodge to Parry, and after the Parry, out of the fight.
+    const cur = drillRef.current;
+    const landed = cur && result.some((r) => (cur === "dodge" ? r === "dodge" || r === "perfect-dodge" : r === "perfect-parry"));
+    if (landed && lesson?.drills) {
+      const next = lesson.drills.indexOf(cur) + 1;
+      if (next >= lesson.drills.length) {
+        later(d + 900, () => finish("victory"));
+        return;
+      }
+      drillRef.current = lesson.drills[next]!;
+      setDrillAt(next);
+      for (const k of ["command", "defend", "now", "hit"] as CoachKey[]) said.current.delete(k);
+    }
     later(d + 60, () => {
       setCaption(null);
       advance();
@@ -839,7 +867,7 @@ export function BattleScreen({
     // While a lesson holds the blow, a near miss of the buttons (anywhere on the right half, where they sit) still counts,
     // so the player is never stranded; a tap elsewhere only repeats the prompt, so no stray tap earns a Perfect.
     if (s?.k === "defend" && s.frozenAt) {
-      if (toStage(e.clientX, e.clientY).x >= 540) return unfreeze(s, lesson?.step === "parry" ? "parry" : "dodge");
+      if (toStage(e.clientX, e.clientY).x >= 540) return unfreeze(s, drill ?? (lesson?.step === "parry" ? "parry" : "dodge"));
       said.current.delete("now");
       return say("now");
     }
@@ -943,7 +971,7 @@ export function BattleScreen({
       {/* units: foes behind, heroes in front */}
       <div className="field">
         {[...battle.foes(), ...battle.party()]
-          .filter((u) => u.alive || u.side === "party" || hurt[u.id] !== undefined || !downed[u.id])
+          .filter((u) => u.alive || u.side === "party" || !gone[u.id])
           .sort((a, b) => posOf(a)[1] - posOf(b)[1])
           .map((u) => {
             const [x, y] = posOf(u);
@@ -1056,7 +1084,7 @@ export function BattleScreen({
       {lesson && LESSON_NO[lesson.step] && (
         // Kept mounted so it pops in once per lesson; it fades while a foe's move card holds that corner.
         <div className={`lesson-chip ${phase.k === "command" ? "" : "away"}`} data-testid="lesson-chip">
-          Lesson {LESSON_NO[lesson.step]} of 4 · {LESSON_NAME[lesson.step]}
+          Lesson {LESSON_NO[lesson.step]} of 3 · {LESSON_NAME[lesson.step]}
         </div>
       )}
       {lesson && onSkip && phase.k === "command" && (
@@ -1101,13 +1129,13 @@ export function BattleScreen({
         };
         return (
           <div className={`def-arc ${live ? "live" : ""}`}>
-            <button className={`def-btn round dodge ${lesson?.step === "dodge" && (coach?.key === "defend" || frozen) ? "coach-pulse" : ""}`} style={at(ARC.dodge)} onPointerDown={press("dodge")} aria-disabled={!live} data-testid={live ? "dodge" : undefined}>
+            <button className={`def-btn round dodge ${(drill ? drill === "dodge" : lesson?.step === "dodge") && (coach?.key === "defend" || frozen) ? "coach-pulse" : ""}`} style={at(ARC.dodge)} onPointerDown={press("dodge")} aria-disabled={!live} data-testid={live ? "dodge" : undefined}>
               <span className="def-glyph">⤺</span>
               Dodge
               {live && <small>forgiving</small>}
             </button>
-            {lesson?.defense !== "dodge" && (
-              <button className={`def-btn round parry ${lesson?.step === "parry" && (coach?.key === "defend" || frozen) ? "coach-pulse" : ""}`} style={at(ARC.parry)} onPointerDown={press("parry")} aria-disabled={!live} data-testid={live ? "parry" : undefined}>
+            {lesson?.defense !== "dodge" && drill !== "dodge" && (
+              <button className={`def-btn round parry ${(drill ? drill === "parry" : lesson?.step === "parry") && (coach?.key === "defend" || frozen) ? "coach-pulse" : ""}`} style={at(ARC.parry)} onPointerDown={press("parry")} aria-disabled={!live} data-testid={live ? "parry" : undefined}>
                 <span className="def-glyph">⚔</span>
                 Parry
                 {live && <small>perfect · counter</small>}
@@ -1230,8 +1258,8 @@ function Statuses({ u, named }: { u: Unit; named?: boolean }) {
 }
 
 /** The practice fights in order, as the lesson chip numbers them. */
-const LESSON_NO: Partial<Record<Lesson["step"], number>> = { strike: 1, dodge: 2, parry: 3, skill: 4 };
-const LESSON_NAME: Partial<Record<Lesson["step"], string>> = { strike: "Strike", dodge: "Dodge", parry: "Parry", skill: "Skills" };
+const LESSON_NO: Partial<Record<Lesson["step"], number>> = { strike: 1, dodge: 2, parry: 2, skill: 3 };
+const LESSON_NAME: Partial<Record<Lesson["step"], string>> = { strike: "Strike", dodge: "Dodge and Parry", parry: "Parry", skill: "Skills" };
 
 /** Matches .foe-tag's width in frame.css, so tags near the edges stay on screen. */
 const FOE_TAG_W = 300;
@@ -1591,6 +1619,26 @@ function FxMark({ f }: { f: Fx }) {
   switch (f.kind) {
     case "slash":
       return <path className="fx slash" style={style} d={`M${f.x - 150} ${f.y - 110} C${f.x - 40} ${f.y - 40} ${f.x + 40} ${f.y + 10} ${f.x + 160} ${f.y + 100}`} stroke={f.color} strokeWidth={22} strokeLinecap="round" fill="none" />;
+    case "ash":
+      // Embers lifting off the fallen body: drift up and out, then fade.
+      return (
+        <g className="fx ash" style={style}>
+          {Array.from({ length: 22 }, (_, i) => {
+            const a = -Math.PI / 2 + ((i * 2.39996) % 2.4) - 1.2;
+            const r = 160 + ((i * 47) % 200);
+            const sz = 8 + (i % 4) * 4;
+            return <rect key={i} x={f.x - sz / 2 + ((i * 37) % 120) - 60} y={f.y - sz / 2 + ((i * 53) % 220) - 80} width={sz} height={sz} rx={2} fill={i % 3 === 0 ? "#fff1c8" : i % 3 === 1 ? f.color : "#5a3a2e"} style={{ ["--dx" as string]: `${Math.round(Math.cos(a) * r * 0.6)}px`, ["--dy" as string]: `${Math.round(Math.sin(a) * r)}px`, ["--rot" as string]: `${(i * 41) % 180}deg`, animationDelay: `${(i % 6) * 40}ms` }} />;
+          })}
+        </g>
+      );
+    case "dust":
+      // A low ring of dust where the body lands.
+      return (
+        <g className="fx dust" style={{ ...style, transformOrigin: `${f.x}px ${f.y}px` }}>
+          <ellipse cx={f.x} cy={f.y} rx={170} ry={34} fill="none" stroke={f.color} strokeWidth={14} opacity={0.7} />
+          <ellipse cx={f.x} cy={f.y} rx={110} ry={20} fill={f.color} opacity={0.35} />
+        </g>
+      );
     case "riposte":
       // A gold crescent that sweeps through the foe: the counter's own mark, unlike any attack's slash.
       return (

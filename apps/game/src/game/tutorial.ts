@@ -27,6 +27,10 @@ export type Lesson = {
   setup: { waves: FoeKind[][]; foeScale: { hp: number; atk: number } };
   /** A win goes straight on to the next step, with no victory screen (the last fight before the Loom). */
   straightOn?: boolean;
+  /** Defences taught in turn against one foe, each once: the lesson ends when the last one lands. */
+  drills?: ("dodge" | "parry")[];
+  /** What the coach says once the drill moves on to Parry (overrides `coach`). */
+  parryCoach?: Partial<Record<CoachKey, string>>;
 };
 
 export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
@@ -45,21 +49,32 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
     },
     setup: { waves: [["husk"]], foeScale: { hp: 0.5, atk: 0.4 } },
   },
+  // Dodge, then Parry, against the same foe, each once (Mark, 20:42): the lesson ends on the first clean Parry.
   dodge: {
     step: "dodge",
-    title: "A Wisp drifts closer",
+    straightOn: true,
+    title: "A Husk lurches out",
     commands: "basic",
-    defense: "dodge",
+    defense: "both",
+    drills: ["dodge", "parry"],
     slow: 1,
     coach: {
       command: "Attack with **Basic** again.",
       defend: "It strikes back! Tap **DODGE** as the red ring closes on your hero.",
-      dodged: "**Dodged.** Dodge is forgiving: its window is wide.",
+      dodged: "**Dodged.** Dodge is forgiving: its window is wide. Next, the harder one: **PARRY**.",
       hit: "Too early or too late. Tap **DODGE** just as the ring closes.",
       ap: "Each Basic also builds **AP**: the blue pips. Crafted skills spend it.",
       now: "**Now!** Tap **DODGE**.",
     },
-    setup: { waves: [["wisp"]], foeScale: { hp: 0.6, atk: 0.45 } },
+    parryCoach: {
+      command: "Attack with **Basic**. When it strikes back, tap **PARRY** as the ring closes.",
+      defend: "Now **PARRY**. Only a perfect tap counts: it blocks the blow and **strikes back**. Miss it and the hit lands.",
+      parried: "**Parried!** You struck back, took **+1 AP**, and the Husk took Break.",
+      dodged: "Dodge keeps you safe, but only Parry strikes back. Try **PARRY** on the next blow.",
+      hit: "A Parry is perfect or nothing. Tap it right as the ring meets the mark.",
+      now: "**Now!** Tap **PARRY** as the blow lands.",
+    },
+    setup: { waves: [["husk"]], foeScale: { hp: 0.9, atk: 0.45 } },
   },
   parry: {
     step: "parry",
@@ -160,7 +175,8 @@ export function lessonSetup(l: Lesson): BattleSetup {
   };
 }
 
-const NEXT: Record<TutStep, TutStep | "done"> = { strike: "dodge", dodge: "parry", parry: "form", form: "skill", skill: "gate", gate: "done" };
+// Dodge and Parry are one lesson now ("dodge"); a save left on "parry" still goes on to the Loom.
+const NEXT: Record<TutStep, TutStep | "done"> = { strike: "dodge", dodge: "form", parry: "form", form: "skill", skill: "gate", gate: "done" };
 
 /** After a practice fight: a loss simply retries it, a win moves on. */
 export function lessonEnded(step: TutStep, won: boolean) {

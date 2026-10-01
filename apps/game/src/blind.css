@@ -73,3 +73,25 @@
 .stage .loom-done::before { content: ""; position: absolute; left: 0; right: 0; top: -44px; height: 44px; }
 /* Max health in a face built for numbers, and bigger: two players read "of 120" as 150 and 110. */
 .stage .battle .hb-hp small { margin-left: 8px; font-family: var(--body); font-size: 32px; font-weight: 700; }
+
+/* Loom lesson: each open spot shows the new skill's damage there; the spots a Modifier boosts are gold with a ✦. */
+.loom-board .cell-dmg {
+  fill: #d9d2c3;
+  font: 700 64px var(--display, Georgia), serif;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #120c10;
+  stroke-width: 8px;
+}
+.loom-board .cell-dmg.boosted {
+  fill: #ffd45e;
+  font-size: 76px;
+}
+.loom-board .cell-boost {
+  fill: #ffd45e;
+  font: 700 38px var(--display, Georgia), serif;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #120c10;
+  stroke-width: 6px;
+}

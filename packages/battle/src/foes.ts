@@ -152,4 +152,4 @@ export const DUEL_HP = { normal: 0.45, elite: 0.45, boss: 0.34 } as const;
  * HP and attack, and about half at these values, while players who parry well still win comfortably
  * (test/battle.test.ts holds it there).
  */
-export const DUEL_ATK = { normal: 0.85, elite: 1, boss: 0.85 } as const;
+export const DUEL_ATK = { normal: 1, elite: 1, boss: 0.85 } as const;

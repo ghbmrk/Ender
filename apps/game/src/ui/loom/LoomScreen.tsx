@@ -262,11 +262,24 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
   const modName = lessonMod ? MOD_SHORT[lessonMod.affinities[0]] : "";
   const lessonCells = useMemo(() => {
     if (!lesson) return new Set<string>();
+    // Every open spot beside the hero glows, each showing what the new skill would hit for there, so the spot
+    // touching the Modifier reads as the better one before it is chosen (Mark, 20:42).
     const open = boardCells(2).filter(({ q, r }) => hexDist(q, r) === 1 && !nodes.some((n) => n.q === q && n.r === r));
-    const best = lessonMod ? open.filter((c) => touches(c, lessonMod)) : [];
-    return new Set((best.length ? best : open).map(({ q, r }) => `${q},${r}`));
+    return new Set(open.map(({ q, r }) => `${q},${r}`));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson, nodes, lessonMod?.id]);
+  /** The lesson skill's damage at each glowing spot, and whether a Modifier boosts it there. */
+  const lessonSpots = useMemo(() => {
+    const out = new Map<string, { dmg: number; boosted: boolean }>();
+    if (!lesson || !lessonForm || lessonPlaced) return out;
+    for (const key of lessonCells) {
+      const [q, r] = key.split(",").map(Number) as [number, number];
+      const a = compileLoom([...nodes, { ...lessonForm, q, r }], rank).actions.find((x) => x.nodeId === lessonForm.id);
+      if (a) out.set(key, { dmg: Math.round(((ROOTS[mine].basic * a.damagePct) / 100) * a.hits), boosted: a.modifiers.length > 0 });
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonCells, lessonForm?.id, lessonPlaced, rank]);
   const boosted = !!lessonSkill && !!lessonMod && touches(lessonMod, nodes.find((n) => n.id === lessonForm!.id)!);
   const dmg = (a: { damagePct: number; hits: number }) => Math.round(((ROOTS[mine].basic * a.damagePct) / 100) * a.hits);
   const unboosted = boosted ? compileLoom(nodes.filter((n) => n.id !== lessonMod!.id), rank).actions.find((a) => a.nodeId === lessonForm!.id) : undefined;
@@ -283,7 +296,7 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
       : !lessonPlaced
         ? {
             text: lessonMod
-              ? `The Husk dropped a **Form**: the piece a skill is made of. Tap a **+**: there it touches ${heroName} and **${modName}**.`
+              ? `The Husk dropped a **Form**: the piece a skill is made of. Each spot shows its damage there. A spot touching **${modName}** also gets its boost: tap a **gold** one.`
               : `The Husk dropped a **Form**: the piece a skill is made of. **Drag it** onto a **+** beside ${heroName}, or just tap a **+**.`,
           }
         : !lessonSkill
@@ -406,7 +419,22 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
             <g key={`${q},${r}`}>
               <path d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />
               {/* An empty cell that takes the Form says so, so it never reads as just decoration. */}
-              {glow && <text x={x} y={y + HEX * 0.22} className="cell-plus" textAnchor="middle">+</text>}
+              {glow && lessonSpots.has(`${q},${r}`) ? (
+                // In the lesson each spot shows the skill's damage there; the boosted ones are gold with a ✦.
+                <>
+                  <text x={x} y={y + (lessonSpots.get(`${q},${r}`)!.boosted ? -HEX * 0.02 : HEX * 0.16)} className={`cell-dmg ${lessonSpots.get(`${q},${r}`)!.boosted ? "boosted" : ""}`} textAnchor="middle">
+                    {lessonSpots.get(`${q},${r}`)!.dmg}
+                  </text>
+                  {/* A boosted spot names what the touching Modifier adds, so the better spot says why it is better. */}
+                  {lessonSpots.get(`${q},${r}`)!.boosted && (
+                    <text x={x} y={y + HEX * 0.36} className="cell-boost" textAnchor="middle">
+                      {modName}
+                    </text>
+                  )}
+                </>
+              ) : (
+                glow && <text x={x} y={y + HEX * 0.22} className="cell-plus" textAnchor="middle">+</text>
+              )}
             </g>
           );
         })}

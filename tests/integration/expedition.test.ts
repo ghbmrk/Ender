@@ -15,11 +15,11 @@ const SEEDS = Array.from({ length: 60 }, (_, i) => `seed-${i}`);
 const plan = (realmId: string, seed: string, snapshotId = h.ctx.world.snapshots[10]!.id) => generateRunPlan(h.ctx, { runId: `r-${seed}`, snapshotId, realmId, seed });
 const LAYER_KINDS: MapNode["kind"][][] = [
   ["combat"],
-  ["mystery", "shrine", "combat", "bazaar"],
+  ["mystery", "shrine", "combat"],
   ["combat", "mystery"],
   ["attunement", "shrine", "mystery"],
   ["elite", "combat"],
-  ["bazaar", "contract", "shrine"],
+  ["contract", "shrine", "mystery"],
   ["boss"],
 ];
 
@@ -43,7 +43,8 @@ describe("expedition map (§76–77)", () => {
         });
         expect(p.map.layers[3]!.map((n) => n.kind)).toEqual(expect.arrayContaining(["attunement", "shrine"]));
         expect(p.map.layers[4]!.map((n) => n.kind)).toEqual(expect.arrayContaining(["elite", "combat"]));
-        expect(p.map.layers[5]!.map((n) => n.kind)).toEqual(expect.arrayContaining(["bazaar", "contract"]));
+        // The Bazaar is open from the map between fights, so the route's market layer holds a Contract and a Shrine.
+        expect(p.map.layers[5]!.map((n) => n.kind)).toEqual(expect.arrayContaining(["contract", "shrine"]));
         expect(p.boss).toBe(realm.boss);
         expect(p.map.layers[6]![0]!.encounter!.waves).toEqual([[realm.boss]]);
       }
@@ -71,7 +72,7 @@ describe("expedition map (§76–77)", () => {
       }
   });
 
-  it("encounters use the battle roster: 1–3 normals, elites with 1–2 escorts, the Realm boss", () => {
+  it("encounters are one foe each: a normal, an elite alone, or the Realm boss", () => {
     const normals = ["husk", "wisp", "hound", "keeper", "seer", "swarm"];
     for (const realm of REALMS)
       for (const seed of SEEDS)
@@ -82,20 +83,10 @@ describe("expedition map (§76–77)", () => {
           }
           expect(n.encounter.difficulty).toBe(realm.difficulty);
           for (const w of n.encounter.waves) for (const f of w) expect(FOES[f]).toBeDefined();
-          if (n.kind === "combat" || n.kind === "mystery") {
-            expect(n.encounter.waves.length).toBeLessThanOrEqual(2);
-            for (const w of n.encounter.waves) {
-              expect(w.length).toBeGreaterThanOrEqual(1);
-              expect(w.length).toBeLessThanOrEqual(3);
-              for (const f of w) expect(normals).toContain(f);
-            }
-          }
-          if (n.kind === "elite") {
-            const [lead, ...rest] = n.encounter.waves[0]!;
-            expect(["ironbound", "cinder", "matron"]).toContain(lead);
-            expect(rest.length).toBeGreaterThanOrEqual(1);
-            expect(rest.length).toBeLessThanOrEqual(2);
-          }
+          // Every fight is one on one (Mark, 2026-10-01).
+          expect(n.encounter.waves.flat().length).toBe(1);
+          if (n.kind === "combat" || n.kind === "mystery") expect(normals).toContain(n.encounter.waves[0]![0]);
+          if (n.kind === "elite") expect(["ironbound", "cinder", "matron"]).toContain(n.encounter.waves[0]![0]);
         }
   });
 });

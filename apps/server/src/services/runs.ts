@@ -33,12 +33,13 @@ export const isFight = (n: MapNode) => !!n.encounter;
  */
 const LAYERS: { count: [number, number]; always: NodeKind[]; fill: NodeKind[] }[] = [
   { count: [2, 2], always: ["combat", "combat"], fill: [] },
-  { count: [2, 3], always: [], fill: ["mystery", "shrine", "combat", "bazaar"] },
+  // The Bazaar is open from the map between any two fights, so it is no longer a stop on the route.
+  { count: [2, 3], always: [], fill: ["mystery", "shrine", "combat"] },
   { count: [2, 3], always: ["combat", "combat"], fill: ["combat", "mystery"] },
   { count: [2, 3], always: ["attunement", "shrine"], fill: ["mystery"] },
   // An Elite is a choice, not a wall: there is always a plain fight beside it for a party that isn't ready.
   { count: [2, 3], always: ["elite", "combat"], fill: ["elite"] },
-  { count: [2, 3], always: ["bazaar", "contract"], fill: ["shrine"] },
+  { count: [2, 3], always: ["contract", "shrine"], fill: ["mystery"] },
   { count: [1, 1], always: ["boss"], fill: [] },
 ];
 
@@ -78,14 +79,9 @@ function normalWave(r: Rng, realm: RealmTemplate, max: number): FoeKind[] {
 
 function encounterFor(r: Rng, realm: RealmTemplate, kind: NodeKind, layer: number, seed: string): Encounter | undefined {
   const difficulty = realm.difficulty;
-  if (kind === "combat" || kind === "mystery") {
-    const waves = [normalWave(r, realm, layer >= 2 ? 3 : 2)];
-    // At most three duels in one ordinary fight, so a single stop can't bleed a hero dry.
-    const room = 3 - waves[0]!.length;
-    if (layer >= 2 && room > 0 && r.chance(0.3)) waves.push(normalWave(r, realm, Math.min(2, room)));
-    return { waves, difficulty, seed };
-  }
-  if (kind === "elite") return { waves: [[r.pick(["ironbound", "cinder", "matron"] as const), ...normalWave(r, realm, 2).slice(0, 2)]], difficulty, seed };
+  // Every fight is one foe, one on one (Mark, 20:42).
+  if (kind === "combat" || kind === "mystery") return { waves: [normalWave(r, realm, 1).slice(0, 1)], difficulty, seed };
+  if (kind === "elite") return { waves: [[r.pick(["ironbound", "cinder", "matron"] as const)]], difficulty, seed };
   if (kind === "boss") return { waves: [[realm.boss]], difficulty, seed };
   return undefined;
 }

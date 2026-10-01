@@ -7,8 +7,6 @@ import { FormCard, Sparkline } from "./FormCard";
 import { announceProgress } from "./craftActions";
 import { crowns, essenceColor, essenceName, fmt, qualityName, signed } from "../economy/format";
 
-/** What a price means for you, in a few words: the market's status, read as advice. */
-const VERDICT: Record<string, string> = { cheap: "Cheap: a good buy", steady: "Fair price", rising: "Pricey", dear: "Dear: a good sell" };
 
 type Tab = "market" | "forms" | "contracts" | "prophecy";
 
@@ -61,7 +59,7 @@ export function Bazaar() {
       <div className="tabs">
         {(["market", "forms", "contracts", "prophecy"] as Tab[]).map((t) => (
           <button key={t} className={tab === t ? "tab on" : "tab"} onClick={() => setTab(t)} data-testid={`tab-${t}`}>
-            {t === "market" ? "Essences" : t === "forms" ? "Forms" : t === "contracts" ? `Contracts (${bz.contracts.length})` : "Prophecy"}
+            {t === "market" ? "Market" : t === "forms" ? "Forms" : t === "contracts" ? `Contracts (${bz.contracts.length})` : "Prophecy"}
           </button>
         ))}
         <div className="hud-spacer" />
@@ -100,53 +98,7 @@ export function Bazaar() {
         </div>
       ))}
 
-      {tab === "market" && (
-        <table className="market" data-testid="essence-table">
-          <thead>
-            <tr>
-              <th>Essence</th>
-              <th>Last 10 turnings</th>
-              <th>Price</th>
-              <th>Buy / Sell</th>
-              <th>Held</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {bz.essences.map((e: any) => (
-              <tr key={e.id} data-testid={`essence-${e.id}`} data-status={e.status} data-price={e.price}>
-                <td>
-                  <span className="glyph" style={{ color: e.color }}>
-                    {e.glyph}
-                  </span>{" "}
-                  <b>{e.name}</b>
-                  <div className="dim small">{e.trend}</div>
-                </td>
-                <td>
-                  <Sparkline values={e.history} color={e.color} />
-                </td>
-                <td>
-                  <b className="mk-price">{fmt(e.price, 2)}</b> <span className={`status ${e.status}`}>{VERDICT[e.status] ?? e.status}</span>
-                  <div className="dim small">{e.priceRatio === 1 ? "its usual price" : `${e.priceRatio < 1 ? "below" : "above"} its usual ${fmt(e.price / e.priceRatio, 1)}`}</div>
-                </td>
-                <td className="small">
-                  {fmt(e.buyPrice, 2)} / {fmt(e.sellPrice, 2)}
-                </td>
-                <td>{e.held}</td>
-                <td className="row">
-                  {/* Each button says what the trade costs or pays, so there's no sum to do. */}
-                  <button className="small" disabled={busy} onClick={() => act(() => api.buyEssence(e.id, 5), (o) => `Bought 5 ${e.name} for ${fmt(o.total, 1)}`)} data-testid={`buy-${e.id}`}>
-                    Buy 5 <small>for {fmt(e.buyPrice * 5, 0)}</small>
-                  </button>
-                  <button className="small" disabled={busy || e.held < 5} onClick={() => act(() => api.sellEssence(e.id, 5), (o) => `Sold 5 ${e.name} for ${fmt(o.total, 1)}`)} data-testid={`sell-${e.id}`}>
-                    Sell 5 <small>for {fmt(e.sellPrice * 5, 0)}</small>
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {tab === "market" && <Market bz={bz} busy={busy} act={act} purse={c?.crowns ?? 0} />}
 
       {tab === "forms" && (
         <div className="bz-forms">
@@ -347,5 +299,171 @@ function Prophecy({ bz, busy, act }: { bz: any; busy: boolean; act: (fn: () => P
       </table>
       {bz.prophecies.meanBrier !== null && <div className="dim small">Mean Brier loss {bz.prophecies.meanBrier} (lower is better; always saying 50% scores 0.25).</div>}
     </div>
+  );
+}
+
+/**
+ * The Essence market, laid out like a trading screen: pick Buy or Sell, scan one list sorted by the best deal for
+ * that side (price, how far it sits from its usual, what you hold), then tap a row for a trade sheet with the
+ * price history, a quantity, the total and what you'll hold after, and one button that says exactly what happens.
+ */
+function Market({ bz, busy, act, purse }: { bz: any; busy: boolean; act: (fn: () => Promise<any>, msg?: (o: any) => string) => Promise<any>; purse: number }) {
+  const [mode, setMode] = useState<"buy" | "sell">("buy");
+  const [pick, setPick] = useState<string | null>(null);
+  const rows = [...bz.essences].sort((a: any, b: any) =>
+    mode === "buy" ? a.priceRatio - b.priceRatio : (b.held > 0 ? 1 : 0) - (a.held > 0 ? 1 : 0) || b.priceRatio - a.priceRatio,
+  );
+  const picked = pick ? bz.essences.find((e: any) => e.id === pick) : null;
+  return (
+    <div className="mk" data-testid="essence-table">
+      <div className="mk-top">
+        <div className="mk-mode" role="tablist">
+          <button className={mode === "buy" ? "on" : ""} onClick={() => setMode("buy")} data-testid="mk-buy">
+            Buy
+          </button>
+          <button className={mode === "sell" ? "on" : ""} onClick={() => setMode("sell")} data-testid="mk-sell">
+            Sell
+          </button>
+        </div>
+        <div className="mk-purse">
+          <small>Your Crowns</small>
+          <b>{fmt(purse, 0)}</b>
+        </div>
+      </div>
+      <div className="mk-hint dim small">{mode === "buy" ? "Cheapest against its usual price first." : "Best price for what you hold first."}</div>
+      <ul className="mk-list">
+        {rows.map((e: any) => {
+          const pct = Math.round((e.priceRatio - 1) * 100);
+          const price = mode === "buy" ? e.buyPrice : e.sellPrice;
+          const deal = mode === "buy" ? e.priceRatio <= 0.85 : e.priceRatio >= 1.2;
+          const off = mode === "sell" && e.held === 0;
+          return (
+            <li key={e.id}>
+              <button className={`mk-row ${off ? "off" : ""}`} onClick={() => setPick(e.id)} data-testid={`essence-${e.id}`} data-status={e.status} data-price={e.price}>
+                <span className="mk-glyph" style={{ color: e.color }}>
+                  {e.glyph}
+                </span>
+                <span className="mk-name">
+                  <b>{e.name}</b>
+                  <small>{off ? "None held" : `You hold ${e.held}`}</small>
+                </span>
+                <Sparkline values={e.history} color={e.color} width={110} height={40} />
+                <span className="mk-price">
+                  <b>{fmt(price, 1)}</b>
+                  <small className={pct === 0 ? "" : (pct < 0) === (mode === "buy") ? "good" : "bad"}>{pct === 0 ? "usual" : `${pct > 0 ? "+" : ""}${pct}% vs usual`}</small>
+                </span>
+                {deal && <span className="mk-deal">{mode === "buy" ? "Good buy" : "Good sell"}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {picked && <TradeSheet e={picked} mode={mode} purse={purse} busy={busy} act={act} onMode={setMode} onClose={() => setPick(null)} />}
+    </div>
+  );
+}
+
+function TradeSheet({ e, mode, purse, busy, act, onMode, onClose }: { e: any; mode: "buy" | "sell"; purse: number; busy: boolean; act: (fn: () => Promise<any>, msg?: (o: any) => string) => Promise<any>; onMode: (m: "buy" | "sell") => void; onClose: () => void }) {
+  const each = mode === "buy" ? e.buyPrice : e.sellPrice;
+  const max = mode === "buy" ? Math.floor(purse / e.buyPrice) : e.held;
+  const [qty, setQty] = useState(Math.min(5, Math.max(1, max)));
+  const q = Math.max(0, Math.min(qty, max));
+  const total = each * q;
+  const usual = e.price / e.priceRatio;
+  return (
+    <div className="mk-sheet-back" onClick={(ev) => ev.target === ev.currentTarget && onClose()}>
+      <div className="mk-sheet" data-testid="trade-sheet">
+        <header>
+          <span className="mk-glyph" style={{ color: e.color }}>
+            {e.glyph}
+          </span>
+          <b>{e.name}</b>
+          <button className="ghost close" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </header>
+        <PriceChart e={e} usual={usual} />
+        <div className="mk-facts">
+          <span>
+            Now <b>{fmt(e.price, 1)}</b>
+          </span>
+          <span>
+            Usual <b>{fmt(usual, 1)}</b>
+          </span>
+          <span>
+            Year <b>{fmt(e.band.low, 1)}–{fmt(e.band.high, 1)}</b>
+          </span>
+        </div>
+        <div className="mk-mode wide">
+          <button className={mode === "buy" ? "on" : ""} onClick={() => onMode("buy")}>
+            Buy at {fmt(e.buyPrice, 1)}
+          </button>
+          <button className={mode === "sell" ? "on" : ""} onClick={() => onMode("sell")}>
+            Sell at {fmt(e.sellPrice, 1)}
+          </button>
+        </div>
+        <div className="mk-qty">
+          <button onClick={() => setQty(Math.max(1, q - 1))} disabled={q <= 1} aria-label="One fewer">
+            −
+          </button>
+          <b data-testid="trade-qty">{q}</b>
+          <button onClick={() => setQty(Math.min(max, q + 1))} disabled={q >= max} aria-label="One more">
+            +
+          </button>
+          {[5, 10].map((n) => (
+            <button key={n} className="chip" onClick={() => setQty(Math.min(n, max))} disabled={max < 1}>
+              {n}
+            </button>
+          ))}
+          <button className="chip" onClick={() => setQty(max)} disabled={max < 1}>
+            Max
+          </button>
+        </div>
+        <dl className="mk-sum">
+          <dt>{mode === "buy" ? "You pay" : "You get"}</dt>
+          <dd>
+            <b>{fmt(total, 0)}</b> Crowns
+          </dd>
+          <dt>After</dt>
+          <dd>
+            {fmt(mode === "buy" ? purse - total : purse + total, 0)} Crowns · {mode === "buy" ? e.held + q : e.held - q} {e.name}
+          </dd>
+        </dl>
+        <button
+          className="big primary mk-go"
+          disabled={busy || q < 1}
+          onClick={() =>
+            act(
+              () => (mode === "buy" ? api.buyEssence(e.id, q) : api.sellEssence(e.id, q)),
+              (o) => `${mode === "buy" ? "Bought" : "Sold"} ${q} ${e.name} for ${fmt(o.total, 0)} Crowns`,
+            )
+          }
+          data-testid={`${mode}-${e.id}`}
+        >
+          {q < 1 ? (mode === "buy" ? "Not enough Crowns" : `No ${e.name} to sell`) : `${mode === "buy" ? "Buy" : "Sell"} ${q} ${e.name} for ${fmt(total, 0)}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** The last turnings' price as a filled line, with the usual price dashed across it. */
+function PriceChart({ e, usual }: { e: any; usual: number }) {
+  const W = 900;
+  const H = 220;
+  const v: number[] = e.history;
+  if (v.length < 2) return null;
+  const lo = Math.min(...v, usual) * 0.95;
+  const hi = Math.max(...v, usual) * 1.05;
+  const y = (p: number) => H - 12 - ((p - lo) / (hi - lo || 1)) * (H - 24);
+  const x = (i: number) => 8 + (i / (v.length - 1)) * (W - 16);
+  const line = v.map((p, i) => `${x(i)},${y(p)}`).join(" ");
+  return (
+    <svg className="mk-chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <polygon points={`${x(0)},${H} ${line} ${x(v.length - 1)},${H}`} fill={e.color} opacity={0.18} />
+      <line x1={0} x2={W} y1={y(usual)} y2={y(usual)} stroke="#d9cfb8" strokeWidth={3} strokeDasharray="14 10" opacity={0.7} />
+      <polyline points={line} fill="none" stroke={e.color} strokeWidth={6} strokeLinejoin="round" />
+      <circle cx={x(v.length - 1)} cy={y(v[v.length - 1]!)} r={11} fill={e.color} stroke="#120c10" strokeWidth={4} />
+    </svg>
   );
 }

@@ -52,6 +52,7 @@ await page.waitForTimeout(400);
 await shot("flow-map");
 
 let fights = 0;
+let bazaarShot = false;
 let woven = 0;
 let skipRaw = false;
 let spoilsShot = false;
@@ -144,9 +145,24 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
     await page.waitForTimeout(400);
     continue;
   }
-  if (await visible(`${tid("mystery-card")}:not(.open)`)) {
-    await page.click(tid("mystery-card"));
+  // A Mystery turns itself over on arrival; wait for it to resolve.
+  if (await visible(tid("mystery"))) {
     await page.waitForTimeout(1500);
+    continue;
+  }
+  if (!bazaarShot && (await visible(tid("map-bazaar"))) && !(await visible(".panel-backdrop"))) {
+    bazaarShot = true;
+    await page.click(tid("map-bazaar"));
+    await page.waitForSelector(tid("essence-table"), { timeout: 10000 });
+    await page.waitForTimeout(300);
+    await shot("flow-bazaar");
+    await page.click(".mk-row");
+    await page.waitForSelector(tid("trade-sheet"));
+    await page.waitForTimeout(300);
+    await shot("flow-bazaar-trade");
+    await page.click(".mk-sheet .close");
+    await page.click(".panel .close");
+    await page.waitForTimeout(300);
     continue;
   }
   if (await visible(tid("shrine-rest"))) {

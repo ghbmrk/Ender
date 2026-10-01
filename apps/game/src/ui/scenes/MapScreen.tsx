@@ -382,9 +382,15 @@ export function MapScreen() {
             </div>
           );
         })}
-        <button className="big" onClick={() => setState({ screen: "loom" })} data-testid="map-loom">
-          Loom
-        </button>
+        {/* The Bazaar is open between every fight (Mark, 20:42), beside the Loom. */}
+        <div className="mp-actions">
+          <button className="big" onClick={() => setState({ panel: "bazaar", bazaarTab: "market" })} data-testid="map-bazaar">
+            Bazaar
+          </button>
+          <button className="big" onClick={() => setState({ screen: "loom" })} data-testid="map-loom">
+            Loom
+          </button>
+        </div>
       </div>
     </div>
   );
