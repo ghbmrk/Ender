@@ -1650,3 +1650,59 @@
 .events .event.event {
   font-family: var(--serif-body);
 }
+
+/* Loop 35: a won Expedition leads with the Boss you beat, struck through in gold, over the whole climb lit. */
+.sum-win {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--serif-body);
+  font-size: 22px;
+  color: #e9dcc0;
+  animation: sw-in 600ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.sum-win b {
+  color: #f4d58c;
+}
+.sum-win .sw-text {
+  flex: 1;
+  display: grid;
+  gap: 10px;
+}
+.sum-win .sw-face {
+  position: relative;
+  flex: none;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #1a0806;
+  box-shadow: 0 0 0 5px #e0b450, 0 0 30px #f4d58c66;
+  filter: saturate(0.6);
+}
+.sum-win .sw-slash {
+  position: absolute;
+  left: -10%;
+  top: 46%;
+  width: 120%;
+  height: 8px;
+  background: linear-gradient(90deg, transparent, #f4d58c 20%, #fff6d8 50%, #f4d58c 80%, transparent);
+  box-shadow: 0 0 12px #f4d58c;
+  transform: rotate(-35deg) scaleX(0);
+  animation: sw-slash 380ms 450ms ease-out forwards;
+}
+.sum-track.won i.crown {
+  background: linear-gradient(90deg, #f4d58c, #fff1c4);
+  box-shadow: 0 0 12px #f4d58ccc, inset 0 0 0 2px #e0b450;
+}
+@keyframes sw-in {
+  from { opacity: 0; transform: scale(0.9); }
+}
+@keyframes sw-slash {
+  to { transform: rotate(-35deg) scaleX(1); }
+}
+.sum-win .sum-best {
+  justify-self: start;
+}

@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import { useStore } from "../state/store";
 import { sfx } from "./battle/sfx";
 import { Panel } from "./Panel";
+import { FOES, type FoeKind } from "@ender/battle";
+import { Head } from "./battle/Figure";
 import { essenceColor, essenceGlyph, essenceName } from "../economy/format";
 
 export function RunSummary() {
@@ -10,14 +12,37 @@ export function RunSummary() {
   useEffect(() => {
     if (!s) return;
     sfx.loot(1 + Object.keys(s.totals?.essences ?? {}).length + (s.totals?.forms ? 1 : 0));
-    if (s.newBest) sfx.best();
+    if (s.newBest || s.outcome === "victory") sfx.best();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s]);
   if (!s) return null;
-  const title = s.outcome === "victory" ? "Expedition complete" : s.outcome === "death" ? "Driven back" : "You withdrew";
+  const boss = s.boss ? FOES[s.boss as FoeKind] : undefined;
+  const title = s.outcome === "victory" ? "Realm cleared" : s.outcome === "death" ? "Driven back" : "You withdrew";
   return (
     <Panel title={title} onClose={returnToCrossing} testId="run-summary">
       <div className="summary">
+        {/* A win shows what you beat: the Boss, crossed out in gold, and the whole climb lit. */}
+        {s.outcome === "victory" && (
+          <div className="sum-win">
+            <span className="sw-face">
+              <Head figure={boss?.figure ?? s.boss ?? "husk"} size={110} />
+              <i className="sw-slash" />
+            </span>
+            <div className="sw-text">
+              <span>
+                <b>{boss?.name ?? "The Boss"}</b> is beaten.
+              </span>
+              {s.firstClear && <em className="sum-best">First clear</em>}
+              {s.reached?.of > 0 && (
+                <div className="sum-track won">
+                  {Array.from({ length: s.reached.of }, (_, i) => (
+                    <i key={i} className={i === s.reached.of - 1 ? "on crown" : "on"} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {s.outcome !== "victory" && s.reached?.step > 0 && (
           <div className="sum-reach">
             <span>
