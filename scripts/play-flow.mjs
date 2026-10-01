@@ -125,6 +125,18 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
     await page.waitForTimeout(1500);
     continue;
   }
+  if (await visible(tid("boss-omen"))) {
+    await page.waitForTimeout(500);
+    await shot("flow-omen");
+    await page.click(tid("boss-omen"));
+    await page.waitForTimeout(300);
+    await shot("flow-map-boss");
+    continue;
+  }
+  if (await visible(".mp-delta") && !(await visible(".mn-done-delta"))) {
+    await page.waitForTimeout(400);
+    await shot("flow-map-delta");
+  }
   if (await visible(tid("map"))) {
     const next = await page.$(".map-node.next");
     if (!next) {

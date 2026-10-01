@@ -1529,3 +1529,91 @@
   font-family: var(--display);
   letter-spacing: 0.02em;
 }
+
+/* The dock's health bars slide from what you last saw to where they are now, with the change called out. */
+.map-dock .mp-hero .gbar > div {
+  transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.map-dock .mp-hp {
+  position: relative;
+}
+.map-dock .mp-delta {
+  position: absolute;
+  left: 120px;
+  bottom: -2px;
+  font: 700 44px/1 var(--display);
+  text-shadow: 0 2px 6px #000;
+  animation: mp-delta 1800ms ease-out both;
+  pointer-events: none;
+}
+.map-dock .mp-delta.up {
+  color: #8fe08a;
+}
+.map-dock .mp-delta.down {
+  color: #ff7b6b;
+}
+@keyframes mp-delta {
+  0% { opacity: 0; transform: translateY(16px); }
+  15% { opacity: 1; transform: none; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* One step from the Boss, the map darkens and the Boss shows its face once. */
+.stage .boss-omen {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  border: 0;
+  background: radial-gradient(ellipse at 50% 40%, #3a0d0acc 0%, #000000e6 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #f3e6c8;
+  animation: omen 2600ms ease-in-out both;
+}
+.boss-omen .bo-face {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 8px #e0b450, 0 0 80px #c0302acc;
+  background: #1a0806;
+  animation: omen-face 2600ms ease-out both;
+}
+.boss-omen b {
+  font: 700 72px/1.1 var(--display);
+  letter-spacing: 1px;
+}
+.boss-omen small {
+  font: italic 40px/1.2 var(--display);
+  opacity: 0.85;
+}
+@keyframes omen {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes omen-face {
+  0% { transform: scale(0.6); }
+  20% { transform: scale(1.06); }
+  30% { transform: scale(1); }
+}
+/* After the moment, the Boss's node keeps a slow red pulse while it is your next step. */
+.stage .map-node.k-boss.next .mn-face {
+  animation: boss-pulse 1600ms ease-in-out infinite;
+}
+@keyframes boss-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 7px #e0b450, inset 0 0 22px #000a, 0 0 0 0 #c0302a00; }
+  50% { box-shadow: inset 0 0 0 7px #e0b450, inset 0 0 22px #000a, 0 0 40px 10px #c0302acc; }
+}
+/* Notices wait behind the Boss's moment rather than sitting on top of it. */
+:root:has(.boss-omen) .toasts {
+  opacity: 0;
+  transition: opacity 200ms;
+}

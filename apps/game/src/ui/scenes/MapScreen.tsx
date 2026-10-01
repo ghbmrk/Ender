@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sfx } from "../battle/sfx";
 import { FOES, PARTY, ROOTS, type FoeKind, type RootId } from "@ender/battle";
 import { rootLabel, heroFigure, lookFor, partyRoots } from "../../game/hero";
@@ -28,6 +28,11 @@ const PEEK: Record<string, string> = {
   contract: "take a paid job",
   mystery: "anything at all",
 };
+/** Health the dock last showed, so a Shrine or a fight's change can play out when you come back to the map. */
+const shownHp: Partial<Record<RootId, number>> = {};
+/** Runs that have already had their Boss approach moment. */
+const warned = new Set<string>();
+
 const REALM_NAME: Record<string, string> = { "ashen-vault": "The Ashen Vault", "glass-fen": "The Glass Fen", "hollow-keep": "The Hollow Keep" };
 
 
@@ -40,6 +45,24 @@ export function MapScreen() {
   const BOTTOM = h - 370;
   useStore((s) => s.panel);
   const [reveal, setReveal] = useState<{ node: MapNode; open: boolean } | null>(null);
+  const [omen, setOmen] = useState<MapNode | null>(null);
+  // Health bars start where you last saw them and settle to where they are now.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), 350);
+    return () => clearTimeout(t);
+  }, []);
+  const bossNext = ex ? reachable().filter((n) => n.kind === "boss") : [];
+  const omenKey = ex && bossNext.length && ex.at ? ex.plan.runId : null;
+  useEffect(() => {
+    if (!omenKey || warned.has(omenKey)) return;
+    warned.add(omenKey);
+    sfx.telegraph();
+    setOmen(bossNext[0]!);
+    const t = setTimeout(() => setOmen(null), 2600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [omenKey]);
   if (!ex) return null;
   const layers = ex.plan.map.layers;
   // The route scrolls as you climb: where you stand sits at the bottom, so the next choice is always under
@@ -177,21 +200,35 @@ export function MapScreen() {
           </button>
         </div>
       )}
+      {omen && omen.encounter && (
+        <button className="boss-omen" onClick={() => setOmen(null)} data-testid="boss-omen">
+          <span className="bo-face">
+            <Head figure={FOES[omen.encounter.waves.flat()[0] as FoeKind]?.figure ?? "husk"} size={260} />
+          </span>
+          <b>{FOES[omen.encounter.waves.flat()[0] as FoeKind]?.name ?? "The Boss"}</b>
+          <small>waits at the top of the climb</small>
+        </button>
+      )}
       {/* Thumb-zone dock: your health on the left, the Loom on the right. */}
       <div className="map-dock map-party">
         {partyRoots().map((r: RootId) => {
           const hp = ex.partyHp[r] ?? ROOTS[r].hp;
+          const was = shownHp[r] ?? hp;
+          const shown = settled ? hp : was;
+          if (settled) shownHp[r] = hp;
+          const gain = hp - was;
           return (
             <div key={r} className="mp-hero">
               <Head figure={heroFigure(r)} size={96} look={lookFor(r)} />
               <div className="mp-hp">
                 <span className="mp-name">{rootLabel(r)}</span>
                 <div className="gbar hp hero">
-                  <div style={{ width: `${(hp / ROOTS[r].hp) * 100}%` }} />
+                  <div style={{ width: `${(shown / ROOTS[r].hp) * 100}%` }} />
                 </div>
                 <span>
                   {hp}/{ROOTS[r].hp}
                 </span>
+                {gain !== 0 && <b key={`${hp}-${was}`} className={`mp-delta ${gain > 0 ? "up" : "down"}`}>{gain > 0 ? `+${gain}` : gain}</b>}
               </div>
             </div>
           );
