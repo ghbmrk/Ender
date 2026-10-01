@@ -5,7 +5,7 @@ import { SceneBackdrop } from "../../art/SceneBackdrop";
 import { startTutorial, tutorialDone } from "../../game/tutorial";
 import { HERO_ROOT, saveHero } from "../../game/hero";
 import { newBinder } from "../../game/flow";
-import { setState, toast } from "../../state/store";
+import { getState, setState, toast } from "../../state/store";
 import { Fig } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
 import { useStage, useWorldTop } from "../Stage";
@@ -196,9 +196,12 @@ export function CreateHero() {
         </button>
       ))}
 
-      <button className="ch-exit" onClick={() => setState({ screen: "title" })} data-testid="to-heroes">
-        ‹ Heroes
-      </button>
+      {/* A first-timer has no heroes to go back to. */}
+      {(tutorialDone() || !!getState().hero) && (
+        <button className="ch-exit" onClick={() => setState({ screen: "title" })} data-testid="to-heroes">
+          ‹ Heroes
+        </button>
+      )}
       <header className="ch-head">
         <h1>Create your hero</h1>
       </header>
