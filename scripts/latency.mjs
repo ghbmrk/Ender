@@ -53,7 +53,7 @@ async function pass() {
   // Steps that load or create a save on the in-page server get SERVER ms; plain screen changes get READY ms.
   const SERVER = Number(process.env.SERVER ?? 600);
   await step("sign in → Crossing", tid("sign-in"), tid("crossing"), SERVER);
-  await step("Crossing → Loom", tid("station-loom"), tid("loom"));
+  await step("Crossing → Loom", tid("hub-loom"), tid("loom"));
   await step("Loom → Crossing", tid("loom-done"), tid("crossing"));
   await step("Set out → Map", tid("hub-gate"), tid("map"), SERVER);
   await step("Map → fight", ".map-node.next", "[data-phase]");

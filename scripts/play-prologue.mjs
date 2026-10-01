@@ -69,7 +69,7 @@ for (let step = 0; step < 1500; step++) {
   if (await visible(tid("battle"))) {
     if (await visible(tid("battle-continue"))) {
       fights++;
-      await page.click(tid("battle-continue"));
+      await page.click(tid("battle-end"), { timeout: 1500 }).catch(() => undefined);
       await page.waitForTimeout(500);
       continue;
     }

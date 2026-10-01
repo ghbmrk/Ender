@@ -55,7 +55,7 @@ function fitLoom(stageH: number, tabs: boolean, emptyTray = false, coach = false
   // what is left above it. A radius-2 board is 8.66 hexes tall and 8 wide. With no Forms to place, the tray
   // shrinks to one line rather than leaving an empty box.
   const head = tabs ? 290 : 170;
-  TRAY_TOP = stageH - 178 - (emptyTray ? 420 : 600);
+  TRAY_TOP = stageH - 178 - (emptyTray ? 290 : 600);
   // Up to 150: on a tall phone the locked outer ring may bleed off the sides so the cells you use are bigger.
   const foot = TRAY_TOP - (coach ? COACH_ROOM : 0);
   HEX = Math.round(Math.min(150, (foot - head - 30) / 8.66));
@@ -645,9 +645,9 @@ function CompilePreview({ c, diff, previewing, power }: { c: CompiledLoom; diff:
             </div>
           ))}
         </div>
-        <h3>Reactions</h3>
-        <div>
-          {c.reactions.length === 0 && <span className="dim">none</span>}
+        {/* Only what the Loom holds: an empty row ("none") shows nothing gained. Capacity is in the header. */}
+        {c.reactions.length > 0 && <h3>Reactions</h3>}
+        {c.reactions.length > 0 && <div>
           {c.reactions.map((r, i) => (
             <span key={r.nodeId} className={r.executes ? "" : "dim"}>
               {i > 0 && " · "}
@@ -655,15 +655,9 @@ function CompilePreview({ c, diff, previewing, power }: { c: CompiledLoom; diff:
               {!r.executes && " (weaker)"}
             </span>
           ))}
-        </div>
-        <h3>Keystone</h3>
-        <div>{c.keystone ? c.keystone.name : <span className="dim">none</span>}</div>
-        <h3>Capacity</h3>
-        <div>
-          <b className={c.usedCapacity > c.capacity ? "bad" : ""}>
-            {c.usedCapacity} / {c.capacity}
-          </b>
-        </div>
+        </div>}
+        {c.keystone && <h3>Keystone</h3>}
+        {c.keystone && <div>{c.keystone.name}</div>}
       </div>
       {diff.length > 0 && (
         <div className="c-diff">

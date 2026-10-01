@@ -437,6 +437,9 @@ export function BattleScreen({
     (outcome === "victory" ? sfx.victory : sfx.defeat)();
   };
 
+  /** Off the end overlay, back to the run with the fight's outcome. */
+  const leave = (outcome: "victory" | "defeat") => onEnd({ outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats, foe: lastFoe(battle) });
+
   const advance = () => {
     if (battle.outcome !== "ongoing") return finish(battle.outcome);
     if (battle.reactions.length) return startDefend(battle.reactions.shift()!);
@@ -1033,38 +1036,42 @@ export function BattleScreen({
         )}
       </div>
 
-      {phase.k === "end" && (
+      {phase.k === "end" && phase.outcome === "victory" && <VictoryBeat praise={praise(battle)} onDone={() => leave("victory")} />}
+      {phase.k === "end" && phase.outcome === "defeat" && (
         <div className={`battle-end ${phase.outcome}`} data-testid="battle-end">
-          <h1>{phase.outcome === "victory" ? "Victory" : lesson ? "Not this time" : "Defeated"}</h1>
-          {phase.outcome === "victory" && praise(battle) && <p className="end-praise">{praise(battle)}</p>}
-          {phase.outcome === "defeat" && !lesson && lastFoe(battle) && <p className="end-left">{leftLine(lastFoe(battle)!)}</p>}
-          {/* What you did, not what you missed: a zero never shows. */}
-          <div className="end-stats">
-            <span>
-              <b>{Math.round(battle.stats.damageDealt)}</b>Damage
-            </span>
-            {battle.stats.parries > 0 && (
-              <span>
-                <b>{battle.stats.parries}</b>Parr{battle.stats.parries === 1 ? "y" : "ies"}
-              </span>
-            )}
-            {battle.stats.perfects > 0 && (
-              <span>
-                <b>{battle.stats.perfects}</b>Perfect{battle.stats.perfects === 1 ? "" : "s"}
-              </span>
-            )}
-            {best.current > 1 && (
-              <span>
-                <b>{best.current}</b>Best chain
-              </span>
-            )}
-          </div>
-          {phase.outcome === "defeat" && !lesson && <p className="end-tip">{defeatTip(battle)}</p>}
-          <button className={`big ${phase.outcome === "victory" ? "primary" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onEnd({ outcome: phase.outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats, foe: lastFoe(battle) })} data-testid="battle-continue">
-            {lesson && phase.outcome === "defeat" ? "Try again" : "Continue"}
+          <h1>{lesson ? "Not this time" : "Defeated"}</h1>
+          {!lesson && lastFoe(battle) && <p className="end-left">{leftLine(lastFoe(battle)!)}</p>}
+          {!lesson && <p className="end-tip">{defeatTip(battle)}</p>}
+          <button className="big" onPointerDown={(e) => e.stopPropagation()} onClick={() => leave("defeat")} data-testid="battle-continue">
+            {lesson ? "Try again" : "Continue"}
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * A win is a beat, not a stop: "Victory" lands, then the spoils follow on their own (a tap skips ahead). The fight's
+ * tallies (damage, parries) are gone: they showed nothing gained, and the spoils that follow do.
+ */
+function VictoryBeat({ praise, onDone }: { praise: string; onDone: () => void }) {
+  const done = useRef(false);
+  const go = () => {
+    if (done.current) return;
+    done.current = true;
+    onDone();
+  };
+  useEffect(() => {
+    const t = window.setTimeout(go, 1100);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="battle-end victory" data-testid="battle-end" onPointerDown={(e) => (e.stopPropagation(), go())}>
+      <h1>Victory</h1>
+      {praise && <p className="end-praise">{praise}</p>}
+      <span data-testid="battle-continue" />
     </div>
   );
 }

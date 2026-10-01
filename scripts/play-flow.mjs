@@ -35,7 +35,7 @@ await page.click(tid("sign-in"));
 await page.waitForSelector(tid("crossing"));
 await page.waitForTimeout(500);
 await shot("flow-crossing");
-await page.click(tid("station-loom"));
+await page.click(tid("hub-loom"));
 await page.waitForSelector(tid("loom"));
 await page.waitForTimeout(600);
 await shot("flow-loom");
@@ -124,7 +124,7 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
       fights++;
       await shot(`flow-battle-end-${fights}`);
       console.log("end", fights, JSON.stringify(await page.evaluate(() => ({ sx: scrollX, sy: scrollY, w: document.documentElement.scrollWidth, els: [...document.querySelectorAll("*")].filter((e) => e.scrollLeft > 0).map((e) => e.className + ":" + e.scrollLeft) }))));
-      await page.click(tid("battle-continue"));
+      await page.click(tid("battle-end"), { timeout: 1500 }).catch(() => undefined);
       await page.waitForTimeout(500);
       continue;
     }

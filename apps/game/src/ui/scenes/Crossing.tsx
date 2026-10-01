@@ -91,7 +91,9 @@ export function Crossing() {
   const painted = !!paintedBackdrop("crossing");
   const stations = (painted ? PAINTED_STATIONS : (mod?.STATIONS ?? [])) as readonly { id: string; x: number; y: number }[];
   const visited = seen();
-  const shown = stations.filter((st) => unlocked(st.id, c?.mirrorCharges ?? 0));
+  const all = stations.filter((st) => unlocked(st.id, c?.mirrorCharges ?? 0));
+  // The Loom's sign on the square is left out: the Loom button in the bottom bar is the one way in.
+  const shown = all.filter((st) => st.id !== "loom");
   const has = (id: string) => shown.some((st) => st.id === id);
   const [risen] = useState(() => (lesson ? [] : announce(shown.map((st) => st.id).filter((id) => id !== "gate" && id !== "loom"))));
   useEffect(() => {

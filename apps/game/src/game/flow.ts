@@ -44,7 +44,6 @@ export async function continueGame() {
   if (!getState().hero) {
     const hero = { root: "iron" as const, name: randomName(), look: lookFromSeed(newSeed()) };
     saveHero(hero);
-    toast(`Meet your hero, ${hero.name}. Make another with New hero.`, "info");
   }
   setState({ screen: getState().expedition ? "map" : "crossing", panel: null, loomEditable: !getState().expedition });
 }
