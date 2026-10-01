@@ -17,6 +17,6 @@ Rules: Do NOT read any files other than the screenshots, do not look at code or 
 Play for about 70 actions, or stop earlier if you would genuinely give up. After each screenshot, write one or two lines: what you think you are looking at, what you think you should do, and how sure you are.
 
 At the end, write a report with:
-1. A numbered list of every moment you were confused, stuck, unsure what something meant, misread something, tapped something that did nothing, or felt bored or annoyed. For each: what you saw, what you expected, what happened, and the screenshot path.
+1. A numbered list of every moment you were confused, stuck, unsure what something meant, misread something, tapped something that did nothing, felt bored or annoyed, or saw something that felt pointless or didn't move you forward. For each: what you saw, what you expected, what happened, and the screenshot path.
 2. In your own words: what is this game, what is the goal, and how do you play it? (Only what you actually understood, guesses marked as guesses.)
 3. Whether you would keep playing, and why.
