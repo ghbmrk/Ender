@@ -95,7 +95,7 @@ export function Crossing() {
         risen.length === 1
           ? `${names[0]} has opened: ${LABEL[risen[0]!]?.sub ?? ""}`
           : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} have opened`;
-      later(450, () => toast(text, "gain"));
+      later(450, () => toast(text, "gain", true));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

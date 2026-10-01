@@ -29,7 +29,7 @@ export async function newBinder(opts: { preset?: string; quiet?: boolean } = {})
   await Promise.all([refreshCharacter(), refreshWorld(), refreshLoom()]);
   if (opts.quiet) return;
   setState({ screen: "crossing", panel: null, expedition: null, loomEditable: true });
-  toast("Welcome to the Crossing. Shape your skills on the Loom, then Set out.", "info");
+  toast("Welcome to the Crossing. Shape your skills on the Loom, then Set out.", "info", true);
 }
 
 export async function continueGame() {

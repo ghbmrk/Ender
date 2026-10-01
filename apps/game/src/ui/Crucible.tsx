@@ -381,7 +381,7 @@ function ActionResult({ r }: { r: { label: string; out: any } }) {
       )}
       {o.inference && (
         <div className="dim small">
-          {o.inference.provider === "fixture" ? "Familiar (recorded)" : "Familiar (rules)"} · {o.inference.workUnits} WU · +{o.inference.xp} XP
+          {o.inference.xp > 0 ? `+${o.inference.xp} Loom Rank progress` : "No Rank progress: this was done before"}
         </div>
       )}
       {o.productionCost !== undefined && o.payout !== undefined && (

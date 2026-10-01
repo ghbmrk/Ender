@@ -105,17 +105,19 @@ export function useStore<T>(sel: (s: State) => T): T {
 
 let toastId = 0;
 /** Notices show one at a time: a new one waits until the one on screen has had its moment. */
-const toastQueue: { text: string; tone: Toast["tone"] }[] = [];
+const toastQueue: { text: string; tone: Toast["tone"]; hub?: boolean }[] = [];
 let toastShowing = false;
 function showNextToast() {
-  const next = toastQueue.shift();
+  let next = toastQueue.shift();
+  // A notice about the hub itself is dropped if a panel has since covered the hub.
+  while (next?.hub && state.panel) next = toastQueue.shift();
   if (!next) {
     toastShowing = false;
     return;
   }
   toastShowing = true;
   const id = ++toastId;
-  setState((s) => ({ toasts: [{ id, ...next }] }));
+  setState(() => ({ toasts: [{ id, text: next.text, tone: next.tone }] }));
   // Shorter holds while others wait, so a burst of notices doesn't hang around.
   const hold = toastQueue.length ? 2200 : 3800;
   current = { id, since: Date.now(), until: Date.now() + hold, timer: setTimeout(endToast, hold) };
@@ -134,13 +136,22 @@ export const dismissToast = endToast;
 /** On a new screen, a notice from the last one leaves soon rather than covering the new one. A notice raised with
  *  the move itself (younger than half a second) is about the new screen, so it keeps its time. */
 export function hurryToast(ms = 1200) {
-  if (!current || Date.now() - current.since < 500 || current.until - Date.now() <= ms) return;
+  if (!current) return;
+  // A notice gets half a second to be seen; a hurry that comes sooner waits for that, rather than being dropped.
+  const age = Date.now() - current.since;
+  if (age < 500) {
+    const t = current;
+    setTimeout(() => current === t && hurryToast(ms), 500 - age);
+    return;
+  }
+  if (current.until - Date.now() <= ms) return;
   clearTimeout(current.timer);
   current.until = Date.now() + ms;
   current.timer = setTimeout(endToast, ms);
 }
-export function toast(text: string, tone: Toast["tone"] = "info") {
+/** `hub`: the notice is about the hub screen, so it is skipped if a panel covers the hub before it shows. */
+export function toast(text: string, tone: Toast["tone"] = "info", hub = false) {
   if (toastQueue.length >= 3) toastQueue.shift();
-  toastQueue.push({ text, tone });
+  toastQueue.push({ text, tone, hub });
   if (!toastShowing) showNextToast();
 }
