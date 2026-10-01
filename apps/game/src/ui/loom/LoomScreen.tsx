@@ -515,8 +515,9 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
             <div key={a.id} className="tray-item raw coach-pulse" onPointerDown={(e) => (e.stopPropagation(), sfx.tap(), setWeaving(a))} data-testid={`raw-${a.id}`}>
               <svg viewBox="-80 -80 160 160" width={150} height={150}>
                 <path d={hexPath(0, 0, 66)} className="raw-hex" />
-                <text y={18} textAnchor="middle" className="raw-glyph">
-                  {a.tier === "veiled" ? "?" : "✦"}
+                {/* Not yet a role: no role sigil (✦ is the Modifier's), just a question for a Form still to weave. */}
+                <text y={22} textAnchor="middle" className="raw-glyph">
+                  ?
                 </text>
               </svg>
               <div className="tray-name">{a.tier === "veiled" ? "New Form" : a.name}</div>
@@ -528,7 +529,12 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
               <svg viewBox="-80 -80 160 160" width={150} height={150}>
                 <NodeHex n={n} x={0} y={0} small />
               </svg>
-              <div className="tray-name">{n.name}</div>
+              <div className="tray-name">
+                <b className={`tray-role role-${n.role}`}>
+                  {ROLE_GLYPH[n.role]} {ROLE_NAME[n.role]}
+                </b>
+                {n.name}
+              </div>
             </div>
           ))}
         </div>
@@ -600,34 +606,12 @@ function hitTest(x: number, y: number, rank: number): { q: number; r: number } |
   return bd < HEX ? best : null;
 }
 
-/** A deterministic rune from the Form's id (§92: procedural, no image generation). */
-function sigil(id: string) {
-  let h = 2166136261;
-  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
-  const rnd = () => ((h = Math.imul(h ^ (h >>> 15), 2246822507)), ((h >>> 0) % 1000) / 1000);
-  const pts = Array.from({ length: 7 }, (_, i) => {
-    const a = (i / 7) * Math.PI * 2 + rnd() * 0.4;
-    const r = 18 + rnd() * 20;
-    return [Math.cos(a) * r, Math.sin(a) * r] as [number, number];
-  });
-  const strokes: string[] = [];
-  const n = 3 + Math.floor(rnd() * 3);
-  for (let i = 0; i < n; i++) {
-    const a = pts[Math.floor(rnd() * 7)]!;
-    const b = pts[Math.floor(rnd() * 7)]!;
-    strokes.push(`M${a[0].toFixed(1)} ${a[1].toFixed(1)} Q${(rnd() * 16 - 8).toFixed(1)} ${(rnd() * 16 - 8).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`);
-  }
-  return { d: strokes.join(" "), dot: rnd() > 0.5 };
-}
-
 /** What a Modifier adds to the Actions beside it, in a word or two that fits on its hex. */
 const MOD_SHORT: Record<string, string> = { burden: "+Break", veil: "+Crits", reach: "+Weak spot", knots: "+Damage", flex: "+Speed", bond: "+AP share" };
 
 function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, landed }: { landed?: boolean; n: LoomNode; x: number; y: number; dormant?: boolean; reason?: string; selected?: boolean; small?: boolean; lifted?: boolean; ghost?: boolean }) {
   const [a, b] = n.affinities;
-  const s = small ? 70 : HEX - 12;
-  const sg = sigil(n.formId);
-  const k = s / 92;
+  const s = small ? 76 : HEX - 12;
   return (
     <g style={landed ? { transformOrigin: `${x}px ${y}px` } : undefined} className={`node ${landed ? "landed" : ""} ${dormant ? "dormant" : ""} ${selected ? "selected" : ""} ${lifted ? "lifted" : ""} ${ghost ? "ghost" : ""} ev-${n.evidence}`}>
       {landed && <path d={hexPath(x, y, s + 10)} className="land-ring" style={{ transformOrigin: `${x}px ${y}px` }} />}
@@ -635,22 +619,21 @@ function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, lan
       <path d={hexPath(x, y, s - 12)} fill={AFF_COLOR[a]} opacity={0.55} filter="url(#wc)" />
       <path d={hexPath(x, y, s - 4)} fill="none" stroke={AFF_COLOR[b]} strokeWidth={8} opacity={0.95} className="rim" />
       {n.evidence === "witnessed" && <path d={hexPath(x, y, s + 5)} fill="none" stroke="#ecc56a" strokeWidth={4} />}
-      <g transform={`translate(${x} ${y - 8 * k}) scale(${k})`}>
-        <path d={sg.d} stroke="#1d1822" strokeWidth={9} fill="none" strokeLinecap="round" />
-        <path d={sg.d} stroke="#fbe8b0" strokeWidth={4} fill="none" strokeLinecap="round" />
-        {sg.dot && <circle r={5} fill="#fbe8b0" />}
-      </g>
-      <text x={x - s * 0.52} y={y - s * 0.42} className="node-role">
+      {/* What the piece does on the Loom, readable at a glance (Mark, 22:05): its role named on a plate across the
+          top and its role sigil large in the middle, then the two Affinities it links by, then what it is. */}
+      <rect x={x - s * 0.5} y={y - s * 0.74} width={s} height={s * 0.3} rx={s * 0.15} className={`node-plate role-${n.role}`} />
+      <text x={x} y={y - s * 0.52} className="node-rolename" style={{ fontSize: s * 0.2 }}>
+        {ROLE_NAME[n.role].toUpperCase()}
+      </text>
+      <text x={x} y={y + s * 0.14} className={`node-glyph role-${n.role}`} style={{ fontSize: s * 0.56 }}>
         {ROLE_GLYPH[n.role]}
       </text>
-      <text x={x + s * 0.5} y={y - s * 0.42} className="node-aff" fill={AFF_COLOR[b]}>
-        {AFF_GLYPH[a]}
-        {AFF_GLYPH[b]}
+      <text x={x} y={y + s * 0.4} className="node-aff" fill={AFF_COLOR[b]} style={{ fontSize: s * 0.2 }}>
+        {AFF_GLYPH[a]} {AFF_GLYPH[b]}
       </text>
-      <text x={x} y={y + s * 0.62} className="node-name">
+      <text x={x} y={y + s * 0.68} className="node-name">
         {n.role === "action" ? TEMPLATES[templateFor(a)].name : n.role === "modifier" ? MOD_SHORT[a] : ROLE_NAME[n.role]}
       </text>
-      {!small && <text x={x} y={y + s * 0.34} className="node-score">{Math.round(n.technicalScore)}</text>}
       {dormant && (
         <text x={x} y={y + 6} className="node-dormant">
           DORMANT

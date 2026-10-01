@@ -4,10 +4,13 @@ import { startExpedition, refreshWorld } from "../game/flow";
 import { toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
 import { bests } from "../game/records";
+import { finishTutorial } from "../game/tutorial";
 import { crowns, essenceColor, essenceGlyph } from "../economy/format";
 
 export function RealmGate() {
   const world = useStore((s) => s.world);
+  /** The prologue's last step: the Gate opened for you, with what Realms and the Bazaar are for. */
+  const lesson = useStore((s) => s.tutorial === "gate");
   const [busy, setBusy] = useState(false);
   /** Each Realm reads as one line and a button; the market detail opens on request. */
   const [open, setOpen] = useState<string | null>(null);
@@ -25,6 +28,7 @@ export function RealmGate() {
   const go = async (id: string) => {
     if (busy) return;
     setBusy(true);
+    if (lesson) finishTutorial();
     try {
       await startExpedition(id);
     } catch (e) {
@@ -34,12 +38,18 @@ export function RealmGate() {
   };
   return (
     <Panel title="Choose a Realm" subtitle={world.headline} wide testId="realm-gate">
-      <p className="gate-why">Each Realm drops different Essences. Today's prices set what a run there is worth.</p>
+      {lesson ? (
+        <p className="gate-why gate-lesson" data-testid="coach">
+          <span className="gl-mark">✦</span>Pick a <b>Realm</b> to set out. Each drops different <b>Essences</b>, which sell at the <b>Bazaar</b> between any two fights. Today's prices decide which Realm pays best; start with the marked one.
+        </p>
+      ) : (
+        <p className="gate-why">Each Realm drops different Essences. Today's prices set what a run there is worth.</p>
+      )}
       <div className="realm-grid">
         {world.realms.map((r: any) => (
           <div key={r.id} className="realm-card" data-testid={`realm-${r.id}`}>
             {/* The painting is the biggest thing on the card, so a tap on it enters too. */}
-            <div className={`realm-head ${paintedBackdrop(r.id) ? "has-art" : ""}`} style={paintedBackdrop(r.id) ? { ["--realm-art" as string]: `url(${paintedBackdrop(r.id)})` } : undefined} onClick={() => go(r.id)} role="button" data-testid={`realm-art-${r.id}`}>
+            <div className={`realm-head ${paintedBackdrop(r.id) ? "has-art" : ""} ${lesson && r.id === nextUp ? "coach-pulse" : ""}`} style={paintedBackdrop(r.id) ? { ["--realm-art" as string]: `url(${paintedBackdrop(r.id)})` } : undefined} onClick={() => go(r.id)} role="button" data-testid={`realm-art-${r.id}`}>
               {r.id === nextUp && <span className="realm-next">{fresh ? "Start here" : "Next"}</span>}
               <h3>{r.name}</h3>
               <span className="diff">Difficulty {r.difficultyLabel}</span>

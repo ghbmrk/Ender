@@ -7,7 +7,7 @@ import { compiledParty, newBinder, refreshLoom } from "./flow";
 
 /**
  * The prologue: a new party walks straight into a fight, and each encounter teaches one thing (§101):
- * timed strikes, then Dodge, then Parry, then a Form becomes a skill on the Loom, then AP and Break.
+ * timed strikes, Dodge and Parry in one fight, then a Form becomes a skill on the Loom, then AP and Break.
  */
 export type TutStep = "strike" | "dodge" | "parry" | "form" | "skill" | "gate";
 
@@ -33,12 +33,16 @@ export type Lesson = {
   parryCoach?: Partial<Record<CoachKey, string>>;
 };
 
-export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
-  strike: {
-    step: "strike",
+export const LESSONS: Record<"dodge" | "parry" | "skill", Lesson> = {
+  // Strike, Dodge and Parry in one fight against one foe (Mark, 22:05): you strike first, then dodge its blow once
+  // and parry it once; the lesson ends on the first clean Parry.
+  dodge: {
+    step: "dodge",
+    straightOn: true,
     title: "A Husk blocks the road",
     commands: "basic",
-    defense: "none",
+    defense: "both",
+    drills: ["dodge", "parry"],
     slow: 2,
     coach: {
       command: "Tap **Basic** to attack.",
@@ -46,20 +50,6 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
       perfect: "**Perfect!** Well-timed strikes hit harder.",
       good: "Good. Tap a touch closer to the mark for a **Perfect**: it hits harder.",
       miss: "Missed the beat. Wait for the ring to meet the mark, then tap.",
-    },
-    setup: { waves: [["husk"]], foeScale: { hp: 0.5, atk: 0.4 } },
-  },
-  // Dodge, then Parry, against the same foe, each once (Mark, 20:42): the lesson ends on the first clean Parry.
-  dodge: {
-    step: "dodge",
-    straightOn: true,
-    title: "A Husk lurches out",
-    commands: "basic",
-    defense: "both",
-    drills: ["dodge", "parry"],
-    slow: 1,
-    coach: {
-      command: "Attack with **Basic** again.",
       defend: "It strikes back! Tap **DODGE** as the red ring closes on your hero.",
       dodged: "**Dodged.** Dodge is forgiving: its window is wide. Next, the harder one: **PARRY**.",
       hit: "Too early or too late. Tap **DODGE** just as the ring closes.",
@@ -153,13 +143,17 @@ export async function startTutorial(hero?: Hero) {
     );
     await refreshLoom();
   }
-  goTo("strike");
+  goTo("dodge");
 }
 
 export function goTo(step: TutStep) {
+  // Strike, Dodge and Parry are one lesson now; a save left on "strike" starts it.
+  if (step === "strike") step = "dodge";
   save(step);
   if (step === "form") setState({ tutorial: step, screen: "loom", loomEditable: true, panel: null });
-  else if (step === "gate") setState({ tutorial: step, screen: "crossing", loomEditable: true, panel: null });
+  // The last step isn't left to the player to find: the Gate opens with its Realms, and the coach says what they're
+  // for and where their Essences sell (Mark, 22:05).
+  else if (step === "gate") setState({ tutorial: step, screen: "crossing", loomEditable: true, panel: "gate" });
   else setState({ tutorial: step, screen: "battle", panel: null, tutorialRun: (getState().tutorialRun ?? 0) + 1 });
 }
 

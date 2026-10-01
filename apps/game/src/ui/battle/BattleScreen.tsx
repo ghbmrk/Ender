@@ -1112,7 +1112,7 @@ export function BattleScreen({
       {lesson && LESSON_NO[lesson.step] && (
         // Kept mounted so it pops in once per lesson; it fades while a foe's move card holds that corner.
         <div className={`lesson-chip ${phase.k === "command" ? "" : "away"}`} data-testid="lesson-chip">
-          {practice ? "Training Yard" : `Lesson ${LESSON_NO[lesson.step]} of 3`} · {LESSON_NAME[lesson.step]}
+          {practice ? "Training Yard" : `Lesson ${LESSON_NO[lesson.step]} of 2`} · {LESSON_NAME[lesson.step]}
         </div>
       )}
       {lesson && (LESSON_NO[lesson.step] ?? 0) > 1 && (
@@ -1121,7 +1121,7 @@ export function BattleScreen({
         // the fight and never holds a tap.
         <div key={lesson.step} className="lesson-intro" data-testid="lesson-intro" aria-hidden>
           <small>Lesson {(LESSON_NO[lesson.step] ?? 2) - 1} done</small>
-          <b>Lesson {LESSON_NO[lesson.step]} of 3</b>
+          <b>Lesson {LESSON_NO[lesson.step]} of 2</b>
           <span>A fresh {FOE_NAME(setup.waves[0]?.[0] ?? "foe")} steps up</span>
         </div>
       )}
@@ -1305,8 +1305,8 @@ function Statuses({ u, named }: { u: Unit; named?: boolean }) {
 }
 
 /** The practice fights in order, as the lesson chip numbers them. */
-const LESSON_NO: Partial<Record<Lesson["step"], number>> = { strike: 1, dodge: 2, parry: 2, skill: 3 };
-const LESSON_NAME: Partial<Record<Lesson["step"], string>> = { strike: "Strike", dodge: "Dodge and Parry", parry: "Parry", skill: "Skills" };
+const LESSON_NO: Partial<Record<Lesson["step"], number>> = { strike: 1, dodge: 1, parry: 1, skill: 2 };
+const LESSON_NAME: Partial<Record<Lesson["step"], string>> = { strike: "Strike", dodge: "Strike, Dodge, Parry", parry: "Parry", skill: "Skills" };
 
 /** Matches .foe-tag's width in frame.css, so tags near the edges stay on screen. */
 const FOE_TAG_W = 300;

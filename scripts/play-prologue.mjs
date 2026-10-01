@@ -40,6 +40,15 @@ await page.click(tid("sign-in"));
 await page.waitForSelector(tid("create-hero"));
 await page.waitForTimeout(600);
 await shot("prologue-00-create");
+await page.click(tid("garb-robes"));
+await page.click(tid("pal-1"));
+await page.waitForTimeout(300);
+await shot("prologue-00-create-picked");
+await page.click(tid("hero-reveal"));
+await page.waitForTimeout(500);
+await shot("prologue-00-reveal-mid");
+await page.waitForTimeout(1300);
+await shot("prologue-00-reveal");
 await page.click(tid("hero-begin"));
 await page.waitForSelector(tid("battle"));
 
@@ -88,5 +97,5 @@ for (let step = 0; step < 1500; step++) {
   await page.waitForTimeout(200);
 }
 await shot(`prologue-last`);
-console.log(JSON.stringify({ fights, crossing: await visible(tid("crossing")), tips, errors, clashes }, null, 1));
+console.log(JSON.stringify({ fights, crossing: await visible(tid("crossing")), gate: await visible(tid("realm-gate")), tips, errors, clashes }, null, 1));
 await browser.close();

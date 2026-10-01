@@ -2171,3 +2171,44 @@ table,
   color: #ffe9a8;
   border-color: #ecc56a;
 }
+
+/* Loom pieces: the role on a plate across the top and its sigil large in the middle. */
+.node .node-plate {
+  fill: #1d1822;
+  opacity: 0.82;
+}
+.node .node-plate.role-action { stroke: #e2654a; stroke-width: 3px; }
+.node .node-plate.role-modifier { stroke: #ecc56a; stroke-width: 3px; }
+.node .node-plate.role-reaction { stroke: #7fb6e8; stroke-width: 3px; }
+.node .node-plate.role-keystone { stroke: #c79cf0; stroke-width: 3px; }
+.node text.node-rolename {
+  fill: #fff4dc;
+  stroke-width: 0;
+  letter-spacing: 0.06em;
+}
+.node text.node-glyph {
+  fill: #fff4dc;
+  stroke-width: 9px;
+}
+.node text.node-glyph.role-action { fill: #ffd2c4; }
+.node text.node-glyph.role-modifier { fill: #ffe9a8; }
+.node text.node-glyph.role-reaction { fill: #d6ebff; }
+.node text.node-glyph.role-keystone { fill: #ecd9ff; }
+/* A Form on the tray names the role it was woven into, with that role's sigil. */
+.tray-name .tray-role {
+  display: block;
+  font-size: 0.9em;
+  letter-spacing: 0.04em;
+}
+.tray-role.role-action, .ws-role-sigil.role-action { color: #ff9f86; }
+.tray-role.role-modifier, .ws-role-sigil.role-modifier { color: #f3cf6b; }
+.tray-role.role-reaction, .ws-role-sigil.role-reaction { color: #8fc4f2; }
+.tray-role.role-keystone, .ws-role-sigil.role-keystone { color: #d1a8f5; }
+.ws-role-sigil {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-right: 6px;
+  font-size: 1.3em;
+  text-align: center;
+  -webkit-text-stroke: 1px #1d1822;
+}

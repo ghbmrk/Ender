@@ -7,6 +7,7 @@ import { toast, useStore } from "../../state/store";
 import { crowns, essenceColor, essenceGlyph, essenceName, fmt } from "../../economy/format";
 import { announceProgress } from "../craftActions";
 import { sfx } from "../battle/sfx";
+import { ROLE_GLYPH } from "../affinity";
 
 /**
  * Weaving: the whole of crafting on the Loom screen. A new Form is revealed with one tap, then becomes a node
@@ -158,6 +159,7 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
               {roles.map((r) => (
                 <button key={r} className="ws-role" disabled={busy || !afford || !a.affinities} onClick={() => weave(r)} data-testid={`weave-${r}`}>
                   <span className="ws-role-name">
+                    <b className={`ws-role-sigil role-${r}`}>{ROLE_GLYPH[r]}</b>
                     {ROLE_NAME[r]} <small>{ROLE_HINT[r]}</small>
                   </span>
                   {a.affinities && <span className="ws-role-does">{becomes(a.affinities, r)}</span>}

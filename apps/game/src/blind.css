@@ -102,3 +102,22 @@
 .stage .battle .lesson-intro span { font-family: var(--body); font-size: 36px; color: #efe6d6; }
 @keyframes lesson-intro { 0% { opacity: 0; transform: scale(1.12); } 10% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .stage .battle .lesson-intro { animation: lesson-intro 1700ms steps(1, end); } }
+
+/* The prologue's last step: the Gate opens itself and says what Realms and the Bazaar are for. */
+.gate-why.gate-lesson {
+  background: #f1e4c4;
+  color: #2a1f12;
+  border: 2px solid #c9a24a;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 16px;
+  line-height: 1.4;
+  font-style: normal;
+}
+.gate-why.gate-lesson b {
+  color: #6b2a10;
+}
+.gate-why.gate-lesson .gl-mark {
+  color: #8a5a12;
+  margin-right: 4px;
+}
