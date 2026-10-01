@@ -264,7 +264,7 @@ export function LoomScreen() {
       : !lessonPlaced && pending
         ? { text: `**${pending.name}** is in hand. Tap a cell with a **+** to place it.` }
       : !lessonPlaced
-        ? { text: `You found a Form: **${lessonForm?.name ?? "a new piece"}**, in the tray below. Forms are the pieces of your skills. **Drag it** onto a glowing cell beside ${heroName}.` }
+        ? { text: `You found a Form: **${lessonForm?.name ?? "a new piece"}**, in the tray below. Forms are the pieces of your skills. **Drag it** onto a **+** cell beside ${heroName}, or just tap a **+**.` }
         : !lessonSkill
           ? { text: "It's **dormant**: a node must touch the Root, or share an Affinity with a neighbour. Drag it beside the Root." }
           : {
@@ -294,8 +294,30 @@ export function LoomScreen() {
   const byCell = new Map(shown.map((n) => [`${n.q},${n.r}`, n]));
   const dormant = new Set(shownC.dormantNodeIds);
 
+  // In the first lesson, a tap anywhere on the board places the new Form on the nearest open
+  // cell beside the hero, so a player who taps instead of dragging is never stuck.
+  const lessonPending = lesson && editable && hero === mine && !lessonPlaced && !!lessonForm && pool.some((n) => n.id === lessonForm.id);
+  const boardTap = (e: React.PointerEvent) => {
+    if (!lessonPending || drag) return;
+    if ((e.target as HTMLElement).closest("button, .loom-lower, .hero-tabs, .coach, .sheet-backdrop")) return;
+    const p = toStage(e.clientX, e.clientY);
+    if (p.y >= TRAY_TOP) return;
+    const near = cells
+      .filter(({ q, r }) => hexDist(q, r) === 1 && !byCell.has(`${q},${r}`))
+      .map(({ q, r }) => ({ q, r, dist: Math.hypot(cellXY(q, r)[0] - p.x, cellXY(q, r)[1] - p.y) }))
+      .sort((a, b) => a.dist - b.dist)[0];
+    if (!near) return;
+    setPlacing(null);
+    setLanded(lessonForm!.id);
+    commit([...nodes, { ...lessonForm!, q: near.q, r: near.r }], pool.filter((x) => x.id !== lessonForm!.id));
+  };
+  // With a single Form in the tray, the whole tray is its handle.
+  const trayDown = (e: React.PointerEvent) => {
+    if (editable && pool.length === 1 && !raw.length) down(e, pool[0]!, "pool");
+  };
+
   return (
-    <div className="loom-screen" onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid="loom">
+    <div className="loom-screen" onPointerDown={boardTap} onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid="loom">
       <div className="loom-bg" />
       <div className="world" style={{ top: worldTop }}>
       <header className="loom-head">
@@ -405,7 +427,7 @@ export function LoomScreen() {
       })}
 
       <div className="loom-lower" style={{ top: TRAY_TOP }}>
-      <div className={`tray ${!pool.length && !raw.length ? "empty" : ""} ${drag?.moved && drag.over === "tray" ? "hover" : ""}`}>
+      <div className={`tray ${!pool.length && !raw.length ? "empty" : ""} ${drag?.moved && drag.over === "tray" ? "hover" : ""}`} onPointerDown={trayDown}>
         <div className="tray-label">
           Forms {(raw.length > 0 || pool.length > 0) && <span className="dim">· {raw.length ? "tap a new Form to weave it" : placing ? "tap a glowing cell" : "tap or drag onto the Loom"}</span>}
         </div>
