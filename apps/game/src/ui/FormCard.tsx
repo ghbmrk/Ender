@@ -1,6 +1,13 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AFF_COLOR, AFF_DEEP } from "./affinity";
 import { CardArt, formAffinities } from "./CardArt";
+import { paintedCard } from "../art/painted";
+
+function hashPct(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 1000) / 1000;
+}
 import { QUALITY_KEYS } from "@ender/shared";
 import { QUALITY_DESCRIPTIONS } from "@ender/content";
 import { TIER_LABEL, crowns, essenceColor, essenceGlyph, essenceName, fmt, qualityName } from "../economy/format";
@@ -38,29 +45,32 @@ export function Recipe({ recipe }: { recipe?: Record<string, number> }) {
   );
 }
 
+/**
+ * A Form's worth in two numbers a player can act on: how strong it is and what it would fetch, with a
+ * verdict on whether making it pays. The fuller breakdown (score, cost, margin, efficiency) stays in the
+ * tooltip.
+ */
 export function EvalLine({ ev }: { ev: any }) {
   if (!ev) return <div className="eval dim">Unknown until Attuned.</div>;
   const t = ev.exact ? "" : "~";
+  const detail = `Score ${t}${fmt(ev.technicalScore, 1)} · Cost ${t}${fmt(ev.productionCost)} · Margin ${t}${fmt(ev.margin)} · Efficiency ${t}${fmt(ev.efficiency)}`;
   return (
-    <div className="eval">
-      <span title="Technical score against the Realm's hidden law">
-        Score <b>{t}{fmt(ev.technicalScore, 1)}</b>
+    <div className="eval" title={detail}>
+      <span className="ev-big">
+        <small>Power</small>
+        <b>
+          {t}
+          {fmt(ev.power, 0)}
+        </b>
       </span>
-      <span title="Artifact power = score × evidence">
-        Power <b>{t}{fmt(ev.power, 1)}</b>
+      <span className="ev-big">
+        <small>Worth</small>
+        <b>
+          {t}
+          {crowns(ev.marketValue)}
+        </b>
       </span>
-      <span title="Production cost at today's prices">
-        Cost <b>{t}{crowns(ev.productionCost)}</b>
-      </span>
-      <span title="What buyers pay for the produced Form">
-        Value <b>{t}{crowns(ev.marketValue)}</b>
-      </span>
-      <span className={ev.margin >= 0 ? "good" : "bad"} title="Value − cost">
-        Margin <b>{t}{fmt(ev.margin)}</b>
-      </span>
-      <span title="Useful power per Crown (0–100)">
-        Eff. <b>{t}{fmt(ev.efficiency)}</b>
-      </span>
+      <span className={`ev-verdict ${ev.margin >= 0 ? "good" : "bad"}`}>{ev.margin >= 0 ? `Pays ${t}${fmt(ev.margin)}` : "Costs more than it's worth"}</span>
     </div>
   );
 }
@@ -84,7 +94,12 @@ export function FormCard({ a, children, compact, selected, onClick }: { a: any; 
       </div>
       {!compact && (
         <div className="fc-art">
-          <CardArt seed={a.id} aff={dom} aff2={second} />
+          {dom && paintedCard(dom) ? (
+            // The Affinity's painting, framed differently per Form so no two cards crop it alike.
+            <div className="fc-paint" style={{ backgroundImage: `url(${paintedCard(dom)})`, backgroundPosition: `${(hashPct(a.id) * 100).toFixed(0)}% ${(hashPct(a.id + "y") * 100).toFixed(0)}%` }} />
+          ) : (
+            <CardArt seed={a.id} aff={dom} aff2={second} />
+          )}
         </div>
       )}
       <div className="fc-realm">

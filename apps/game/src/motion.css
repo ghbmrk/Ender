@@ -1164,3 +1164,44 @@
     margin-left: auto;
   }
 }
+
+/* Loop 14: a Form card's worth in two big numbers and a verdict; the painted Affinity art in its window. */
+.fc-art .fc-paint {
+  width: 100%;
+  height: 100%;
+  background-size: 160% auto;
+  background-repeat: no-repeat;
+}
+.fc-rules .eval.eval {
+  align-items: flex-end;
+  gap: 4px 20px;
+  font-family: var(--serif);
+}
+.fc-rules .eval .ev-big {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.fc-rules .eval .ev-big small {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rules-dim);
+}
+.fc-rules .eval .ev-big b {
+  font-size: 22px;
+  font-weight: 800;
+}
+.fc-rules .eval .ev-verdict {
+  margin-left: auto;
+  align-self: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #2f6b3a22;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.fc-rules .eval .ev-verdict.bad {
+  background: #9a2a3918;
+}
