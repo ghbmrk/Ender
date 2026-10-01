@@ -124,12 +124,12 @@ export const RULES = {
   timing: { perfect: 70, good: 150 },
   gradeMult: { perfect: 1.25, good: 1, miss: 0.8 } as Record<Grade, number>,
   flurryPerfect: 1.15,
-  /** Defence windows, ms relative to impact [early, late]. */
+  /** Defence windows, ms relative to impact [early, late]. Parry is widened for touch screens (Ender, 2026-10-01). */
   dodge: [-260, 100] as const,
-  parry: [-90, 70] as const,
-  perfectParry: [-45, 35] as const,
+  parry: [-120, 90] as const,
+  perfectParry: [-55, 45] as const,
   /** (Ender default) A Perfect Dodge uses the Parry window. */
-  perfectDodge: [-90, 70] as const,
+  perfectDodge: [-120, 90] as const,
   parryAp: 1,
   parryBreak: 10,
   counterPotency: 0.65,
