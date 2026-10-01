@@ -349,7 +349,7 @@ export function useCurrency(ctx: Ctx, charId: string, itemId: string) {
         snapshotId: s.id,
         issuer: "royal" as const,
         title: `Royal Writ: ${ESSENCES[e].name}-light Form`,
-        description: `Deliver a Trialed Form with Power ≥ 50 using at most 3 ${ESSENCES[e].name}.`,
+        description: `Deliver a Trialed Form with Power of 50 or more that uses at most 3 ${ESSENCES[e].name}.`,
         requirement: { minPower: 50, maxEssence: [{ essence: e, qty: 3 }], minTier: "trialed" as const },
         reward: 210,
         reason: "The Crown answers your Writ.",

@@ -213,7 +213,7 @@ export function Bazaar() {
                 {ct.reason} · {ct.turningsLeft} turning{ct.turningsLeft === 1 ? "" : "s"} left
               </div>
               {ct.eligibleArtifactIds.length === 0 ? (
-                <div className="dim small">None of your Trialed Forms qualify yet.</div>
+                <div className="dim small">None of your Forms qualify yet. A Form counts once you Trial it in the Crucible.</div>
               ) : (
                 <div className="row">
                   {ct.eligibleArtifactIds.map((id: string) => {

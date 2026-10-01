@@ -186,8 +186,8 @@ export function Crucible() {
                 <div className="bind" data-testid="inscribe">
                   <h4>Inscribe {a.inscribedRole && <span className="dim small">· now {/^[aeiou]/i.test(a.inscribedRole) ? "an" : "a"} {a.inscribedRole}</span>}</h4>
                   <div className="dim small">
-                    Inscribing turns this Form into a Loom node. It costs the Form's Essence recipe
-                    {a.evaluation?.recipe ? ` (${Object.entries(a.evaluation.recipe).map(([e, q]) => `${fmt(q as number, 1)} ${essenceName(e)}`).join(", ")})` : ""}; changing it later costs the recipe again.
+                    Pick a role to place it on your Loom. Costs
+                    {a.evaluation?.recipe ? ` ${Object.entries(a.evaluation.recipe).map(([e, q]) => `${fmt(q as number, 1)} ${essenceName(e)}`).join(", ")}` : " its Essence recipe"}, and again if you change it.
                   </div>
                   <div className="inscribe-grid">
                     {ROLES.filter((r) => r.id !== "keystone" || a.keystoneEligible).map((r) => (
