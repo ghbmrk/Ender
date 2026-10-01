@@ -111,10 +111,27 @@ function showNextToast() {
   const id = ++toastId;
   setState((s) => ({ toasts: [{ id, ...next }] }));
   // Shorter holds while others wait, so a burst of notices doesn't hang around.
-  setTimeout(() => {
-    setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-    setTimeout(showNextToast, 180);
-  }, toastQueue.length ? 2200 : 3800);
+  const hold = toastQueue.length ? 2200 : 3800;
+  current = { id, since: Date.now(), until: Date.now() + hold, timer: setTimeout(endToast, hold) };
+}
+let current: { id: number; since: number; until: number; timer: ReturnType<typeof setTimeout> } | null = null;
+function endToast() {
+  if (!current) return;
+  const { id, timer } = current;
+  clearTimeout(timer);
+  current = null;
+  setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+  setTimeout(showNextToast, 180);
+}
+/** Tapping a notice puts it away. */
+export const dismissToast = endToast;
+/** On a new screen, a notice from the last one leaves soon rather than covering the new one. A notice raised with
+ *  the move itself (younger than half a second) is about the new screen, so it keeps its time. */
+export function hurryToast(ms = 1200) {
+  if (!current || Date.now() - current.since < 500 || current.until - Date.now() <= ms) return;
+  clearTimeout(current.timer);
+  current.until = Date.now() + ms;
+  current.timer = setTimeout(endToast, ms);
 }
 export function toast(text: string, tone: Toast["tone"] = "info") {
   if (toastQueue.length >= 3) toastQueue.shift();

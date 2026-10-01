@@ -14,6 +14,8 @@ export type BattleSetup = {
   foeScale?: { hp?: number; atk?: number };
   /** Most foes on the field at once (default FIELD_CAP). 1 makes every fight a duel: waves arrive one foe at a time and bosses summon no help. */
   fieldCap?: number;
+  /** Foes never enrage (the prologue, which teaches one rhythm at a time). */
+  calm?: boolean;
 };
 
 type Dot = { rounds: number; dmg: number };
@@ -713,7 +715,7 @@ export class Battle {
       }
     }
     // A cornered foe turns desperate: below a third of its health it hits a fifth harder, once.
-    for (const f of this.living("foe").filter((x) => x.tier !== "boss" && !x.enraged && x.hp < x.maxHp * ENRAGE_AT)) {
+    for (const f of this.living("foe").filter((x) => !this.setup.calm && x.tier !== "boss" && !x.enraged && x.hp < x.maxHp * ENRAGE_AT)) {
       f.enraged = true;
       f.power *= ENRAGE_POWER;
       events.push({ type: "enrage", target: f.id });

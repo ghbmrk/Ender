@@ -187,6 +187,15 @@ describe("combat rules (§61–72)", () => {
     expect(angry.some((a) => a.rage)).toBe(true);
     for (const def of Object.values(FOES)) if (def.tier !== "boss") expect(def.attacks.some((a) => a.rage)).toBe(true);
   });
+  it("a calm battle (the prologue) never enrages its foes", () => {
+    for (const calm of [false, true]) {
+      const b = new Battle({ seed: "cm", party: party(), waves: [["keeper"]], difficulty: 1, calm });
+      const k = b.unit("keeper-1");
+      k.hp = Math.floor(k.maxHp * 0.3);
+      b.settle();
+      expect(!!k.enraged).toBe(!calm);
+    }
+  });
   it("AP: start 3, +1 at the start of your turn, Basic +2, max 9", () => {
     const b = new Battle({ seed: "ap", party: party(), waves: [["keeper"]], difficulty: 1 });
     let t = b.nextTurn();

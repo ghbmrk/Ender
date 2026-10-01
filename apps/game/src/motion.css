@@ -1314,3 +1314,9 @@
   from { translate: -6px 0; }
   to { translate: 6px 0; }
 }
+
+/* A notice can be tapped away. */
+.toasts .toast {
+  pointer-events: auto;
+  cursor: pointer;
+}
