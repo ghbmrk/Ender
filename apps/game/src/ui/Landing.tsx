@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { enterGame, signIn } from "../game/launch";
 import { paintedBackdrop, paintedFigure } from "../art/painted";
@@ -13,6 +13,7 @@ import { OpenAIMark } from "./OpenAIMark";
  */
 export function Landing() {
   const [busy, setBusy] = useState(false);
+  const going = useRef(false);
   // Warm the save while the title shows (a first visit creates the character here), so signing in is quick.
   useEffect(() => {
     const warm = () => void api.character().catch(() => undefined);
@@ -20,15 +21,19 @@ export function Landing() {
     return () => ("cancelIdleCallback" in window ? cancelIdleCallback(id as number) : clearTimeout(id as number));
   }, []);
   // Sign-in is a placeholder: it is remembered, and it leads straight into the game.
+  // A tap anywhere on the title begins too: new players tap the middle of the screen first.
   const begin = async () => {
+    if (going.current) return;
+    going.current = true;
     sfx.unlock();
     setBusy(true);
     signIn();
     await enterGame();
     setBusy(false);
+    going.current = false;
   };
   return (
-    <div className="landing painted" data-testid="landing">
+    <div className="landing painted" data-testid="landing" onClick={begin}>
       {/* The painting fills the whole screen, cropping its sides on taller phones, so no dark band shows. */}
       <div className="cover-fill">
         <CoverPainting />
@@ -39,6 +44,7 @@ export function Landing() {
         <h1>ENDER</h1>
         <p className="tagline">You never earn a skill. You make one.</p>
       </div>
+      <p className="landing-tap">Tap to begin</p>
       <div className="title-actions landing-actions">
         {/* The mark is the button; "Sign in" sits in its heart. It names ChatGPT for screen readers. */}
         <button className="landing-signin" disabled={busy} onClick={begin} aria-label="Sign in with ChatGPT" data-testid="sign-in">

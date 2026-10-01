@@ -2140,3 +2140,30 @@ table,
 .ws-role-fit.full {
   color: #e8a07a;
 }
+
+/* The foe's health in numbers under its bar, so progress in a long fight is plain. */
+.stage .foe-tag .foe-hp-num {
+  margin: 4px 0 2px;
+  text-align: center;
+  font-size: 36px;
+  font-weight: 700;
+  color: #ffd2c8;
+  text-shadow: 0 2px 0 #000, 0 0 10px #000;
+  font-variant-numeric: tabular-nums;
+}
+/* Skip sits under the hero's badge, clear of foe names on the right. */
+.stage .battle .skip-tutorial {
+  left: 24px;
+  right: auto;
+  top: 470px;
+}
+
+/* Tray names wrap to two lines rather than cutting off: a new player needs to read what they found. */
+.stage .tray-item .tray-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: 200px;
+  line-height: 1.1;
+  text-align: center;
+}

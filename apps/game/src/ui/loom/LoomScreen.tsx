@@ -244,7 +244,7 @@ export function LoomScreen() {
     : hero !== mine
       ? { text: `Open **${heroName}** to place the new Form.` }
       : !lessonPlaced
-        ? { text: "A Form dropped! Forms are the pieces of your skill tree. **Drag it** onto a glowing cell beside your Root." }
+        ? { text: `You found a Form: **${lessonForm?.name ?? "a new piece"}**, in the tray below. Forms are the pieces of your skills. **Drag it** onto a glowing cell beside ${heroName}.` }
         : !lessonSkill
           ? { text: "It's **dormant**: a node must touch the Root, or share an Affinity with a neighbour. Drag it beside the Root." }
           : {

@@ -422,7 +422,8 @@ export function BattleScreen({
           const acts = battle.actionsOf(u.id);
           if (acts.some((a) => battle.costOf(u.id, a.nodeId) <= u.ap)) say("skill");
           else if (acts.length) say("ap");
-        } else say("command");
+        } else if (u.ap > 0 && lesson?.coach.ap) say("ap");
+        else say("command");
       });
     } else {
       const plan = battle.planFoe(u.id);
@@ -587,7 +588,6 @@ export function BattleScreen({
     const events = battle.resolveHero({ actor: s.actor, command: s.command, target: s.target, ally: s.ally, grades: s.tracker.result(), weakPoint: !!s.weakHit });
     events.push(...battle.settle());
     const d = play(events);
-    if (s.command === "basic" && lesson?.commands === "basic") later(d + 300, () => say("ap"));
     later(d + 60, advance);
   };
 
@@ -735,6 +735,8 @@ export function BattleScreen({
     }
   };
   const chooseCommand = (actor: string, command: string) => {
+    // A tip about choosing has been acted on: clear it so it doesn't sit over the fight.
+    setCoach((c) => (c && (c.key === "command" || c.key === "skill" || c.key === "ap") ? null : c));
     if (command !== "basic") {
       const a = battle.actionsOf(actor).find((x) => x.nodeId === command)!;
       if (battle.costOf(actor, command) > battle.unit(actor).ap) return;
@@ -927,7 +929,7 @@ export function BattleScreen({
         );
       })()}
       <div className="bpanel arc" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
-        {phase.k === "attack" && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
+        {phase.k === "attack" && !(lesson && coach) && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
         {(phase.k === "command" || phase.k === "ally") && (
           <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />
         )}
@@ -1041,12 +1043,15 @@ function FoeTag({ u, h, x }: { u: Unit; h: number; x: number }) {
   // Keep the tag on screen near the edges.
   const left = Math.max(10, Math.min(1070 - FOE_TAG_W, x - FOE_TAG_W / 2)) - x;
   return (
-    <div className="foe-tag" style={{ top: -h - 34, left }}>
+    <div className="foe-tag" style={{ top: -h - 78, left }}>
       <div className="foe-name">
         {u.name}
         {u.tier === "elite" && <span className="elite-mark">elite</span>}
       </div>
       <Bar v={u.hp} max={u.maxHp} cls="hp" />
+      <div className="foe-hp-num">
+        {Math.max(0, Math.ceil(u.hp))} / {u.maxHp}
+      </div>
       <Bar v={u.broken ? 100 : u.breakVal} max={100} cls={`brk ${u.broken ? "full" : ""}`} />
       <Statuses u={u} />
     </div>
