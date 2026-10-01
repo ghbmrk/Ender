@@ -12,7 +12,7 @@ import { compiledParty, newBinder, refreshLoom } from "./flow";
 export type TutStep = "strike" | "dodge" | "parry" | "form" | "skill" | "gate";
 
 /** Words the coach says at moments in a practice fight. Each is said once. */
-export type CoachKey = "command" | "attack" | "perfect" | "good" | "miss" | "ap" | "defend" | "dodged" | "parried" | "hit" | "skill" | "broken";
+export type CoachKey = "command" | "attack" | "perfect" | "good" | "miss" | "ap" | "defend" | "dodged" | "parried" | "hit" | "skill" | "broken" | "now";
 
 export type Lesson = {
   step: TutStep;
@@ -57,6 +57,7 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
       dodged: "**Dodged.** Dodge is forgiving: its window is wide.",
       hit: "Too early or too late. Tap **DODGE** just as the ring closes.",
       ap: "Each Basic also builds **AP**: the blue pips. Crafted skills spend it.",
+      now: "**Now!** Tap **DODGE**.",
     },
     setup: { waves: [["wisp"]], foeScale: { hp: 0.6, atk: 0.45 } },
   },
@@ -75,6 +76,7 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
       parried: "**Parried!** You struck back, took **+1 AP**, and the Husk took Break.",
       dodged: "Dodge keeps you safe, but only Parry strikes back. Try **PARRY** on the next blow.",
       hit: "A Parry is perfect or nothing. Tap it right as the ring meets the mark.",
+      now: "**Now!** Tap **PARRY** as the blow lands.",
     },
     setup: { waves: [["husk"]], foeScale: { hp: 0.65, atk: 0.45 } },
   },

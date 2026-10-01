@@ -85,6 +85,11 @@ export class Cues {
     mark.classList.add("pulse", cls);
   }
 
+  /** Stops every ring where it is (a lesson holding time), or sets them going again from there. */
+  hold(on: boolean) {
+    for (const r of this.rings.values()) on ? r.anim.pause() : r.anim.play();
+  }
+
   clear() {
     for (const i of [...this.rings.keys()]) this.drop(i);
   }
