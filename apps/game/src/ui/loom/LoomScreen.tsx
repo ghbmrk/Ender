@@ -206,7 +206,22 @@ export function LoomScreen() {
       if (d.from === "board") removeToPool(d.node);
       return;
     }
-    if (d.over) {
+    // A Form dragged from the tray and let go short of the board is not lost: the nearest
+    // glowing cell takes it when close, otherwise it stays in hand for a tap.
+    let over = d.over;
+    if (!over && d.from === "pool") {
+      const near = [...goodCells].map((k) => k.split(",").map(Number) as [number, number])
+        .map(([q, r]) => ({ q, r, dist: Math.hypot(cellXY(q, r)[0] - d.x, cellXY(q, r)[1] - d.y) }))
+        .sort((a, b) => a.dist - b.dist)[0];
+      if (near && near.dist < HEX * 2.2) over = { q: near.q, r: near.r };
+      else {
+        setSelected(d.node.id);
+        setPlacing(d.node.formId);
+        return;
+      }
+    }
+    if (over) {
+      d.over = over;
       const next = moveNode(nodes, d.node, d.over);
       const nextPool = d.from === "pool" ? pool.filter((x) => x.id !== d.node.id) : pool;
       // A node displaced from its cell by a pool drop goes back to the pool.
@@ -326,7 +341,13 @@ export function LoomScreen() {
           const hover = drag?.moved && drag.over && drag.over !== "tray" && drag.over.q === q && drag.over.r === r;
           const open = !locked && !byCell.has(`${q},${r}`) && hexDist(q, r) > 0;
           const glow = (lesson && hero === mine && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`)) || (!!held && !locked && hexDist(q, r) > 0 && goodCells.has(`${q},${r}`) && !(drag?.moved && hover));
-          return <path key={`${q},${r}`} d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />;
+          return (
+            <g key={`${q},${r}`}>
+              <path d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />
+              {/* An empty cell that takes the Form says so, so it never reads as just decoration. */}
+              {glow && <text x={x} y={y + HEX * 0.22} className="cell-plus" textAnchor="middle">+</text>}
+            </g>
+          );
         })}
         {/* painted links */}
         {shownC.links.map((l) => {
