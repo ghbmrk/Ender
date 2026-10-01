@@ -19,7 +19,7 @@ export const DEMO_LOOMS: Record<string, LoomNode[]> = {
   quick: [n("storm-lattice", "action", 1, 0, ["flex", "reach"], 74), n("veiled-edge", "action", 0, 1, ["veil", "flex"], 61), n("quickglass", "modifier", 1, 1, ["flex", "veil"], 55)],
 };
 
-import { DUEL_FIELD_CAP, DUEL_HP } from "./hero";
+import { DUEL_ATK, DUEL_FIELD_CAP, DUEL_HP } from "./hero";
 
 /** ?demo=boss, ?demo=battle, or ?demo=<foe kind> to meet one foe alone (e.g. ?demo=matron). */
 export function demoSetup(boss = false, kind?: string): BattleSetup {
@@ -32,7 +32,7 @@ export function demoSetup(boss = false, kind?: string): BattleSetup {
     waves: one ? [[one]] : boss ? [["king"]] : [["husk"], ["wisp"], ["hound"], ["keeper"]],
     difficulty: 1,
     fieldCap: DUEL_FIELD_CAP,
-    foeScale: { hp: DUEL_HP[boss ? "boss" : one && FOES[one].tier === "elite" ? "elite" : "normal"] },
+    foeScale: { hp: DUEL_HP[boss ? "boss" : one && FOES[one].tier === "elite" ? "elite" : "normal"], atk: DUEL_ATK[boss ? "boss" : one && FOES[one].tier === "elite" ? "elite" : "normal"] },
   };
 }
 export { AFFINITIES };

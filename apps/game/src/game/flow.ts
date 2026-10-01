@@ -1,7 +1,7 @@
 import { PARTY, ROOTS, compileLoom, type BattleSetup, type FoeKind, type LoomNode, type RootId } from "@ender/battle";
 import { api } from "../api";
 import { getState, setState, toast, type MapNode } from "../state/store";
-import { DUEL_FIELD_CAP, DUEL_HP, heroFigure, partyRoots, saveHero } from "./hero";
+import { DUEL_ATK, DUEL_FIELD_CAP, DUEL_HP, heroFigure, partyRoots, saveHero } from "./hero";
 import { lookFromSeed, newSeed, randomName } from "../art/look";
 import type { BattleResult } from "../ui/battle/BattleScreen";
 import { bests, noteRun } from "./records";
@@ -147,7 +147,7 @@ export function battleSetup(): BattleSetup {
     waves: (b.waves as FoeKind[][]).flat().map((k) => [k]),
     difficulty: b.difficulty,
     fieldCap: DUEL_FIELD_CAP,
-    foeScale: { hp: DUEL_HP[b.kind === "boss" ? "boss" : b.kind === "elite" ? "elite" : "normal"] },
+    foeScale: { hp: DUEL_HP[b.kind === "boss" ? "boss" : b.kind === "elite" ? "elite" : "normal"], atk: DUEL_ATK[b.kind === "boss" ? "boss" : b.kind === "elite" ? "elite" : "normal"] },
   };
 }
 

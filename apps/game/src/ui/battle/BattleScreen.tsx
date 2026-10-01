@@ -627,7 +627,9 @@ export function BattleScreen({
     sfx.unlock();
     const r = s.tracker.press(t, kind);
     if (!r) return;
-    if (r.result === "hit") float([chest(battle.unit(s.plan.targets[0]!))[0] + 60, chest(battle.unit(s.plan.targets[0]!))[1] - 120], kind === "parry" ? "TOO EARLY" : "MISTIMED", "def hit");
+    // Say which way the press missed, so the next one can be corrected.
+    const late = t > s.impacts[r.index]!;
+    if (r.result === "hit") float([chest(battle.unit(s.plan.targets[0]!))[0] + 60, chest(battle.unit(s.plan.targets[0]!))[1] - 120], late ? "TOO LATE" : "TOO EARLY", "def hit");
   };
 
   const resolveDefend = (s: DefendSeq) => {
