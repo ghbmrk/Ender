@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HeroPrebake } from "../battle/HeroPrebake";
 import { sfx } from "../battle/sfx";
 import { FOES, PARTY, ROOTS, type FoeKind, type RootId } from "@ender/battle";
@@ -138,9 +138,12 @@ export function MapScreen() {
   useEffect(() => prepaintFoes(reach), [reach.map((n) => n.id).join()]);
   // A tap on a stop you can't reach yet says where you can go, and the reachable stops flash.
   const [nudge, setNudge] = useState(0);
+  const shownAt = useRef(performance.now());
   const Back = backdropFor(ex.plan.realmId, false)?.default;
   const go = (n: MapNode): void => {
     if (reveal) return;
+    // A tap that skipped the fight's Victory lands its click here a moment later: the map's choice is never made by it.
+    if (performance.now() - shownAt.current < 200) return;
     // A tap on a stop further on goes by the way there; when that way is a fight, say so, so a Shrine never seems to turn into a foe.
     const by = (v: MapNode): void => {
       if (n.layer > anchor && v.encounter && v.kind !== "mystery")
