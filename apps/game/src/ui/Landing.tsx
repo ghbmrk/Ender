@@ -7,10 +7,9 @@ import { Fig } from "./battle/Figure";
 import { sfx } from "./battle/sfx";
 
 /**
- * The first screen anyone sees, laid out like the cover of an old fantasy rulebook: a title block on
- * aged card, one big framed painting of a torchlit temple, and a line of cover copy. The painting is
- * alive: torchlight flickers, embers rise and the idol's gem eyes smoulder. Sign-in is a placeholder;
- * the button simply begins.
+ * The first screen anyone sees: the title and the button over a full-bleed painting in the spirit of
+ * classic fantasy cover art (a torchlit temple, an idol, a small party at the foot of the stair). The painting is alive: braziers flicker and embers rise. Dark bands keep the title and the
+ * button legible. Sign-in is a placeholder; the button simply begins.
  */
 export function Landing() {
   const [hasSave, setHasSave] = useState(false);
@@ -32,17 +31,18 @@ export function Landing() {
     setState({ screen: returning ? "title" : "create" });
   };
   return (
-    <div className="landing cover" data-testid="landing">
-      <header className="cv-head">
-        <div className="cv-series">A Book of Making</div>
-        <h1 className="cv-title">Ender</h1>
-        <div className="cv-sub">Adventurer’s Handbook</div>
-      </header>
-      <div className="cv-art">
+    <div className="landing painted" data-testid="landing">
+      {/* The painting fills the whole screen, cropping its sides on taller phones, so no dark band shows. */}
+      <div className="cover-fill">
         <CoverPainting />
       </div>
-      <p className="cv-copy">Everything a hero needs to make their own skills, and to live long enough to use them.</p>
-      <div className="cv-actions">
+      <div className="landing-fade top" />
+      <div className="landing-fade bottom" />
+      <div className="title-card landing-card">
+        <h1>ENDER</h1>
+        <p className="tagline">You never earn a skill. You make one.</p>
+      </div>
+      <div className="title-actions landing-actions">
         <button className="big primary landing-signin" onClick={begin} data-testid="sign-in">
           Sign in with ChatGPT
         </button>
