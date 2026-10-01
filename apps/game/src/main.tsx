@@ -6,12 +6,15 @@ import { warm } from "./art/ondevice/store";
 import { Stage } from "./ui/Stage";
 import { Landing } from "./ui/Landing";
 import { Toasts } from "./ui/Toasts";
+// Screen stylesheets first, then the shared ones that refine them (the order they had before the split start).
+// They load with the first part: the single-file build dropped them when only lazy screens imported them.
+import "./coach.css";
+import "./create.css";
 import "./styles.css";
 import "./frame.css";
 import "./painted.css";
 import "./motion.css";
-// Coach styles load with the first part: the single-file build dropped them when only the lazy Coach imported them.
-import "./coach.css";
+import "./cover.css";
 import "./blind.css";
 
 /**
@@ -27,6 +30,10 @@ const rest = (async () => {
   (window as any).__ender = { debug, getState: store.getState, setState: store.setState, api };
   App = app.App;
   markReady();
+  // Then everything a later screen needs, invisibly, in the order the player reaches it: fonts and paintings.
+  void import("./art/painted").then((m) => m.preloadAllArt());
+  for (const f of ["500 1em 'Alegreya SC'", "700 1em 'Alegreya SC'", "800 1em 'Alegreya SC'", "400 1em Alegreya", "italic 400 1em Alegreya", "700 1em Alegreya", "400 1em 'Atkinson Hyperlegible'", "700 1em 'Atkinson Hyperlegible'"])
+    void document.fonts?.load(f).catch(() => undefined);
   // On-device character art: start the painter behind the first screen and keep the hero's paint current.
   void import("./art/ondevice/useArt").then((m) => m.watchHero());
   if ((window as { __enderNoSave?: boolean }).__enderNoSave) toast("Your save couldn't be read in this browser just now, so this session won't be saved. Reload to try again.", "loss");

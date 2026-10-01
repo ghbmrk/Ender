@@ -48,15 +48,18 @@ const hexPath = (x: number, y: number, s: number) =>
     return `${i ? "L" : "M"}${(x + s * Math.cos(a)).toFixed(1)} ${(y + s * Math.sin(a)).toFixed(1)}`;
   }).join(" ") + " Z";
 let TRAY_TOP = 1150;
-function fitLoom(stageH: number, tabs: boolean, emptyTray = false) {
+/** Room kept above the Forms tray for the lesson's tip, so it never covers the board or the tray. */
+const COACH_ROOM = 250;
+function fitLoom(stageH: number, tabs: boolean, emptyTray = false, coach = false) {
   // The lower block (Forms tray + skills summary, ~600) sits on the Continue bar; the board fills and centres in
   // what is left above it. A radius-2 board is 8.66 hexes tall and 8 wide. With no Forms to place, the tray
   // shrinks to one line rather than leaving an empty box.
   const head = tabs ? 290 : 170;
   TRAY_TOP = stageH - 178 - (emptyTray ? 420 : 600);
   // Up to 150: on a tall phone the locked outer ring may bleed off the sides so the cells you use are bigger.
-  HEX = Math.round(Math.min(150, (TRAY_TOP - head - 30) / 8.66));
-  CY = Math.round((head + TRAY_TOP - 10) / 2);
+  const foot = TRAY_TOP - (coach ? COACH_ROOM : 0);
+  HEX = Math.round(Math.min(150, (foot - head - 30) / 8.66));
+  CY = Math.round((head + foot - 10) / 2);
 }
 
 type Layout = Record<RootId, LoomNode[]>;
@@ -100,7 +103,7 @@ export function LoomScreen() {
   const afterFight = useStore((s) => s.afterFight) && !DEMO;
   const spoils = useStore((s) => s.rewards);
   const [raw, setRaw] = useState<any[]>([]);
-  fitLoom(stageH, roots.length > 1, !pool.length && !raw.length && !lesson);
+  fitLoom(stageH, roots.length > 1, !pool.length && !raw.length && !lesson, !!lesson);
   const [weaving, setWeaving] = useState<any | null>(null);
   /** A pool node (by Form id) waiting for the player to tap a cell. */
   const [placing, setPlacing] = useState<string | null>(null);
@@ -207,7 +210,22 @@ export function LoomScreen() {
       if (d.from === "board") removeToPool(d.node);
       return;
     }
-    if (d.over) {
+    // A Form dragged from the tray and let go short of the board is not lost: the nearest
+    // glowing cell takes it when close, otherwise it stays in hand for a tap.
+    let over = d.over;
+    if (!over && d.from === "pool") {
+      const near = [...goodCells].map((k) => k.split(",").map(Number) as [number, number])
+        .map(([q, r]) => ({ q, r, dist: Math.hypot(cellXY(q, r)[0] - d.x, cellXY(q, r)[1] - d.y) }))
+        .sort((a, b) => a.dist - b.dist)[0];
+      if (near && near.dist < HEX * 2.2) over = { q: near.q, r: near.r };
+      else {
+        setSelected(d.node.id);
+        setPlacing(d.node.formId);
+        return;
+      }
+    }
+    if (over) {
+      d.over = over;
       const next = moveNode(nodes, d.node, d.over);
       const nextPool = d.from === "pool" ? pool.filter((x) => x.id !== d.node.id) : pool;
       // A node displaced from its cell by a pool drop goes back to the pool.
@@ -244,13 +262,14 @@ export function LoomScreen() {
         : null
     : hero !== mine
       ? { text: `Open **${heroName}** to place the new Form.` }
+      : !lessonPlaced && pending
+        ? { text: `**${pending.name}** is in hand. Tap a cell with a **+** to place it.` }
       : !lessonPlaced
-        ? { text: `You found a Form: **${lessonForm?.name ?? "a new piece"}**, in the tray below. Forms are the pieces of your skills. **Drag it** onto a glowing cell beside ${heroName}.` }
+        ? { text: `You found a Form: **${lessonForm?.name ?? "a new piece"}**, in the tray below. Forms are the pieces of your skills. **Drag it** onto a **+** cell beside ${heroName}, or just tap a **+**.` }
         : !lessonSkill
           ? { text: "It's **dormant**: a node must touch the Root, or share an Affinity with a neighbour. Drag it beside the Root." }
           : {
-              text: `**${lessonSkill.name}** is now ${heroName}'s skill. Your Loom is your skill tree: move a Form and the skills change.`,
-              action: { label: "Fight", onClick: () => goTo("skill"), testId: "lesson-fight" },
+              text: `**${lessonSkill.name}** is now ${heroName}'s skill. Your Loom is your skill tree: move a Form and the skills change. Tap **Fight** to try it.`,
             };
 
   const cells = boardCells(2);
@@ -276,8 +295,30 @@ export function LoomScreen() {
   const byCell = new Map(shown.map((n) => [`${n.q},${n.r}`, n]));
   const dormant = new Set(shownC.dormantNodeIds);
 
+  // In the first lesson, a tap anywhere on the board places the new Form on the nearest open
+  // cell beside the hero, so a player who taps instead of dragging is never stuck.
+  const lessonPending = lesson && editable && hero === mine && !lessonPlaced && !!lessonForm && pool.some((n) => n.id === lessonForm.id);
+  const boardTap = (e: React.PointerEvent) => {
+    if (!lessonPending || drag) return;
+    if ((e.target as HTMLElement).closest("button, .loom-lower, .hero-tabs, .coach, .sheet-backdrop")) return;
+    const p = toStage(e.clientX, e.clientY);
+    if (p.y >= TRAY_TOP) return;
+    const near = cells
+      .filter(({ q, r }) => hexDist(q, r) === 1 && !byCell.has(`${q},${r}`))
+      .map(({ q, r }) => ({ q, r, dist: Math.hypot(cellXY(q, r)[0] - p.x, cellXY(q, r)[1] - p.y) }))
+      .sort((a, b) => a.dist - b.dist)[0];
+    if (!near) return;
+    setPlacing(null);
+    setLanded(lessonForm!.id);
+    commit([...nodes, { ...lessonForm!, q: near.q, r: near.r }], pool.filter((x) => x.id !== lessonForm!.id));
+  };
+  // With a single Form in the tray, the whole tray is its handle.
+  const trayDown = (e: React.PointerEvent) => {
+    if (editable && pool.length === 1 && !raw.length) down(e, pool[0]!, "pool");
+  };
+
   return (
-    <div className="loom-screen" onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid="loom">
+    <div className="loom-screen" onPointerDown={boardTap} onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid="loom">
       <div className="loom-bg" />
       <div className="world" style={{ top: worldTop }}>
       <header className="loom-head">
@@ -301,6 +342,12 @@ export function LoomScreen() {
             ))}
           </div>
         )}
+        {/* The lesson ends on the same big bottom button as every other Loom visit, where thumbs already look for it. */}
+        {lesson && lessonSkill && (
+          <button className="loom-done coach-pulse" onClick={() => goTo("skill")} data-testid="lesson-fight">
+            Fight
+          </button>
+        )}
         {!lesson && <button className={`loom-done ${afterFight && !raw.length && !pool.length ? "coach-pulse" : ""}`} onClick={close} data-testid="loom-done">
           {afterFight || (inRun && editable) ? "Continue" : "Done"}
         </button>}
@@ -322,7 +369,13 @@ export function LoomScreen() {
           const hover = drag?.moved && drag.over && drag.over !== "tray" && drag.over.q === q && drag.over.r === r;
           const open = !locked && !byCell.has(`${q},${r}`) && hexDist(q, r) > 0;
           const glow = (lesson && hero === mine && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`)) || (!!held && !locked && hexDist(q, r) > 0 && goodCells.has(`${q},${r}`) && !(drag?.moved && hover));
-          return <path key={`${q},${r}`} d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />;
+          return (
+            <g key={`${q},${r}`}>
+              <path d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />
+              {/* An empty cell that takes the Form says so, so it never reads as just decoration. */}
+              {glow && <text x={x} y={y + HEX * 0.22} className="cell-plus" textAnchor="middle">+</text>}
+            </g>
+          );
         })}
         {/* painted links */}
         {shownC.links.map((l) => {
@@ -375,7 +428,7 @@ export function LoomScreen() {
       })}
 
       <div className="loom-lower" style={{ top: TRAY_TOP }}>
-      <div className={`tray ${!pool.length && !raw.length ? "empty" : ""} ${drag?.moved && drag.over === "tray" ? "hover" : ""}`}>
+      <div className={`tray ${!pool.length && !raw.length ? "empty" : ""} ${drag?.moved && drag.over === "tray" ? "hover" : ""}`} onPointerDown={trayDown}>
         <div className="tray-label">
           Forms {(raw.length > 0 || pool.length > 0) && <span className="dim">· {raw.length ? "tap a new Form to weave it" : placing ? "tap a glowing cell" : "tap or drag onto the Loom"}</span>}
         </div>
@@ -405,7 +458,7 @@ export function LoomScreen() {
 
       <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} power={ROOTS[hero].basic} />
       </div>
-      {coach && !drag?.moved && !weaving && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: TRAY_TOP - 175 }} />}
+      {coach && !drag?.moved && !weaving && <Coach text={coach.text} key={coach.text} style={{ bottom: 1920 - TRAY_TOP + 16 }} />}
 
       {drag?.moved && (
         <svg className="drag-ghost" viewBox="0 0 1080 1920">

@@ -42,3 +42,12 @@ const links = head
   .filter((l) => /^<(script|link rel="(stylesheet|modulepreload)")/.test(l));
 writeFileSync(resolve(split, "artifact.html"), `${title}\n${links.join("\n")}\n${root}\n`);
 console.log(`dist-split/artifact.html written (${readdirSync(resolve(split, "assets")).length} supporting files)`);
+
+// A stylesheet with an unclosed brace silently swallows every rule after it (a merge once dropped one), so the
+// build refuses to finish until each sheet balances.
+const srcDir = resolve(ROOT, "apps/game/src");
+for (const f of readdirSync(srcDir).filter((f) => f.endsWith(".css"))) {
+  let depth = 0;
+  for (const c of readFileSync(resolve(srcDir, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "")) depth += c === "{" ? 1 : c === "}" ? -1 : 0;
+  if (depth !== 0) throw new Error(`apps/game/src/${f}: ${depth > 0 ? "an unclosed {" : "an extra }"}; every rule after it would be lost`);
+}

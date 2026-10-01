@@ -69,10 +69,12 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
     defense: "both",
     slow: 1,
     coach: {
-      defend: "Now try **PARRY**. Its window is tight, but it pays: **+1 AP** and **Break** on the foe.",
-      parried: "**Parried!** +1 AP, and the Husk took Break.",
-      dodged: "Safe, but Dodge earns nothing. Try **PARRY** on the next blow.",
-      hit: "Parry is tight. Tap it right as the ring closes.",
+      // Said at each of your turns, so the last blow's "Parry is tight" never sits over the cards when Parry can't be used.
+      command: "Attack with **Basic**. When it strikes back, tap **PARRY** as the ring closes.",
+      defend: "Now try **PARRY**. Only a perfect tap counts: it blocks the blow and **strikes back**. Miss it and the hit lands.",
+      parried: "**Parried!** You struck back, took **+1 AP**, and the Husk took Break.",
+      dodged: "Dodge keeps you safe, but only Parry strikes back. Try **PARRY** on the next blow.",
+      hit: "A Parry is perfect or nothing. Tap it right as the ring meets the mark.",
     },
     setup: { waves: [["husk"]], foeScale: { hp: 0.65, atk: 0.45 } },
   },

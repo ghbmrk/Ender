@@ -21,6 +21,7 @@ export function RealmGate() {
   const fresh = !Object.keys(best).length;
   if (!world) return <Panel title="Realm Gate">Listening to the Gate…</Panel>;
   const go = async (id: string) => {
+    if (busy) return;
     setBusy(true);
     try {
       await startExpedition(id);
@@ -97,7 +98,7 @@ export function RealmGate() {
                 <button className="realm-more" onClick={() => setOpen(open === r.id ? null : r.id)} data-testid={`realm-more-${r.id}`}>
                   {open === r.id ? "Less" : "Details"}
                 </button>
-              <button className="primary" disabled={busy} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
+              <button className={`primary ${busy ? "going" : ""}`} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
                 Set out
               </button>
             </div>

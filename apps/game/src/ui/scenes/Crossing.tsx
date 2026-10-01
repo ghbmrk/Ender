@@ -3,7 +3,7 @@ import { HeroPrebake } from "../battle/HeroPrebake";
 import { PARTY, ROOTS } from "@ender/battle";
 import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { crossingBackdrop } from "../../art/registry";
-import { paintedBackdrop } from "../../art/painted";
+import { paintedBackdrop, predecode } from "../../art/painted";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
 
 /** Where each station's sign hangs on the painted square, in world (1080x1920) units. */
@@ -83,6 +83,8 @@ export function Crossing() {
   const lesson = useStore((s) => s.tutorial === "gate");
   const mod = crossingBackdrop();
   const Back = mod?.default;
+  // The Gate's realm paintings (also the fight backdrops) decode while the player looks around here.
+  useEffect(() => predecode(["ashen-vault", "glass-fen", "hollow-keep", "throne", "fen-lair"].map(paintedBackdrop)), []);
   // The painted square is a lane of lit doorways; each station hangs its sign on one of them.
   const painted = !!paintedBackdrop("crossing");
   const stations = (painted ? PAINTED_STATIONS : (mod?.STATIONS ?? [])) as readonly { id: string; x: number; y: number }[];

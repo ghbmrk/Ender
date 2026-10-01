@@ -55,9 +55,15 @@ const cmds = {
   },
   async taptext({ t, after = 250 }) {
     // Like a person reading the screen, prefer something that looks pressable over plain words.
-    const pressable = page.locator("button, [role=button], a").filter({ hasText: String(t), visible: true }).first();
-    const words = page.getByText(String(t), { exact: false }).filter({ visible: true }).first();
-    const box = (await pressable.boundingBox({ timeout: 300 }).catch(() => null)) ?? (await words.boundingBox({ timeout: 1000 }).catch(() => null));
+    // Only what is on screen counts: a match scrolled out of view is not something the player sees.
+    const onScreen = async (loc) => {
+      for (const el of await loc.all()) {
+        const b = await el.boundingBox().catch(() => null);
+        if (b && b.y + b.height / 2 > 0 && b.y + b.height / 2 < 844 && b.x + b.width / 2 > 0 && b.x + b.width / 2 < 390) return b;
+      }
+      return null;
+    };
+    const box = (await onScreen(page.locator("button, [role=button], a").filter({ hasText: String(t), visible: true }))) ?? (await onScreen(page.getByText(String(t), { exact: false }).filter({ visible: true })));
     if (!box) return { error: `no visible text "${t}"`, shot: await shot() };
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
     await run(Number(after));
@@ -81,6 +87,9 @@ createServer(async (req, res) => {
   const args = Object.fromEntries(u.searchParams);
   try {
     if (!cmds[c]) throw new Error(`unknown command ${c}`);
+    // A finger can't land off the glass: say so rather than silently tapping nothing.
+    for (const k of ["x", "x1", "x2"]) if (k in args && (+args[k] < 0 || +args[k] > 390)) throw new Error(`${k}=${args[k]} is off the screen: x goes from 0 to 390`);
+    for (const k of ["y", "y1", "y2"]) if (k in args && (+args[k] < 0 || +args[k] > 844)) throw new Error(`${k}=${args[k]} is off the screen: y goes from 0 to 844`);
     const r = await cmds[c](args);
     log(`${c} ${JSON.stringify(args)} -> ${r.shot ?? ""}${r.error ? " ERR " + r.error : ""}`);
     res.end(JSON.stringify(r) + "\n");

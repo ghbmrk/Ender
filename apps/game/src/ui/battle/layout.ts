@@ -37,6 +37,6 @@ export const DUEL_FOE_DEPTH = 0.5;
 /** The thumb arc, in stage px relative to the card row's top: Parry and Dodge sit on it. */
 export const ARC = {
   parry: { x: 885, y: -440, d: 330 },
-  dodge: { x: 590, y: -200, d: 280 },
+  dodge: { x: 590, y: -248, d: 280 },
   path: (top: number) => `M0 ${top + 210} Q 524 ${top - 207} 1080 ${top - 574}`,
 };

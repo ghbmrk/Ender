@@ -19,7 +19,7 @@ import {
   type Unit,
 } from "@ender/battle";
 import { backdropFor, backdropId } from "../../art/registry";
-import { SceneBackdrop } from "../../art/SceneBackdrop";
+import { GroundedBackdrop, SceneBackdrop } from "../../art/SceneBackdrop";
 import { paintedCard } from "../../art/painted";
 import { STAGE_H, useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH } from "../affinity";
@@ -104,7 +104,7 @@ const RIDER_SHORT: Record<string, string> = {
   flex: "Perfect timing: act sooner",
   bond: "gives an ally 1 AP",
 };
-const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PERFECT PARRY", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "DODGE", hit: "HIT" };
+const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PARRY! COUNTER", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "DODGE", hit: "HIT" };
 const STATUS_GLYPH: Record<string, string> = { marked: "◎", slow: "≋", fracture: "⟋", burn: "♨", poison: "☠" };
 
 type CamKick = "shake" | "big" | "punch" | "finale";
@@ -154,6 +154,8 @@ export function BattleScreen({
   const [, force] = useReducer((n: number) => n + 1, 0);
   const [phase, setPhase] = useState<Phase>({ k: "intro" });
   const [target, setTarget] = useState<string | null>(null);
+  /** AP the card under the thumb would spend (negative: gain), shown on the AP bar before the tap lands. */
+  const [aim, setAim] = useState(0);
   const [floaters, setFloaters] = useState<Floater[]>([]);
   const [fx, setFx] = useState<Fx[]>([]);
   const [banner, setBanner] = useState<{ id: number; text: string; sub?: string; ms: number; lore?: string } | null>(null);
@@ -291,6 +293,7 @@ export function BattleScreen({
   /** Turn engine events into numbers, words and paint. */
   const play = (events: BattleEvent[]) => {
     let d = 0;
+    let waveShown = false;
     for (const e of events) {
       switch (e.type) {
         case "damage": {
@@ -384,11 +387,15 @@ export function BattleScreen({
         case "summon":
           later(d, () => showBanner("Reinforcements", "the seals give way"));
           break;
-        case "wave":
-          later(d, () => showBanner(`Wave ${e.index + 1}`));
+        case "wave": {
+          // A new foe stepping in is named, and holds the screen over the round banner, so a swap never reads as the old foe changing.
+          const next = battle.living("foe")[0];
+          waveShown = true;
+          later(d, () => showBanner(next ? `${next.name} steps in` : `Wave ${e.index + 1}`, `foe ${e.index + 1} of this fight`, 1400));
           break;
+        }
         case "round":
-          later(d, () => showBanner(`Round ${e.round}`, undefined, 650));
+          if (!waveShown) later(d, () => showBanner(`Round ${e.round}`, undefined, 650));
           break;
         case "skip":
           float(battle.unit(e.unit), "Staggered", "fl-status", d);
@@ -795,8 +802,9 @@ export function BattleScreen({
         className="world"
         style={{ top: worldTop, transformOrigin: cam ? `${cam.at[0]}px ${cam.at[1]}px` : undefined, animation: cam ? `cam-${cam.k}-${cam.n % 2} ${CAM_MS[cam.k]}ms ease-out` : undefined }}
       >
-      <div className="backdrop">
-        <SceneBackdrop id={backdropId(realmId, boss)} Drawn={Backdrop} />
+      {/* In a duel the painting's ground is lined up with the foe's feet, so the foe stands on the floor. */}
+      <div className={`backdrop ${duel ? "grounded-box" : ""}`}>
+        {duel ? <GroundedBackdrop id={backdropId(realmId, boss)} Drawn={Backdrop} feet={arena.foe[1]} top={-worldTop} /> : <SceneBackdrop id={backdropId(realmId, boss)} Drawn={Backdrop} />}
       </div>
 
       {/* units: foes behind, heroes in front */}
@@ -899,7 +907,8 @@ export function BattleScreen({
           <Coach
             text={coach.text}
             key={coach.key}
-            style={{ bottom: STAGE_H - PANEL_TOP + 24 }}
+            // While a blow comes in, the tip moves up under the foe's attack name, clear of the ring on the hero.
+            style={phase.k === "defend" ? { top: 720 } : { bottom: STAGE_H - PANEL_TOP + 120 }}
             onTap={coach.key === "command" && phase.k === "command" ? () => chooseCommand(phase.actor, "basic") : undefined}
           />
         )
@@ -956,16 +965,17 @@ export function BattleScreen({
               <button className={`def-btn round parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} style={at(ARC.parry)} onPointerDown={press("parry")} aria-disabled={!live} data-testid={live ? "parry" : undefined}>
                 <span className="def-glyph">⚔</span>
                 Parry
-                {live && <small>tight · +1 AP</small>}
+                {live && <small>perfect · counter</small>}
               </button>
             )}
           </div>
         );
       })()}
       <div className="bpanel arc" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
+        {battle.living("party")[0] && <ApBar u={phase.k === "command" || phase.k === "ally" ? battle.unit(phase.actor) : battle.living("party")[0]!} aim={phase.k === "command" ? aim : 0} />}
         {phase.k === "attack" && !(lesson && coach) && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
         {(phase.k === "command" || phase.k === "ally") && (
-          <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />
+          <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : null} onAim={setAim} onPick={(a, c) => { setAim(0); chooseCommand(a, c); }} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />
         )}
         {/* Outside your turn the cards stay in place, dimmed, so the row never empties and the thumb knows where to go. */}
         {phase.k !== "command" && phase.k !== "ally" && battle.living("party")[0] && (
@@ -1032,7 +1042,7 @@ function defeatTip(battle: Battle): string {
   const foe = battle.foes().find((f) => f.alive) ?? battle.foes()[0];
   const blurb = foe ? FOES[foe.kind as FoeKind]?.blurb.replace(/^Boss\.\s*/, "") : undefined;
   if (battle.stats.perfects === 0) return "Tap as the closing ring meets the mark: a Perfect strike hits much harder.";
-  if (battle.stats.parries === 0) return `Try Parry when you know the beat. It's tight, but it gives AP and Breaks the foe.${blurb ? ` ${foe!.name}: ${blurb}` : ""}`;
+  if (battle.stats.parries === 0) return `Try Parry when you know the beat. Only a perfect one counts, but it strikes back, gives AP and Breaks the foe.${blurb ? ` ${foe!.name}: ${blurb}` : ""}`;
   if (blurb) return `${foe!.name}: ${blurb}`;
   return "Weave the Forms you find on the Loom. New skills hit harder.";
 }
@@ -1145,7 +1155,38 @@ function Timeline({ b, tl, artOf }: { b: Battle; tl: { round: number; ids: strin
   );
 }
 
-/** The hero's corner badge: portrait, health along the curved edge, AP as gems. */
+/**
+ * AP sits on top of the cards that spend it: a row of gems that fill as Basic and Parries earn AP and drain when a
+ * skill is used. While a card is pressed, the gems it would spend flicker (or, for Basic, the ones it would add show).
+ */
+function ApBar({ u, aim }: { u: Unit; aim: number }) {
+  const prev = useRef(u.ap);
+  const [flash, setFlash] = useState<"gain" | "spend" | null>(null);
+  useEffect(() => {
+    if (u.ap === prev.current) return;
+    setFlash(u.ap > prev.current ? "gain" : "spend");
+    prev.current = u.ap;
+    const t = setTimeout(() => setFlash(null), 450);
+    return () => clearTimeout(t);
+  }, [u.ap]);
+  return (
+    <div className={`ap-bar ${flash ?? ""}`} data-testid={`ap-${u.id}`}>
+      <span className="ap-label">
+        AP <b>{u.ap}</b>
+      </span>
+      <span className="ap-gems">
+        {Array.from({ length: RULES.apMax }, (_, i) => {
+          const on = i < u.ap;
+          const spend = aim > 0 && on && i >= u.ap - aim;
+          const gain = aim < 0 && !on && i < u.ap - aim;
+          return <i key={i} className={`ap-gem ${on ? "on" : ""} ${spend ? "aim-spend" : ""} ${gain ? "aim-gain" : ""}`} />;
+        })}
+      </span>
+    </div>
+  );
+}
+
+/** The hero's corner badge: portrait and health along the curved edge (AP sits on the card row). */
 function HeroBadge({ u, others, impacts, art }: { u: Unit; others: Unit[]; impacts: DefendSeq | null; art?: Art }) {
   const pct = Math.max(0, Math.min(100, (100 * u.hp) / u.maxHp));
   const arc = "M372 24 Q 372 420 14 432";
@@ -1163,11 +1204,6 @@ function HeroBadge({ u, others, impacts, art }: { u: Unit; others: Unit[]; impac
       <div className="hb-hp">
         <b>{Math.round(u.hp)}</b>
         <small>of {u.maxHp}</small>
-      </div>
-      <div className="ap-pips hb-ap" data-testid={`ap-${u.id}`}>
-        {Array.from({ length: RULES.apMax }, (_, i) => (
-          <span key={i} className={i < u.ap ? "on" : ""} />
-        ))}
       </div>
       {others.length > 0 && (
         <div className="hb-others">
@@ -1199,8 +1235,10 @@ function Commands({
   pulse,
   onPick,
   onCancel,
+  onAim,
   idle,
 }: {
+  onAim?: (ap: number) => void;
   b: Battle;
   actor: string;
   ally: boolean;
@@ -1232,7 +1270,12 @@ function Commands({
             key={a.nodeId}
             className={`card ${can ? "" : "poor"} ${pulse === "actions" && can ? "coach-pulse" : ""} ${paintedCard(a.dominant) ? "has-art" : ""}`}
             style={{ ["--aff" as string]: AFF_COLOR[a.dominant], ["--aff-deep" as string]: AFF_DEEP[a.dominant], ["--card-art" as string]: paintedCard(a.dominant) ? `url(${paintedCard(a.dominant)})` : undefined }}
-            onPointerDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              if (can) onAim?.(cost);
+            }}
+            onPointerLeave={() => onAim?.(0)}
+            onPointerCancel={() => onAim?.(0)}
             onClick={() => can && onPick(actor, a.nodeId)}
             data-testid={idle ? undefined : `cmd-${a.template}`}
           >
@@ -1246,7 +1289,10 @@ function Commands({
                   </span>
                 )}
               </span>
-              <span className={`card-ap ${cost < a.apCost ? "cheap" : ""}`}>{cost} AP</span>
+              <span className={`card-ap ${cost < a.apCost ? "cheap" : ""}`}>
+                <i className="ap-gem" aria-hidden />
+                {cost} AP
+              </span>
             </div>
             {/* Damage in the same units as Basic's, so the two compare at a glance. */}
             <div className="card-line">
@@ -1267,10 +1313,12 @@ function Commands({
         </div>
       )}
       {/* Basic sits at the right end of the row, under the right thumb. */}
-      <button className={`card basic ${pulse === "basic" || (!idle && actions.length > 0 && actions.every((a) => b.costOf(actor, a.nodeId) > u.ap)) ? "coach-pulse" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid={idle ? undefined : "cmd-basic"}>
+      <button className={`card basic ${pulse === "basic" || (!idle && actions.length > 0 && actions.every((a) => b.costOf(actor, a.nodeId) > u.ap)) ? "coach-pulse" : ""}`} onPointerDown={(e) => { e.stopPropagation(); onAim?.(-2); }} onPointerLeave={() => onAim?.(0)} onPointerCancel={() => onAim?.(0)} onClick={() => onPick(actor, "basic")} data-testid={idle ? undefined : "cmd-basic"}>
         <div className="card-top">
           <span className="card-name">Basic</span>
-          <span className="card-ap gain">+2 AP</span>
+          <span className="card-ap gain">
+            <i className="ap-gem" aria-hidden />+2 AP
+          </span>
         </div>
         <div className="card-line">{u.power} damage · timed</div>
         <div className="card-line dim">Builds AP for crafted Actions</div>
@@ -1321,7 +1369,7 @@ function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq 
     const acts = b.actionsOf(phase.actor);
     const cheapest = Math.min(...acts.map((a) => b.costOf(phase.actor, a.nodeId)));
     text = acts.length && u.ap < cheapest ? "Basic builds AP. Your crafted Actions spend it." : duel ? "" : "Tap a foe to target, then a command.";
-  } else if (phase.k === "defend" && s?.k === "defend") text = s.impacts.length > 1 ? `${s.impacts.length} blows: defend each one` : "Dodge is forgiving. Parry is tight but earns AP.";
+  } else if (phase.k === "defend" && s?.k === "defend") text = s.impacts.length > 1 ? `${s.impacts.length} blows: defend each one` : "Dodge is forgiving and avoids the hit. Parry must be perfect, and strikes back.";
   if (!text) return null;
   return (
     <div className={`hint ${fresh ? "fresh" : ""}`} style={{ top }} key={fresh ?? "hint"}>
@@ -1358,7 +1406,10 @@ function CueBands({ kind, at: [cx, cy] }: { kind: "attack" | "defend"; at: [numb
   return (
     <g className="cues">
       <circle cx={cx} cy={cy} r={mid(band.outer)} fill="none" stroke={attack ? "#ecc56a" : "#86c6f2"} strokeWidth={wid(band.outer)} opacity={0.22} />
-      <circle cx={cx} cy={cy} r={mid(band.inner)} fill="none" stroke="#ecc56a" strokeWidth={wid(band.inner)} opacity={0.4} />
+      <circle cx={cx} cy={cy} r={mid(band.inner)} fill="none" stroke="#ecc56a" strokeWidth={wid(band.inner)} opacity={attack ? 0.4 : 0.55} />
+      {/* Defending, the Parry band is the narrow gold one inside the wide blue Dodge band: edge it so it reads as its own target. */}
+      {!attack && <circle cx={cx} cy={cy} r={band.inner[0]} fill="none" stroke="#fbe8b0" strokeWidth={4} opacity={0.8} />}
+      {!attack && <circle cx={cx} cy={cy} r={band.inner[1]} fill="none" stroke="#fbe8b0" strokeWidth={4} opacity={0.8} />}
       <circle cx={cx} cy={cy} r={MARK_R} fill="none" stroke="#1d1822" strokeWidth={12} opacity={0.85} />
     </g>
   );

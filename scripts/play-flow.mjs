@@ -2,6 +2,7 @@
 // node scripts/play-flow.mjs [maxFights]   (uses ?autoplay=1, which only auto-times presses; commands are chosen here)
 import { chromium } from "@playwright/test";
 import { resolve } from "node:path";
+import { overlaps } from "./overlap.mjs";
 const root = resolve(import.meta.dirname, "..");
 const shots = resolve(root, "art-shots");
 const maxFights = Number(process.argv[2] ?? 3);
@@ -16,7 +17,13 @@ await page.addInitScript((extra) => {
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-const shot = (n) => page.screenshot({ path: `${shots}/${n}.png` });
+// Each stop also checks the screen for overlapping text and controls.
+const clashes = {};
+const shot = async (n) => {
+  await page.screenshot({ path: `${shots}/${n}.png` });
+  const o = await overlaps(page);
+  if (o.length) clashes[n] = o;
+};
 const tid = (t) => `[data-testid="${t}"]`;
 const visible = async (sel) => (await page.$(sel)) !== null;
 
@@ -173,5 +180,5 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
   await page.waitForTimeout(300);
 }
 await shot("flow-end");
-console.log(JSON.stringify({ fights, woven, errors: errors.slice(0, 10) }));
+console.log(JSON.stringify({ fights, woven, errors: errors.slice(0, 10), clashes }, null, 1));
 await browser.close();

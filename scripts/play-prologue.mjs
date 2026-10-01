@@ -3,6 +3,7 @@
 // one per new coaching tip, and prints the tips in order.
 import { chromium } from "@playwright/test";
 import { resolve } from "node:path";
+import { overlaps } from "./overlap.mjs";
 const root = resolve(import.meta.dirname, "..");
 const shots = resolve(root, "art-shots");
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
@@ -13,6 +14,13 @@ page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 const tid = (t) => `[data-testid="${t}"]`;
 const visible = async (sel) => (await page.$(sel)) !== null;
 const tips = [];
+// Each stop also checks the screen for overlapping text and controls.
+const clashes = {};
+const shot = async (n) => {
+  await page.screenshot({ path: `${shots}/${n}.png` });
+  const o = await overlaps(page);
+  if (o.length) clashes[n] = o;
+};
 let n = 0;
 const snapTip = async () => {
   const el = await page.$(tid("coach"));
@@ -20,11 +28,11 @@ const snapTip = async () => {
   const text = (await el.textContent())?.trim();
   if (text && !tips.includes(text)) {
     tips.push(text);
-    await page.screenshot({ path: `${shots}/prologue-${String(++n).padStart(2, "0")}.png` });
+    await shot(`prologue-${String(++n).padStart(2, "0")}`);
   }
 };
 
-await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html") + "?autoplay=1");
+await page.goto((process.env.PAGE ?? "file://" + resolve(root, "apps/game/dist-web/ender.html")) + "?autoplay=1");
 // A new player lands on the title, and its button leads straight into the first fight with a made-up hero.
 await page.waitForSelector(tid("sign-in"), { timeout: 60000 });
 await page.click(tid("sign-in"));
@@ -52,7 +60,7 @@ for (let step = 0; step < 1500; step++) {
       await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
       await page.mouse.down();
       for (let i = 1; i <= 12; i++) await page.mouse.move(a.x + a.width / 2 + ((b.x + b.width / 2 - a.x - a.width / 2) * i) / 12, a.y + a.height / 2 + ((b.y + b.height / 2 - a.y - a.height / 2) * i) / 12);
-      await page.screenshot({ path: `${shots}/prologue-${String(++n).padStart(2, "0")}-drag.png` });
+      await shot(`prologue-${String(++n).padStart(2, "0")}-drag`);
       await page.mouse.up();
     }
     await page.waitForTimeout(600);
@@ -74,6 +82,6 @@ for (let step = 0; step < 1500; step++) {
   }
   await page.waitForTimeout(200);
 }
-await page.screenshot({ path: `${shots}/prologue-last.png` });
-console.log(JSON.stringify({ fights, crossing: await visible(tid("crossing")), tips, errors }, null, 1));
+await shot(`prologue-last`);
+console.log(JSON.stringify({ fights, crossing: await visible(tid("crossing")), tips, errors, clashes }, null, 1));
 await browser.close();
