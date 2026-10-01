@@ -51,3 +51,8 @@
 .realm-head {
   cursor: pointer;
 }
+
+/* The ring hint sits above Dodge, not behind it: at the old height Dodge cut the words in half. */
+.stage .battle .bpanel.arc .tap-anywhere {
+  top: -520px;
+}
