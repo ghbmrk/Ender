@@ -339,8 +339,12 @@ export function LoomScreen() {
     setLanded(lessonForm!.id);
     commit([...nodes, { ...lessonForm!, q: near.q, r: near.r }], pool.filter((x) => x.id !== lessonForm!.id));
   };
+  // A single new Form still to weave: the tray around it and the tip that names it both open it.
+  const soleRaw = raw.length === 1 && !pool.length ? raw[0] : null;
+  const openSoleRaw = soleRaw ? () => (sfx.tap(), setWeaving(soleRaw)) : undefined;
   // With a single Form in the tray, the whole tray is its handle.
   const trayDown = (e: React.PointerEvent) => {
+    if (openSoleRaw) return openSoleRaw();
     if (editable && pool.length === 1 && !raw.length) down(e, pool[0]!, "pool");
   };
 
@@ -500,7 +504,7 @@ export function LoomScreen() {
 
       <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} power={ROOTS[hero].basic} />
       </div>
-      {coach && !drag?.moved && !weaving && <Coach text={coach.text} key={coach.text} style={{ bottom: 1920 - TRAY_TOP + 16 }} />}
+      {coach && !drag?.moved && !weaving && <Coach text={coach.text} key={coach.text} style={{ bottom: 1920 - TRAY_TOP + 16 }} onTap={openSoleRaw} />}
 
       {drag?.moved && (
         <svg className="drag-ghost" viewBox="0 0 1080 1920">
