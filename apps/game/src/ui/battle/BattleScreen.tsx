@@ -122,7 +122,7 @@ export function BattleScreen({
   const [target, setTarget] = useState<string | null>(null);
   const [floaters, setFloaters] = useState<Floater[]>([]);
   const [fx, setFx] = useState<Fx[]>([]);
-  const [banner, setBanner] = useState<{ id: number; text: string; sub?: string; ms: number } | null>(null);
+  const [banner, setBanner] = useState<{ id: number; text: string; sub?: string; ms: number; lore?: string } | null>(null);
   const [caption, setCaption] = useState<{ name: string; tell: string; foe: string } | null>(null);
   const [hurt, setHurt] = useState<Record<string, number>>({});
   const [clock, setClock] = useState(0);
@@ -214,9 +214,9 @@ export function BattleScreen({
       setHurt((h) => ({ ...h, [id]: (h[id] ?? 0) + 1 }));
       later(260, () => setHurt((h) => ({ ...h, [id]: 0 })));
     });
-  const showBanner = (text: string, sub?: string, ms = 900) => {
+  const showBanner = (text: string, sub?: string, ms = 900, lore?: string) => {
     const id = ++uid;
-    setBanner({ id, text, sub, ms });
+    setBanner({ id, text, sub, ms, lore });
     later(ms, () => setBanner((b) => (b?.id === id ? null : b)));
   };
 
@@ -367,9 +367,14 @@ export function BattleScreen({
   };
 
   useEffect(() => {
-    const names = battle.living("foe").map((f) => f.name);
-    showBanner(title ?? (names.length > 2 ? `${names[0]} and ${names.length - 1} more` : names.join(" & ")), boss ? "a Boss bars the way" : undefined, 850);
-    later(800, advance);
+    const foes = battle.living("foe");
+    const names = foes.map((f) => f.name);
+    // The first time you meet a kind of foe, its card holds a beat longer and says how it fights.
+    const lead = foes.find((f) => f.tier === "boss") ?? foes[0];
+    const lore = !lesson && lead && meetFoe(lead.kind) ? FOES[lead.kind as FoeKind]?.blurb.replace(/^Boss\.\s*/, "") : undefined;
+    const sub = boss ? "a Boss bars the way" : lore ? "New foe" : undefined;
+    showBanner(title ?? (names.length > 2 ? `${names[0]} and ${names.length - 1} more` : names.join(" & ")), sub, lore ? 1900 : 850, lore);
+    later(lore ? 1750 : 800, advance);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -736,9 +741,10 @@ export function BattleScreen({
         </div>
       )}
       {banner && (
-        <div className="banner" key={banner.id} style={{ animationDuration: `${banner.ms}ms` }}>
+        <div className={`banner ${banner.lore ? "has-lore" : ""}`} key={banner.id} style={{ animationDuration: `${banner.ms}ms` }}>
           <div>{banner.text}</div>
           {banner.sub && <small>{banner.sub}</small>}
+          {banner.lore && <p className="banner-lore">{banner.lore}</p>}
         </div>
       )}
 
@@ -1143,6 +1149,18 @@ function FxMark({ f }: { f: Fx }) {
       return <circle className="fx bloom" style={{ ...style, transformOrigin: `${f.x}px ${f.y}px` }} cx={f.x} cy={f.y} r={150} fill={f.color} filter="url(#wc-wash)" />;
     case "whoosh":
       return <path className="fx slash" style={style} d={`M${f.x - 120} ${f.y + 40} Q${f.x} ${f.y - 90} ${f.x + 140} ${f.y - 20}`} stroke={f.color} strokeWidth={14} strokeLinecap="round" fill="none" strokeDasharray="30 18" />;
+  }
+}
+
+/** Records a meeting with a kind of foe; true the first time. */
+function meetFoe(kind: string): boolean {
+  try {
+    const seen: string[] = JSON.parse(localStorage.getItem("ender:foes-seen") ?? "[]");
+    if (seen.includes(kind)) return false;
+    localStorage.setItem("ender:foes-seen", JSON.stringify([...seen, kind]));
+    return true;
+  } catch {
+    return false;
   }
 }
 

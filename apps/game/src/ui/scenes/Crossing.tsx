@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { PARTY, ROOTS } from "@ender/battle";
 import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { crossingBackdrop } from "../../art/registry";
@@ -21,6 +22,7 @@ function unlocked(id: string, mirrorCharges: number, n = weaves()) {
   if (id === "mirror") return mirrorCharges > 0 || n >= 5;
   return true;
 }
+const later = (ms: number, f: () => void) => window.setTimeout(f, ms);
 const SEEN = "ender:stations-seen";
 function seen(): string[] {
   try {
@@ -37,11 +39,24 @@ function markSeen(id: string) {
   }
 }
 
+/** Stations not yet announced. Each one rises in with a toast the first time it appears. */
+const ANNOUNCED = "ender:stations-announced";
+function announce(ids: string[]): string[] {
+  try {
+    const done: string[] = JSON.parse(localStorage.getItem(ANNOUNCED) ?? "[]");
+    const fresh = ids.filter((id) => !done.includes(id));
+    if (fresh.length) localStorage.setItem(ANNOUNCED, JSON.stringify([...done, ...fresh]));
+    return fresh;
+  } catch {
+    return [];
+  }
+}
+
 const LABEL: Record<string, { name: string; sub: string }> = {
   gate: { name: "The Gate", sub: "begin an Expedition" },
   bazaar: { name: "Bazaar", sub: "Essences, Forms, contracts" },
-  crucible: { name: "Crucible", sub: "Attune · Inscribe · Temper" },
-  mirror: { name: "Mirror", sub: "Witness a Trialed Form" },
+  crucible: { name: "Crucible", sub: "refine your Forms" },
+  mirror: { name: "Mirror", sub: "see a Form at work" },
   grimoire: { name: "Grimoire", sub: "every Form you have found" },
   loom: { name: "The Loom", sub: "weave your party's skills" },
 };
@@ -57,6 +72,18 @@ export function Crossing() {
   const stations = (mod?.STATIONS ?? []) as readonly { id: string; x: number; y: number }[];
   const visited = seen();
   const shown = stations.filter((st) => unlocked(st.id, c?.mirrorCharges ?? 0));
+  const [risen] = useState(() => (lesson ? [] : announce(shown.map((st) => st.id).filter((id) => id !== "gate" && id !== "loom"))));
+  useEffect(() => {
+    if (risen.length) {
+      const names = risen.map((id) => LABEL[id]?.name ?? id);
+      const text =
+        risen.length === 1
+          ? `${names[0]} has opened: ${LABEL[risen[0]!]?.sub ?? ""}`
+          : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} have opened`;
+      later(450, () => toast(text, "gain"));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const open = (id: string) => {
     if (lesson) finishTutorial();
     markSeen(id);
@@ -77,7 +104,7 @@ export function Crossing() {
         {shown.map((s) => (
           <button
             key={s.id}
-            className={`station st-${s.id} ${lesson ? (s.id === "gate" ? "coach-pulse" : "muted") : ""} ${!lesson && s.id !== "gate" && s.id !== "loom" && !visited.includes(s.id) ? "fresh" : ""}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
+            className={`station st-${s.id} ${risen.includes(s.id) ? "risen" : ""} ${lesson ? (s.id === "gate" ? "coach-pulse" : "muted") : ""} ${!lesson && s.id !== "gate" && s.id !== "loom" && !visited.includes(s.id) ? "fresh" : ""}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
             {!lesson && s.id !== "gate" && s.id !== "loom" && !visited.includes(s.id) && <span className="st-new">New</span>}
             <span className="st-name">{LABEL[s.id]?.name ?? s.id}</span>
             <span className="st-sub">{LABEL[s.id]?.sub}</span>

@@ -917,3 +917,57 @@
 .loot .loot-tile.loot-tile.form {
   flex-basis: 40%;
 }
+
+/* Loop 9: first meeting with a foe. The card sits on a dark band and says how it fights, under the name. */
+.battle .banner.has-lore {
+  padding: 34px 0 30px;
+  background: linear-gradient(90deg, transparent, rgba(14, 9, 6, 0.86) 12%, rgba(14, 9, 6, 0.86) 88%, transparent);
+  border-top: 3px solid rgba(214, 170, 90, 0.6);
+  border-bottom: 3px solid rgba(214, 170, 90, 0.6);
+}
+.battle .banner .banner-lore {
+  margin: 16px auto 0;
+  max-width: 820px;
+  font-family: var(--serif-body);
+  font-weight: 400;
+  font-style: italic;
+  font-size: 42px;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: #f4e3b8;
+  text-shadow: 0 2px 0 #000;
+}
+
+/* Loop 9: a station that has just opened rises out of the ground with a flare. */
+.crossing .station.risen {
+  animation: st-rise 900ms cubic-bezier(0.2, 0.9, 0.3, 1.15) 250ms both;
+}
+.crossing .station.risen.fresh {
+  animation:
+    st-rise 900ms cubic-bezier(0.2, 0.9, 0.3, 1.15) 250ms both,
+    st-fresh 1.6s ease-in-out 1150ms infinite;
+}
+.crossing .station.risen::before {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 130, 0.7), rgba(255, 214, 130, 0) 65%);
+  animation: st-flare 1100ms ease-out 350ms both;
+  pointer-events: none;
+}
+@keyframes st-rise {
+  0% { opacity: 0; transform: translate(-50%, calc(-50% + 80px)) scale(0.6); }
+  100% { opacity: 1; transform: translate(-50%, -50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crossing .station.risen,
+  .crossing .station.risen::before {
+    animation: none;
+  }
+}
+@keyframes st-flare {
+  0% { opacity: 0; transform: scale(0.3); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.6); }
+}
