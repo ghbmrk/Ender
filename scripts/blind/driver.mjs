@@ -81,6 +81,9 @@ createServer(async (req, res) => {
   const args = Object.fromEntries(u.searchParams);
   try {
     if (!cmds[c]) throw new Error(`unknown command ${c}`);
+    // A finger can't land off the glass: say so rather than silently tapping nothing.
+    for (const k of ["x", "x1", "x2"]) if (k in args && (+args[k] < 0 || +args[k] > 390)) throw new Error(`${k}=${args[k]} is off the screen: x goes from 0 to 390`);
+    for (const k of ["y", "y1", "y2"]) if (k in args && (+args[k] < 0 || +args[k] > 844)) throw new Error(`${k}=${args[k]} is off the screen: y goes from 0 to 844`);
     const r = await cmds[c](args);
     log(`${c} ${JSON.stringify(args)} -> ${r.shot ?? ""}${r.error ? " ERR " + r.error : ""}`);
     res.end(JSON.stringify(r) + "\n");
