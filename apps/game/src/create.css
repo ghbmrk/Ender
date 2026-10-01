@@ -205,3 +205,27 @@
   from { background: radial-gradient(ellipse, #f4d58c66, transparent 70%); }
   to { background: transparent; }
 }
+
+/* The painted hero (art/painted/hero-<garb>-<palette>): over the shoulder, as in fights. */
+.create-hero .ch-painted {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.create-hero .ch-painted-img {
+  height: 100%;
+  max-width: 92%;
+  object-fit: contain;
+  object-position: bottom;
+  pointer-events: auto;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55));
+  animation: ch-arrive 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes ch-arrive {
+  0% { opacity: 0.4; filter: brightness(1.8) drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55)); transform: scale(1.03); }
+  100% { opacity: 1; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55)); transform: none; }
+}
