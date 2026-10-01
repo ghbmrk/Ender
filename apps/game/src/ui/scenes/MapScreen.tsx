@@ -23,6 +23,17 @@ const KIND: Record<string, { glyph: string; name: string }> = {
   mystery: { glyph: "?", name: "Mystery" },
   boss: { glyph: "♚", name: "Boss" },
 };
+/** Whether a path of links runs from one stop to another further on. */
+function leadsTo(from: MapNode, id: string, seen = new Set<string>()): boolean {
+  if (from.links.includes(id)) return true;
+  return from.links.some((l) => {
+    if (seen.has(l)) return false;
+    seen.add(l);
+    const n = nodeById(l);
+    return !!n && leadsTo(n, id, seen);
+  });
+}
+
 /** What a reachable node holds, in a few words, for the nodes that aren't fights. */
 const PEEK: Record<string, string> = {
   shrine: "rest and heal",
@@ -103,6 +114,11 @@ export function MapScreen() {
     if (reveal) return;
     // With one way on there is no choice to make, so a tap on any stop takes that way.
     if (reach.length === 1 && !next.has(n.id)) return go(reach[0]!);
+    // A tap on a stop further on that only one glowing stop leads to takes that stop: the tap says where you want to go.
+    if (!next.has(n.id) && n.layer > anchor) {
+      const via = reach.filter((r) => leadsTo(r, n.id));
+      if (via.length === 1) return go(via[0]!);
+    }
     if (!next.has(n.id)) {
       if (n.layer > anchor) {
         setNudge((k) => k + 1);
