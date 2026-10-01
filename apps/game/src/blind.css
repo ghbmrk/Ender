@@ -69,3 +69,5 @@
 @keyframes lesson-chip-in { from { transform: scale(1.35); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .stage .battle .lesson-chip { animation: none; } }
 .stage .battle .lesson-chip.away { opacity: 0; transition: opacity 120ms; }
+/* The Loom's bottom button takes taps in the strip just above it too: a thumb aiming at it from the panel above landed in the gap and did nothing. */
+.stage .loom-done::before { content: ""; position: absolute; left: 0; right: 0; top: -44px; height: 44px; }

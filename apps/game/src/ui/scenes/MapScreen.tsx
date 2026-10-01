@@ -162,9 +162,19 @@ export function MapScreen() {
       className="map-screen"
       data-testid="map"
       // With one way on, a tap on the open map between stops takes it too: a miss is never a dead tap.
+      // With a choice, a tap just beside a glowing stop takes the nearest one: thumbs land a little off the coin.
       onClick={(e) => {
         const t = e.target as Element;
-        if (reach.length === 1 && (t === e.currentTarget || t.closest(".backdrop"))) go(reach[0]!);
+        if (!(t === e.currentTarget || t.closest(".backdrop"))) return;
+        if (reach.length === 1) return go(reach[0]!);
+        let best: { n: MapNode; d: number } | null = null;
+        for (const n of reach) {
+          const r = e.currentTarget.querySelector(`[data-testid="map-node-${n.id}"]`)?.getBoundingClientRect();
+          if (!r) continue;
+          const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+          if (d < r.width * 1.25 && (!best || d < best.d)) best = { n, d };
+        }
+        if (best) go(best.n);
       }}
     >
       <div className="backdrop dimmed">
