@@ -57,9 +57,6 @@ export const Fig = memo(function Fig({ figure, pose = "idle", scale, className, 
 
 /** A head crop of a figure, for the timeline and portraits. */
 export const Head = memo(function Head({ figure, size, look, art }: { figure: string; size: number; look?: HeroLook; art?: Art }) {
-  const mod = figureFor(figure);
-  const [x, y, s] = mod.meta.head;
-  const F = mod.default;
   if (art)
     return (
       <div className={`head head-ondevice ${look ? "is-hero" : ""}`} style={{ width: size, height: size }}>
@@ -73,12 +70,40 @@ export const Head = memo(function Head({ figure, size, look, art }: { figure: st
         <img src={painted} className="head-img" data-fig={figure} alt="" draggable={false} />
       </div>
     );
+  return <DrawnHead figure={figure} size={size} look={look} />;
+});
+
+/**
+ * A drawn head is a whole figure (some 180 SVG nodes, with the watercolour filter) cropped to the face, and a fight
+ * shows the hero's several times over (turn order, badge). So the first one drawn is kept as an image, and every
+ * later one, on any screen, is that one image: the map draws the hero's head, so the fight opens without redrawing it.
+ */
+const headUrls = new Map<string, string>();
+function DrawnHead({ figure, size, look }: { figure: string; size: number; look?: HeroLook }) {
+  const key = `${figure}|${look ? JSON.stringify(look) : ""}`;
+  const url = headUrls.get(key);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const svg = box.current?.querySelector("svg");
+    if (url || !svg || headUrls.has(key)) return;
+    const markup = svg.outerHTML
+      .replace(/\s(xmlns(:xlink)?)="[^"]*"/g, "")
+      .replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="256" height="256"')
+      .replace(/^(<svg[^>]*>)/, `$1<defs>${defsFor(svg.outerHTML)}</defs>`);
+    const src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(markup);
+    const img = new Image();
+    img.src = src;
+    // Kept only once it has decoded, so a head that uses it shows at once.
+    void img.decode().then(() => headUrls.set(key, src)).catch(() => undefined);
+  }, [key, url]);
+  const F = figureFor(figure).default;
+  const [x, y, s] = figureFor(figure).meta.head;
   return (
-    <div className="head" style={{ width: size, height: size }}>
-      <F viewBox={`${x} ${y} ${s} ${s}`} className="fig-svg" look={look} />
+    <div className="head" style={{ width: size, height: size }} ref={box}>
+      {url ? <img src={url} className="fig-svg" alt="" draggable={false} /> : <F viewBox={`${x} ${y} ${s} ${s}`} className="fig-svg" look={look} />}
     </div>
   );
-});
+}
 
 /*
  * Baked figures. A drawn figure's watercolour filter (turbulence, lighting) is far too costly to

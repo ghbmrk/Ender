@@ -61,7 +61,6 @@
   opacity: 0;
   transition: opacity 200ms ease-out;
   pointer-events: none;
-  will-change: opacity;
 }
 .battle .unit.foe.windup .menace,
 .battle .unit.foe.rewind .menace {
