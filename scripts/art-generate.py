@@ -29,7 +29,7 @@ def seed_of(asset_id: str, variant: int) -> int:
 
 
 def full_prompt(style: dict, asset: dict) -> str:
-    kind = style[asset["kind"]].replace("{screen}", asset.get("screen", "bright green"))
+    kind = asset.get("framing", style[asset["kind"]]).replace("{screen}", asset.get("screen", "bright green"))
     return ", ".join([kind, asset["prompt"], style["base"]])
 
 
@@ -118,7 +118,7 @@ def main() -> None:
         w, h = SIZE[asset["kind"]]
         t = time.time()
         img = pipe(
-            **encode_long(pipe, full_prompt(style, asset), style["negative"]),
+            **encode_long(pipe, full_prompt(style, asset), asset.get("negative", style["negative"])),
             width=w,
             height=h,
             num_inference_steps=a.steps,
