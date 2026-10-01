@@ -29,7 +29,37 @@ def seed_of(asset_id: str, variant: int) -> int:
 
 
 def full_prompt(style: dict, asset: dict) -> str:
-    return ", ".join([asset["prompt"], style[asset["kind"]], style["base"]])
+    kind = style[asset["kind"]].replace("{screen}", asset.get("screen", "bright green"))
+    return ", ".join([kind, asset["prompt"], style["base"]])
+
+
+def encode_long(pipe, prompt: str, negative: str):
+    """SDXL prompt embeddings without CLIP's 77-token cut: encode 75-token chunks with both text encoders and
+    concatenate them, so the style and framing text after a long subject prompt still reaches the model."""
+    import torch
+
+    def ids(tok, text):
+        return tok(text, truncation=False, add_special_tokens=False).input_ids
+
+    n = max(1, *[-(-len(ids(t, x)) // 75) for t in (pipe.tokenizer, pipe.tokenizer_2) for x in (prompt, negative)])
+    result = []
+    for text in (prompt, negative):
+        per_encoder, pooled = [], None
+        for tok, enc in ((pipe.tokenizer, pipe.text_encoder), (pipe.tokenizer_2, pipe.text_encoder_2)):
+            toks = ids(tok, text)
+            states = []
+            for i in range(n):
+                chunk = [tok.bos_token_id] + toks[i * 75 : (i + 1) * 75] + [tok.eos_token_id]
+                chunk += [tok.pad_token_id] * (77 - len(chunk))
+                with torch.no_grad():
+                    out = enc(torch.tensor([chunk]), output_hidden_states=True)
+                states.append(out.hidden_states[-2])
+                if enc is pipe.text_encoder_2 and pooled is None:
+                    pooled = out[0]
+            per_encoder.append(torch.cat(states, dim=1))
+        result.append((torch.cat(per_encoder, dim=-1), pooled))
+    (pe, pp), (ne, np_) = result
+    return dict(prompt_embeds=pe, pooled_prompt_embeds=pp, negative_prompt_embeds=ne, negative_pooled_prompt_embeds=np_)
 
 
 def load_pipeline(model: str, lora: str | None, steps: int):
@@ -88,8 +118,7 @@ def main() -> None:
         w, h = SIZE[asset["kind"]]
         t = time.time()
         img = pipe(
-            prompt=full_prompt(style, asset),
-            negative_prompt=style["negative"],
+            **encode_long(pipe, full_prompt(style, asset), style["negative"]),
             width=w,
             height=h,
             num_inference_steps=a.steps,

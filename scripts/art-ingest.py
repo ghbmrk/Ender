@@ -6,8 +6,9 @@
 Works the same for images rendered by scripts/art-generate.py and ones made elsewhere (e.g. Midjourney)
 from the same prompts: name the file after the asset id and drop it in art/raw/.
 
-  figure    the flat background is keyed out (flood fill from the edges), the figure is cropped to its
-            silhouette with its feet on the bottom edge, and it is scaled to FIG_H pixels tall
+  figure    the chroma-key screen (green, or the asset's "screen") is keyed out (flood fill from the edges), the figure is cropped to its
+            silhouette with its feet on the bottom edge, and it is scaled down to FIG_H pixels tall (bosses keep
+            their native height)
   backdrop  cover-cropped to the 1080x1920 portrait world
   cardart   cover-cropped square, 512px
   texture   512px square
@@ -26,7 +27,8 @@ ROOT = Path(__file__).resolve().parent.parent
 PROMPTS = ROOT / "art" / "prompts.json"
 RAW = ROOT / "art" / "raw"
 OUT = ROOT / "apps" / "game" / "src" / "art" / "painted"
-FIG_H = 720
+FIG_H = 960  # duel staging: a normal foe stands ~560 world px, ~600 device px on a DPR-3 phone
+BOSSES = {"king", "wyrm"}  # bosses stand ~1.4x taller: keep their native height
 QUALITY = {"figure": 84, "backdrop": 78, "cardart": 80, "texture": 78}
 
 
@@ -45,25 +47,14 @@ def cover(img: Image.Image, w: int, h: int) -> Image.Image:
     return img.crop((x, y, x + w, y + h))
 
 
-def key_out(img: Image.Image) -> Image.Image:
-    """Remove a flat background connected to the image edges; soft-edged alpha."""
-    rgb = np.asarray(img.convert("RGB")).astype(np.float32)
-    h, w, _ = rgb.shape
-    border = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]])
-    bg = np.median(border, axis=0)
-    dist = np.sqrt(((rgb - bg) ** 2).sum(axis=2))
-    spread = np.percentile(np.sqrt(((border - bg) ** 2).sum(axis=1)), 90)
-    lo, hi = max(14.0, spread * 1.3), max(40.0, spread * 2.6)
-    # Flood fill from every edge pixel through "background-like" pixels.
+def flood(passable: np.ndarray, seeds: list[tuple[int, int]]) -> np.ndarray:
+    """Pixels reachable from the seeds through passable pixels (4-connected)."""
+    h, w = passable.shape
     seen = np.zeros((h, w), bool)
-    q = deque()
-    for x in range(w):
-        q.extend([(0, x), (h - 1, x)])
-    for y in range(h):
-        q.extend([(y, 0), (y, w - 1)])
+    q = deque(seeds)
     while q:
         y, x = q.popleft()
-        if seen[y, x] or dist[y, x] > hi:
+        if seen[y, x] or not passable[y, x]:
             continue
         seen[y, x] = True
         if y > 0:
@@ -74,21 +65,58 @@ def key_out(img: Image.Image) -> Image.Image:
             q.append((y, x - 1))
         if x < w - 1:
             q.append((y, x + 1))
+    return seen
+
+
+def screen_ratio(rgb: np.ndarray, screen: str) -> np.ndarray:
+    """How strongly each pixel leans toward the chroma-key screen, 0..1, independent of brightness, so the
+    screen's glow behind a figure and its dark vignette corners key out alike."""
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    if screen == "magenta":
+        return np.clip((np.minimum(r, b) - g) / (np.maximum(r, b) + 1), 0, 1)
+    return np.clip((g - np.maximum(r, b)) / (g + 1), 0, 1)
+
+
+def key_out(img: Image.Image, screen: str, lo: float = 0.10, hi: float = 0.22) -> Image.Image:
+    """Remove the chroma-key screen connected to the image edges; soft-edged alpha and edge despill."""
+    rgb = np.asarray(img.convert("RGB")).astype(np.float32)
+    h, w, _ = rgb.shape
+    ratio = screen_ratio(rgb, screen)
+    edges = [(0, x) for x in range(w)] + [(h - 1, x) for x in range(w)] + [(y, 0) for y in range(h)] + [(y, w - 1) for y in range(h)]
+    seen = flood(ratio >= lo, edges)
     alpha = np.ones((h, w), np.float32)
-    ramp = np.clip((dist - lo) / (hi - lo), 0, 1)
-    alpha[seen] = ramp[seen]
+    alpha[seen] = 1 - np.clip((ratio[seen] - lo) / (hi - lo), 0, 1)
+    # Strong screen colour enclosed by the figure (between legs, under an arm) is screen too.
+    inner = ~seen & (ratio >= 2 * hi)
+    alpha[inner] = 0
+    # Vignette corners and stray specks: keep only what connects to the centred figure (opaque pixels in the
+    # middle column band).
+    solid = alpha > 0.1
+    mid = [(y, x) for y in range(h) for x in range(int(w * 0.45), int(w * 0.55)) if alpha[y, x] > 0.9]
+    if mid:
+        alpha[~flood(solid, mid)] = 0
     a = Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
-    out = img.convert("RGB")
+    # Despill near the cut edge: remove the screen colour's excess over the other channel(s).
+    edge = np.asarray(a.filter(ImageFilter.MinFilter(9))) < 255
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    if screen == "magenta":
+        spill = np.where(edge, np.maximum(0, np.minimum(r, b) - g), 0)
+        rgb[..., 0], rgb[..., 2] = r - spill, b - spill
+    else:
+        rgb[..., 1] = g - np.where(edge, np.maximum(0, g - np.maximum(r, b)), 0)
+    out = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8))
     out.putalpha(a)
     return out
 
 
-def fit_figure(img: Image.Image) -> Image.Image:
-    cut = key_out(img)
+def fit_figure(img: Image.Image, screen: str, boss: bool) -> Image.Image:
+    cut = key_out(img, screen)
     box = cut.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox()
     if not box:
         raise ValueError("nothing left after keying out the background")
     cut = cut.crop(box)
+    if boss or cut.height <= FIG_H:
+        return cut
     s = FIG_H / cut.height
     return cut.resize((max(1, round(cut.width * s)), FIG_H), Image.LANCZOS)
 
@@ -100,7 +128,7 @@ def ingest(asset: dict) -> Path | None:
     img = Image.open(src)
     kind = asset["kind"]
     if kind == "figure":
-        img = fit_figure(img)
+        img = fit_figure(img, asset.get("screen", "green"), asset["id"] in BOSSES)
     elif kind == "backdrop":
         img = cover(img.convert("RGB"), 1080, 1920)
     else:
