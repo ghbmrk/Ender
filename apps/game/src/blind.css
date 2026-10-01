@@ -46,3 +46,8 @@
 .map-marker {
   pointer-events: none;
 }
+
+/* Realm cards: the painting enters, so it reads as pressable. */
+.realm-head {
+  cursor: pointer;
+}

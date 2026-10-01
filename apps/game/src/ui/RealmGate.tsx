@@ -38,7 +38,8 @@ export function RealmGate() {
       <div className="realm-grid">
         {world.realms.map((r: any) => (
           <div key={r.id} className="realm-card" data-testid={`realm-${r.id}`}>
-            <div className={`realm-head ${paintedBackdrop(r.id) ? "has-art" : ""}`} style={paintedBackdrop(r.id) ? { ["--realm-art" as string]: `url(${paintedBackdrop(r.id)})` } : undefined}>
+            {/* The painting is the biggest thing on the card, so a tap on it enters too. */}
+            <div className={`realm-head ${paintedBackdrop(r.id) ? "has-art" : ""}`} style={paintedBackdrop(r.id) ? { ["--realm-art" as string]: `url(${paintedBackdrop(r.id)})` } : undefined} onClick={() => go(r.id)} role="button" data-testid={`realm-art-${r.id}`}>
               {r.id === nextUp && <span className="realm-next">{fresh ? "Start here" : "Next"}</span>}
               <h3>{r.name}</h3>
               <span className="diff">Difficulty {r.difficultyLabel}</span>
