@@ -2653,4 +2653,15 @@
     transform: translate(-50%, -50%) scale(1.3);
     box-shadow: inset 0 0 0 6px #ffe9a8, 0 0 60px #ffd67a;
   }
+
+/* The card the tutorial wants pressed glows gold, strongly enough to read at a glance. */
+.stage .bpanel .card.coach-pulse {
+  animation: card-glow 1s ease-in-out infinite;
+  filter: brightness(1.12);
+  z-index: 5;
+}
+@keyframes card-glow {
+  0%,
+  100% { box-shadow: 0 0 0 4px #ffd67a, 0 0 30px 8px #ffd67a99; }
+  50% { box-shadow: 0 0 0 8px #fff1c2, 0 0 70px 24px #ffd67add; }
 }
