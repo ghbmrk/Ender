@@ -12,6 +12,8 @@ export type BattleSetup = {
   difficulty: number;
   /** Scales foe HP and attack (the prologue's gentle practice fights). */
   foeScale?: { hp?: number; atk?: number };
+  /** Most foes on the field at once (default FIELD_CAP). 1 makes every fight a duel: waves arrive one foe at a time and bosses summon no help. */
+  fieldCap?: number;
 };
 
 type Dot = { rounds: number; dmg: number };
@@ -235,7 +237,7 @@ export class Battle {
 
   private spawnWave(i: number) {
     this.waveIndex = i;
-    const spawned = (this.setup.waves[i] ?? []).slice(0, FIELD_CAP).map((k) => this.makeFoe(k));
+    const spawned = (this.setup.waves[i] ?? []).slice(0, this.setup.fieldCap ?? FIELD_CAP).map((k) => this.makeFoe(k));
     this.units.push(...spawned);
     return spawned.map((u) => u.id);
   }
@@ -325,8 +327,11 @@ export class Battle {
     return got;
   }
 
+  /** The ally with the least AP; a hero fighting alone is their own ally. */
   private lowestAp(except?: Unit) {
-    return this.living("party").filter((p) => p !== except).sort((a, b) => a.ap - b.ap || (a.id < b.id ? -1 : 1))[0];
+    const party = this.living("party");
+    if (party.length === 1) return party[0];
+    return party.filter((p) => p !== except).sort((a, b) => a.ap - b.ap || (a.id < b.id ? -1 : 1))[0];
   }
   private lowestHp() {
     return this.living("party").sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || (a.id < b.id ? -1 : 1))[0];
@@ -695,7 +700,7 @@ export class Battle {
       while (b.phase < phases.length && b.hp < b.maxHp * phases[b.phase]!.at) {
         const ph = phases[b.phase]!;
         b.phase++;
-        const room = FIELD_CAP - this.living("foe").length;
+        const room = (this.setup.fieldCap ?? FIELD_CAP) - this.living("foe").length;
         const spawned = ph.summon.slice(0, Math.max(0, room)).map((k) => this.makeFoe(k));
         this.units.push(...spawned);
         if (spawned.length) events.push({ type: "summon", units: spawned.map((s) => s.id) });

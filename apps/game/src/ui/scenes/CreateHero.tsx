@@ -16,7 +16,7 @@ import "../../create.css";
 const PITCH: Record<RootId, { style: string; line: string }> = {
   iron: { style: "Knight", line: "Heavy blows. Parries crack a foe's guard." },
   quick: { style: "Ranger", line: "Fast. Perfect timing lets you act sooner." },
-  bond: { style: "Binder", line: "A guide. Parries feed your allies AP." },
+  bond: { style: "Binder", line: "Steady. Parries and Links refill your AP." },
 };
 const ROOT_ORDER: RootId[] = ["iron", "quick", "bond"];
 type Tab = "skin" | "hair" | "colours" | "head";

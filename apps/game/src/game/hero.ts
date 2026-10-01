@@ -4,8 +4,8 @@ import type { Hero } from "../art/look";
 import { getState, setState } from "../state/store";
 
 /**
- * The player's own hero, made at the start of the prologue. It fights alone until the prologue ends,
- * when the other two Roots join as companions. Saved in this browser beside the game save.
+ * The player's own hero, made at the start of the prologue. Every fight is this hero against one foe
+ * at a time, so the figures can stand close and large. Saved in this browser beside the game save.
  */
 const KEY = "ender:hero";
 
@@ -28,12 +28,16 @@ export function saveHero(hero: Hero | null) {
   setState({ hero });
 }
 
-/** Who fights: the hero alone during the prologue's fights, the full party otherwise. */
+/** Who fights: the hero alone, always (every fight is a duel). Saves from before heroes existed keep the old party. */
 export function partyRoots(): RootId[] {
-  const { hero, tutorial } = getState();
-  if (hero && tutorial && tutorial !== "gate") return [hero.root];
-  return [...PARTY];
+  const { hero } = getState();
+  return hero ? [hero.root] : [...PARTY];
 }
+
+/** Duels: one foe on the field at a time, so an encounter's foes come one after another. */
+export const DUEL_FIELD_CAP = 1;
+/** Foes were tuned for three heroes; a lone hero meets them at this share of their HP. */
+export const DUEL_HP = { normal: 0.45, elite: 0.45, boss: 0.5 } as const;
 
 /** The look to draw for a Root's figure, when that Root is the player's hero. */
 export const lookFor = (root: string) => {

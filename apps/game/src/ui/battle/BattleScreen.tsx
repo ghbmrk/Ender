@@ -22,8 +22,8 @@ import { backdropFor, backdropId } from "../../art/registry";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
 import { STAGE_H, useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH } from "../affinity";
-import { Fig, Head, figureBox } from "./Figure";
-import { BOSS_ADDS, BOSS_POS, FOE_POS, HERO_POS, PANEL_TOP } from "./layout";
+import { FIG_SCALE, Fig, Head, figureBox } from "./Figure";
+import { BOSS_ADDS, BOSS_POS, DUEL_BOSS, DUEL_FOE, DUEL_HERO, DUEL_ZOOM, FOE_POS, HERO_POS, PANEL_TOP } from "./layout";
 import { sfx } from "./sfx";
 import { debug } from "../../game/debug";
 import type { CoachKey, Lesson } from "../../game/tutorial";
@@ -140,7 +140,10 @@ export function BattleScreen({
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   // ───────────── positions ─────────────
+  /** One hero against one foe at a time: stage them close and large. */
+  const duel = battle.party().length === 1 && (setup.fieldCap ?? 5) === 1;
   const posOf = (u: Unit): [number, number] => {
+    if (duel) return u.side === "party" ? DUEL_HERO : u.tier === "boss" ? DUEL_BOSS : DUEL_FOE;
     if (u.side === "party") return HERO_POS[u.kind as RootId];
     const s = slots.current;
     if (!s[u.id]) {
@@ -158,10 +161,13 @@ export function BattleScreen({
   };
   const hitBox = (u: Unit) => {
     const b = figureBox(u.figure, figScale(u));
-    const w = Math.min(b.w, 260);
+    const w = Math.min(b.w, duel ? 420 : 260);
     return { left: -w / 2, top: -b.h * 0.9, width: w, height: b.h * 0.9 };
   };
-  const figScale = (u: Unit) => (u.kind === "ironbound" ? 1.55 : u.kind === "cinder" ? 1.45 : undefined);
+  const figScale = (u: Unit) => {
+    const base = u.kind === "ironbound" ? 1.55 : u.kind === "cinder" ? 1.45 : (FIG_SCALE[u.figure] ?? 1.2);
+    return duel ? base * DUEL_ZOOM : u.kind === "ironbound" || u.kind === "cinder" ? base : undefined;
+  };
 
   // ───────────── feedback ─────────────
   const float = (u: Unit | [number, number], text: string, cls: string, delay = 0) => {
@@ -557,7 +563,8 @@ export function BattleScreen({
         return;
       }
     }
-    commit(actor, command);
+    // Alone, Link binds the hero to their own next Action.
+    commit(actor, command, battle.living("party").length === 1 ? actor : undefined);
   };
 
   // ───────────── render ─────────────

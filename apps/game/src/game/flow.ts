@@ -1,7 +1,8 @@
 import { PARTY, ROOTS, compileLoom, type BattleSetup, type FoeKind, type LoomNode, type RootId } from "@ender/battle";
 import { api } from "../api";
 import { getState, setState, toast, type MapNode } from "../state/store";
-import { partyRoots } from "./hero";
+import { DUEL_FIELD_CAP, DUEL_HP, partyRoots, saveHero } from "./hero";
+import { lookFromSeed, newSeed, randomName } from "../art/look";
 import type { BattleResult } from "../ui/battle/BattleScreen";
 
 export async function refreshCharacter() {
@@ -37,6 +38,12 @@ export async function continueGame() {
   if (active?.plan && active.status === "active") {
     const visited = (active.visited ?? []) as string[];
     setState({ expedition: { plan: active.plan, visited, at: visited.at(-1) ?? null, partyHp: {}, loom: active.loom ?? null } });
+  }
+  // Saves from before heroes were made get one, so every fight is still a duel.
+  if (!getState().hero) {
+    const hero = { root: "iron" as const, name: randomName(), look: lookFromSeed(newSeed()) };
+    saveHero(hero);
+    toast(`Meet your hero, ${hero.name}. Make another with New Party.`, "info");
   }
   setState({ screen: getState().expedition ? "map" : "crossing", panel: null, loomEditable: !getState().expedition });
 }
@@ -107,8 +114,11 @@ export function battleSetup(): BattleSetup {
   return {
     seed: `${ex.plan.seed}|${b.nodeId}`,
     party: compiledParty().map((p) => ({ ...p, hp: ex.partyHp[p.root] })),
-    waves: b.waves as FoeKind[][],
+    // Every fight is a duel: the encounter's foes step up one at a time.
+    waves: (b.waves as FoeKind[][]).flat().map((k) => [k]),
     difficulty: b.difficulty,
+    fieldCap: DUEL_FIELD_CAP,
+    foeScale: { hp: DUEL_HP[b.kind === "boss" ? "boss" : b.kind === "elite" ? "elite" : "normal"] },
   };
 }
 

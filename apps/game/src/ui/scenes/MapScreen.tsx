@@ -1,5 +1,5 @@
 import { PARTY, ROOTS, type RootId } from "@ender/battle";
-import { lookFor } from "../../game/hero";
+import { lookFor, partyRoots } from "../../game/hero";
 import { getState as getStoreState } from "../../state/store";
 import { backdropFor } from "../../art/registry";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
@@ -111,7 +111,7 @@ export function MapScreen() {
           </button>
         </div>
         <div className="map-party">
-          {PARTY.map((r: RootId) => {
+          {partyRoots().map((r: RootId) => {
             const hp = ex.partyHp[r] ?? ROOTS[r].hp;
             return (
               <div key={r} className="mp-hero">

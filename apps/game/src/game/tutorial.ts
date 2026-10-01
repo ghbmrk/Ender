@@ -145,6 +145,7 @@ export function lessonSetup(l: Lesson): BattleSetup {
     waves: l.setup.waves,
     difficulty: 1,
     foeScale: l.setup.foeScale,
+    fieldCap: 1,
   };
 }
 

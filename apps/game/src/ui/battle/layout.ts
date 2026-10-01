@@ -17,3 +17,10 @@ export const BOSS_ADDS: [number, number][] = [
   [560, 1140],
 ];
 export const PANEL_TOP = 1440;
+
+/** Duels (one hero, one foe): the two stand closer and larger, so the figures carry more detail. */
+export const DUEL_HERO: [number, number] = [315, 1400];
+export const DUEL_FOE: [number, number] = [770, 1120];
+export const DUEL_BOSS: [number, number] = [745, 1150];
+/** How much larger than the party-scale figures duellists are drawn. */
+export const DUEL_ZOOM = 1.8;

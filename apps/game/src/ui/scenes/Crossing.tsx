@@ -1,5 +1,5 @@
 import { PARTY, ROOTS } from "@ender/battle";
-import { lookFor, rootLabel } from "../../game/hero";
+import { lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { crossingBackdrop } from "../../art/registry";
 import { refreshLoom } from "../../game/flow";
 import { setState, toast, useStore } from "../../state/store";
@@ -66,9 +66,9 @@ export function Crossing() {
           ))}
         </div>
       </header>
-      {lesson && <Coach text="Two companions join you at the Crossing. Tap **The Gate** to set out on an Expedition together. You can rework the Loom here, or at Shrines along the way." style={{ bottom: 250 }} />}
+      {lesson && <Coach text="You're ready. Tap **The Gate** to set out on an Expedition. You can rework your Loom here, or at Shrines along the way." style={{ bottom: 250 }} />}
       <div className="hub-party">
-        {PARTY.map((r) => (
+        {partyRoots().map((r) => (
           <div key={r} className="hub-hero">
             <Head figure={ROOTS[r].hero} size={92} look={lookFor(r)} />
             <span>{rootLabel(r)}</span>
