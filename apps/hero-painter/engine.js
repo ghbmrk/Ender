@@ -338,6 +338,20 @@ export async function createPainter({ manifest, fetchChunk, onProgress = () => {
   const order = Object.entries(T).sort((a, b) => a[1].offset - b[1].offset);
   const gpu = {}, cpu = {};
   let pending = new Uint8Array(0), pendingAt = 0, ti = 0, loaded = 0;
+  const unpackPipe = device.createComputePipeline({ layout: "auto", compute: { entryPoint: "main", module: device.createShaderModule({ code: `
+struct P { n8: u32, _a: u32, _b: u32, _c: u32 }
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(1) var<storage, read> pk: array<u32>;
+@group(0) @binding(2) var<storage, read_write> out: array<u32>;
+fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
+@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) g: vec3<u32>) {
+  let i = g.x + g.y * 4194240u; if (i >= p.n8) { return; }
+  let j = i * 5u;
+  let lo = byteAt(j) | (byteAt(j + 1u) << 8u) | (byteAt(j + 2u) << 16u) | (byteAt(j + 3u) << 24u); let hi = byteAt(j + 4u);
+  out[2u * i] = (lo & 31u) | (((lo >> 5u) & 31u) << 8u) | (((lo >> 10u) & 31u) << 16u) | (((lo >> 15u) & 31u) << 24u);
+  out[2u * i + 1u] = ((lo >> 20u) & 31u) | (((lo >> 25u) & 31u) << 8u) | ((((lo >> 30u) | (hi << 2u)) & 31u) << 16u) | (((hi >> 3u) & 31u) << 24u);
+}` }) } });
+  let unpackTrash = [];
   const take = (name, t) => {
     const raw = pending.subarray(t.offset - pendingAt, t.offset - pendingAt + t.bytes);
     const n = t.shape.reduce((a, b) => a * b, 1);
@@ -346,14 +360,19 @@ export async function createPainter({ manifest, fetchChunk, onProgress = () => {
       const mm = new Float32Array(raw.slice(0, g * 8).buffer);
       const ms = new Float32Array(g * 2);
       for (let i = 0; i < g; i++) { ms[2 * i] = mm[i]; ms[2 * i + 1] = mm[g + i]; }
-      const pk = raw.subarray(g * 8);
-      const codes = new Uint8Array(Math.ceil(n / 4) * 4);
-      for (let i = 0, j = 0; i < n; i += 8, j += 5) {
-        const lo = pk[j] | (pk[j + 1] << 8) | (pk[j + 2] << 16) | (pk[j + 3] << 24), hi = pk[j + 4];
-        codes[i] = lo & 31; codes[i + 1] = (lo >>> 5) & 31; codes[i + 2] = (lo >>> 10) & 31; codes[i + 3] = (lo >>> 15) & 31;
-        codes[i + 4] = (lo >>> 20) & 31; codes[i + 5] = (lo >>> 25) & 31; codes[i + 6] = ((lo >>> 30) | (hi << 2)) & 31; codes[i + 7] = (hi >>> 3) & 31;
-      }
-      gpu[name] = { q: true, c: upload(codes), m: upload(ms) };
+      // 8 codes per 5 bytes; the GPU unpacks them to one byte each, so the main thread stays free.
+      const n8 = Math.ceil(n / 8), pk = new Uint8Array(Math.ceil((n8 * 5) / 4) * 4);
+      pk.set(raw.subarray(g * 8, g * 8 + n8 * 5));
+      const packed = upload(pk), codes = mkbuf(n8 * 8);
+      const e = device.createCommandEncoder(), pass = e.beginComputePass();
+      const u = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+      device.queue.writeBuffer(u, 0, new Uint32Array([n8, 0, 0, 0]));
+      pass.setPipeline(unpackPipe);
+      pass.setBindGroup(0, device.createBindGroup({ layout: unpackPipe.getBindGroupLayout(0), entries: [u, packed, codes].map((b, i) => ({ binding: i, resource: { buffer: b } })) }));
+      pass.dispatchWorkgroups(Math.min(65535, Math.ceil(n8 / 64)), Math.ceil(n8 / 64 / 65535)); pass.end();
+      device.queue.submit([e.finish()]);
+      unpackTrash.push(packed, u);
+      gpu[name] = { q: true, c: codes, m: upload(ms) };
     } else {
       let f;
       if (t.kind === "f32") f = new Float32Array(raw.slice().buffer);
@@ -362,8 +381,15 @@ export async function createPainter({ manifest, fetchChunk, onProgress = () => {
       else gpu[name] = { q: false, f: upload(f) };
     }
   };
-  for (let fi = 0; fi < manifest.files.length; fi++) {
-    const chunk = new Uint8Array(await fetchChunk(manifest.files[fi]));
+  // Fetch up to three chunks at once; process them in order, yielding between tensors so taps stay quick.
+  const inflight = [], files = manifest.files;
+  let nextFetch = 0;
+  let used = 0;
+  const kick = () => { while (nextFetch < files.length && nextFetch < used + 3) { inflight[nextFetch] = fetchChunk(files[nextFetch]); nextFetch++; } };
+  kick();
+  const yieldNow = () => new Promise((r) => setTimeout(r, 0));
+  for (let fi = 0; fi < files.length; fi++) {
+    const chunk = new Uint8Array(await inflight[fi]); inflight[fi] = null; used = fi + 1; kick();
     const merged = new Uint8Array(pending.length + chunk.length);
     merged.set(pending); merged.set(chunk, pending.length);
     pending = merged;
@@ -371,12 +397,15 @@ export async function createPainter({ manifest, fetchChunk, onProgress = () => {
       const [name, t] = order[ti];
       if (t.offset + t.bytes > pendingAt + pending.length) break;
       take(name, t); ti++;
+      await yieldNow();
     }
     const keepFrom = ti < order.length ? order[ti][1].offset : pendingAt + pending.length;
     pending = pending.slice(keepFrom - pendingAt); pendingAt = keepFrom;
     loaded += chunk.length;
     onProgress(loaded / manifest.total);
     await device.queue.onSubmittedWorkDone();
+    for (const b of unpackTrash) b.destroy();
+    unpackTrash = [];
   }
 
   // ---------- pipelines ----------

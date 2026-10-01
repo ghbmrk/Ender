@@ -3,85 +3,100 @@
 @font-face { font-family: "Alegreya SC"; font-weight: 700; src: url(__FONT_SC700__) format("woff2"); font-display: swap; }
 @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; src: url(__FONT_AT400__) format("woff2"); font-display: swap; }
 @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; src: url(__FONT_AT700__) format("woff2"); font-display: swap; }
-/* Layout: one portrait screen. The painted hero fills the upper stage over the Hollow Keep backdrop,
-   seen over the shoulder and cropped at the knee; every control sits in the lower thumb zone, primary action bottom-right. */
+/* Layout: one portrait screen in two states. Choosing: a sigil of gathering threads fills the stage while the
+   choices sit in the thumb zone. Revealed: the painted hero fills the stage over the backdrop, seen over the shoulder. */
 :root {
   --ink: #1d1822; --slate: #2a2533; --stone: #3a3142; --line: #4d4257;
-  --text: #f1e9dc; --dim: #b9adc4; --gold: #ecc56a; --gold-deep: #c9953a; --thread: #9fc3ff; --violet: #c9a8ff; --ember: #ffb35c;
+  --text: #f1e9dc; --dim: #b9adc4; --gold: #ecc56a; --gold-deep: #c9953a; --thread: #9fc3ff; --violet: #c9a8ff;
   --display: "Alegreya SC", "Palatino Linotype", Georgia, serif;
   --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
   color-scheme: dark;
 }
 html, body { height: 100%; }
-body { background: var(--ink); color: var(--text); font: 16px/1.4 var(--body); -webkit-tap-highlight-color: transparent; }
-#app { max-width: 480px; margin: 0 auto; min-height: 100%; display: grid; grid-template-rows: minmax(300px, 56vh) auto; }
-.stage { position: relative; overflow: hidden; background: #120f17 center / cover no-repeat; }
-.stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,15,23,.15) 0%, rgba(18,15,23,0) 40%, rgba(29,24,34,.9) 100%); pointer-events: none; }
-#hero, #fx { position: absolute; left: -12%; bottom: -14%; width: 106%; aspect-ratio: 1; }
-#hero { filter: drop-shadow(0 0 18px rgba(0,0,0,.6)); }
-#fx { pointer-events: none; mix-blend-mode: screen; z-index: 2; }
-.title { position: absolute; z-index: 3; top: 14px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.title h1 { margin: 0; font: 700 22px/1 var(--display); color: var(--gold); letter-spacing: .04em; text-shadow: 0 2px 8px #000; }
-.title span { font-size: 13px; color: var(--dim); text-shadow: 0 1px 4px #000; text-align: right; }
-.say { position: absolute; z-index: 3; left: 16px; right: 16px; bottom: 12px; font-size: 14px; color: var(--text); text-shadow: 0 1px 6px #000; min-height: 20px; }
-#prev { position: absolute; z-index: 3; right: 12px; top: 48px; width: 76px; height: 76px; border: 2px solid var(--gold-deep); border-radius: 50%; background: var(--slate) center 18% / 170% no-repeat; box-shadow: 0 2px 10px #000; }
-#prev::after { content: "before"; position: absolute; bottom: -18px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--dim); text-shadow: 0 1px 3px #000; }
-.panel { padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; background: var(--ink); }
-.row { display: grid; gap: 8px; }
-.label { font: 700 13px/1 var(--display); letter-spacing: .08em; color: var(--dim); }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { min-height: 44px; padding: 0 16px; border-radius: 22px; border: 1px solid var(--line); background: var(--slate); color: var(--text); font: 700 15px var(--body); }
-.chip[aria-pressed="true"] { border-color: var(--gold); background: #3b3020; color: var(--gold); }
-.pal { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.sw { width: 100%; height: 44px; border-radius: 22px; border: 2px solid var(--line); padding: 0; background: conic-gradient(var(--a) 0 50%, var(--b) 0 100%); }
-.sw[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--gold); }
-.loom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.aff { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 6px 0 12px; border-radius: 10px; background: var(--slate); border: 1px solid var(--line); color: var(--text); font: 700 15px var(--body); }
-.pips { display: flex; gap: 4px; }
-.pip { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--gold-deep); }
-.pip.on { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 6px var(--gold); }
-.foot { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
-.ghost { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 700 15px var(--body); }
-.go { min-height: 56px; border-radius: 14px; border: 0; background: linear-gradient(180deg, var(--gold), var(--gold-deep)); color: #2a1a05; font: 700 19px var(--display); letter-spacing: .05em; }
-.go:disabled { filter: grayscale(.7) brightness(.7); }
-button { cursor: pointer; }
-[hidden] { display: none !important; }
+body { background: var(--ink); color: var(--text); font: 16px/1.4 var(--body); -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+#app { max-width: 480px; margin: 0 auto; min-height: 100%; display: grid; grid-template-rows: minmax(300px, 1fr) auto; }
+button { cursor: pointer; touch-action: manipulation; }
 button:focus-visible { outline: 3px solid var(--thread); outline-offset: 2px; }
-.bar { height: 6px; border-radius: 3px; background: var(--stone); overflow: hidden; }
-.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--thread), var(--violet)); transition: width .2s; }
-.stats { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
-.stats b { color: var(--text); font-weight: 700; }
+[hidden] { display: none !important; }
+
+.stage { position: relative; overflow: hidden; background: #120f17; min-height: 46vh; }
+#backdrop { position: absolute; inset: 0; background: center / cover no-repeat; opacity: 0; transition: opacity .6s; }
+.revealed #backdrop { opacity: 1; }
+.stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,15,23,.1) 0%, rgba(18,15,23,0) 45%, rgba(29,24,34,.92) 100%); pointer-events: none; z-index: 3; }
+#hero { position: absolute; left: -12%; bottom: -14%; width: 106%; aspect-ratio: 1; z-index: 2; opacity: 0; }
+#fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; }
+#flash { position: absolute; inset: 0; z-index: 5; background: radial-gradient(circle at 45% 55%, #fffaf0, #ffe7b0 40%, rgba(255,231,176,0) 75%); opacity: 0; pointer-events: none; }
+.title { position: absolute; z-index: 6; top: 14px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.title h1 { margin: 0; font: 700 22px/1 var(--display); color: var(--gold); letter-spacing: .04em; text-shadow: 0 2px 8px #000; }
+.title span { font-size: 12px; color: var(--dim); text-shadow: 0 1px 4px #000; text-align: right; font-variant-numeric: tabular-nums; }
+.say { position: absolute; z-index: 6; left: 16px; right: 16px; bottom: 12px; font-size: 15px; text-shadow: 0 1px 6px #000; min-height: 21px; }
+.power { position: absolute; z-index: 6; left: 16px; top: 46px; display: flex; align-items: baseline; gap: 8px; font: 700 13px var(--display); letter-spacing: .1em; color: var(--dim); }
+.power b { font-size: 26px; color: var(--gold); letter-spacing: 0; text-shadow: 0 0 12px rgba(236,197,106,.6); font-variant-numeric: tabular-nums; transition: transform .15s; display: inline-block; }
+.power b.bump { transform: scale(1.35); }
+
+.panel { padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; background: var(--ink); }
+.row { display: grid; gap: 7px; }
+.label { font: 700 13px/1 var(--display); letter-spacing: .08em; color: var(--dim); }
+.chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.chip { min-height: 46px; border-radius: 23px; border: 1px solid var(--line); background: var(--slate); color: var(--text); font: 700 15px var(--body); }
+.chip[aria-pressed="true"] { border-color: var(--gold); background: #3b3020; color: var(--gold); box-shadow: 0 0 14px rgba(236,197,106,.25); }
+.pal { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.sw { height: 44px; border-radius: 22px; border: 2px solid var(--line); padding: 0; background: linear-gradient(110deg, var(--a) 0 55%, var(--b) 55% 100%); }
+.sw[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--gold), 0 0 16px var(--a); }
+.loom { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.aff { display: grid; gap: 5px; justify-items: start; min-height: 52px; padding: 8px 10px; border-radius: 10px; background: var(--slate); border: 1px solid var(--line); color: var(--text); font: 700 14px var(--body); text-align: left; }
+.aff[data-r="1"], .aff[data-r="2"], .aff[data-r="3"] { border-color: var(--glow); box-shadow: inset 0 0 calc(var(--rank) * 10px) color-mix(in srgb, var(--glow) 35%, transparent); }
+.pips { display: flex; gap: 4px; }
+.pip { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--line); }
+.pip.on { background: var(--glow); border-color: var(--glow); box-shadow: 0 0 6px var(--glow); }
+.foot { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
+.ghost { min-height: 52px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 700 15px var(--body); }
+.go { min-height: 58px; border-radius: 14px; border: 0; background: linear-gradient(180deg, var(--gold), var(--gold-deep)); color: #2a1a05; font: 700 20px var(--display); letter-spacing: .05em; position: relative; overflow: hidden; }
+.go:disabled { filter: grayscale(.8) brightness(.6); }
+.go::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); transform: translateX(-100%); }
+.go.charged::after { animation: sheen 1.8s ease-in-out infinite; }
+@keyframes sheen { to { transform: translateX(100%); } }
+.stats { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; min-height: 18px; }
+.stats b { color: var(--text); }
 .err { color: #ff9a8a; }
-@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+.revealed .choose { display: none; }
+.after { display: none; }
+.revealed .after { display: grid; }
+@media (prefers-reduced-motion: reduce) { .go.charged::after { animation: none; } #backdrop { transition: none; } }
 </style>
 <div id="app">
   <section class="stage" id="stage">
-    <div class="title"><h1>Hero Painter</h1><span id="gpu">Painted on this device</span></div>
-    <div id="prev" hidden></div>
+    <div id="backdrop"></div>
     <canvas id="hero" width="512" height="512" aria-label="Your painted hero"></canvas>
-    <canvas id="fx" width="512" height="512"></canvas>
-    <div class="say" id="say">Load the painter once (214 MB), then every hero is painted on this phone.</div>
+    <canvas id="fx"></canvas>
+    <div id="flash"></div>
+    <div class="title"><h1>Weave your hero</h1><span id="net"></span></div>
+    <div class="power choose" id="powerRow">POWER <b id="power">0</b></div>
+    <div class="say" id="say">Choose what your hero wears. Every choice feeds the Loom.</div>
   </section>
   <section class="panel">
-    <div class="row" id="loadrow">
-      <div class="bar" aria-hidden="true"><i id="bar"></i></div>
-    </div>
-    <div class="row">
+    <div class="row choose">
       <div class="label">Garb</div>
       <div class="chips" id="garb"></div>
     </div>
-    <div class="row">
+    <div class="row choose">
       <div class="label">Colours</div>
       <div class="pal" id="pal"></div>
     </div>
-    <div class="row">
+    <div class="row choose">
       <div class="label">Loom ranks &middot; tap to raise</div>
       <div class="loom" id="loom"></div>
     </div>
-    <div class="stats" id="stats">No hero painted yet.</div>
-    <div class="foot">
+    <div class="foot choose">
       <button class="ghost" id="reroll" type="button">New face</button>
-      <button class="go" id="go" type="button">Load painter</button>
+      <button class="go" id="go" type="button" disabled>Reveal</button>
+    </div>
+    <div class="row after">
+      <div class="stats" id="stats"></div>
+      <div class="foot">
+        <button class="ghost" id="again" type="button">New face</button>
+        <button class="go charged" id="back" type="button">Weave again</button>
+      </div>
     </div>
   </section>
 </div>
@@ -89,7 +104,7 @@ button:focus-visible { outline: 3px solid var(--thread); outline-offset: 2px; }
 __ENGINE__
 
 const $ = (id) => document.getElementById(id);
-document.getElementById("stage").style.backgroundImage = "url(bg-hollow-keep.webp)";
+$("backdrop").style.backgroundImage = "url(bg-hollow-keep.webp)";
 
 const GARBS = [["armour", "Plate"], ["leathers", "Leathers"], ["robes", "Robes"]];
 const PALS = [["#9a2a39", "#c9953a"], ["#23408f", "#6a44a3"], ["#1c605a", "#9a6535"], ["#43296f", "#c9953a"], ["#35323a", "#9a2a39"], ["#8f6420", "#1c605a"], ["#d8cfb8", "#23408f"], ["#4a2a15", "#2c8f84"]];
@@ -97,100 +112,108 @@ const PAL_NAMES = ["Oxblood and gold", "Sapphire and violet", "Verdigris and rus
 const AFFS = [["burden", "Burden"], ["veil", "Veil"], ["reach", "Reach"], ["knots", "Knots"], ["flex", "Flex"], ["bond", "Bond"]];
 const GLOWS = { burden: "#ffb35c", veil: "#c9a8ff", reach: "#9fc3ff", knots: "#ffd98a", flex: "#7dffd6", bond: "#ff8a7a" };
 
-const state = { garb: "armour", pal: 0, seed: 7, ranks: { burden: 0, veil: 0, reach: 0, knots: 0, flex: 0, bond: 0 } };
+const state = { garb: null, pal: null, seed: (Math.random() * 2 ** 31) | 0, ranks: Object.fromEntries(AFFS.map(([k]) => [k, 0])) };
+const ready = () => state.garb !== null && state.pal !== null;
+const power = () => (state.garb ? 3 : 0) + (state.pal !== null ? 3 : 0) + Object.values(state.ranks).reduce((a, b) => a + b, 0) * 2;
+const MAXP = 6 + 18 * 2;
 
 function traits() {
-  // The strongest Loom affinities shape the look, highest rank first (at most three), right after the garb.
   const ranks = AFFS.map(([k]) => [k, state.ranks[k]]).filter(([, r]) => r > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
   return [`look.${state.garb}.${state.pal}`, ...ranks.map(([k, r]) => `${k}.${r}`), `weapon.${state.garb}`, "view", "bg", "style"];
 }
-function topGlow() {
-  const best = AFFS.map(([k]) => [k, state.ranks[k]]).sort((a, b) => b[1] - a[1])[0];
-  return best[1] > 0 ? GLOWS[best[0]] : "#9fc3ff";
+const keyOf = () => JSON.stringify([traits(), state.seed]);
+function colours() {
+  const c = [];
+  if (state.pal !== null) c.push(...PALS[state.pal]);
+  for (const [k] of AFFS) if (state.ranks[k]) c.push(GLOWS[k]);
+  return c.length ? c : ["#9fc3ff", "#c9a8ff"];
 }
 
 // ---------- controls ----------
 function renderControls() {
   $("garb").innerHTML = GARBS.map(([k, n]) => `<button class="chip" type="button" data-garb="${k}" aria-pressed="${state.garb === k}">${n}</button>`).join("");
   $("pal").innerHTML = PALS.map(([a, b], i) => `<button class="sw" type="button" data-pal="${i}" aria-label="${PAL_NAMES[i]}" aria-pressed="${state.pal === i}" style="--a:${a};--b:${b}"></button>`).join("");
-  $("loom").innerHTML = AFFS.map(([k, n]) => `<button class="aff" type="button" data-aff="${k}" aria-label="${n} rank ${state.ranks[k]} of 3">${n}<span class="pips">${[1, 2, 3].map((r) => `<i class="pip${state.ranks[k] >= r ? " on" : ""}"></i>`).join("")}</span></button>`).join("");
+  $("loom").innerHTML = AFFS.map(([k, n]) => `<button class="aff" type="button" data-aff="${k}" data-r="${state.ranks[k]}" style="--glow:${GLOWS[k]};--rank:${state.ranks[k]}" aria-label="${n}, rank ${state.ranks[k]} of 3">${n}<span class="pips">${[1, 2, 3].map((r) => `<i class="pip${state.ranks[k] >= r ? " on" : ""}"></i>`).join("")}</span></button>`).join("");
+  const p = power();
+  $("power").textContent = p;
+  $("power").classList.remove("bump"); void $("power").offsetWidth; $("power").classList.add("bump");
+  setTimeout(() => $("power").classList.remove("bump"), 160);
+  $("go").disabled = !ready();
+  $("go").classList.toggle("charged", ready());
+  $("say").textContent = !state.garb ? "Choose what your hero wears. Every choice feeds the Loom." : state.pal === null ? "Now their colours." : "Raise Loom ranks to gather more power, or reveal your hero.";
 }
 renderControls();
+
 document.querySelector(".panel").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
-  if (b.dataset.garb) { state.garb = b.dataset.garb; renderControls(); weave("garb"); }
-  else if (b.dataset.pal) { state.pal = +b.dataset.pal; renderControls(); weave("colours"); }
-  else if (b.dataset.aff) { const k = b.dataset.aff; state.ranks[k] = (state.ranks[k] + 1) % 4; renderControls(); weave(state.ranks[k] ? "rank" : "rank-reset", k); }
+  let burst = null;
+  if (b.dataset.garb) { state.garb = b.dataset.garb; burst = colours()[0]; }
+  else if (b.dataset.pal) { state.pal = +b.dataset.pal; burst = PALS[state.pal][0]; }
+  else if (b.dataset.aff) { const k = b.dataset.aff; state.ranks[k] = (state.ranks[k] + 1) % 4; burst = GLOWS[k]; }
+  else return;
+  // paint the pressed state first, then do the rest
+  requestAnimationFrame(() => { renderControls(); fx.feed(burst, power() / MAXP, colours()); schedule(); });
 });
-$("reroll").addEventListener("click", () => { state.seed = (Math.random() * 2 ** 31) | 0; weave("face"); });
-$("go").addEventListener("click", () => (painter ? weave("again") : load()));
+$("reroll").addEventListener("click", () => { state.seed = (Math.random() * 2 ** 31) | 0; fx.feed("#fff6dc", power() / MAXP, colours()); schedule(); });
+$("go").addEventListener("click", () => reveal());
+$("back").addEventListener("click", () => backToChoices());
+$("again").addEventListener("click", () => { backToChoices(); state.seed = (Math.random() * 2 ** 31) | 0; schedule(); reveal(); });
 
-// ---------- painter ----------
-let painter = null, loading = false, busy = false, queued = null;
-async function load() {
-  if (loading) return; loading = true;
-  $("go").disabled = true; $("go").textContent = "Loading…";
-  try {
-    const t0 = performance.now();
-    const manifest = await (await fetch("model/manifest.json")).json();
-    painter = await createPainter({
-      manifest,
-      fetchChunk: async (f) => { const r = await fetch("model/" + f); if (!r.ok) throw new Error(`Download failed (${r.status}) for ${f}.`); return r.arrayBuffer(); },
-      onProgress: (p) => { $("bar").style.width = (p * 100).toFixed(1) + "%"; $("say").textContent = `Loading the painter… ${Math.round(p * 214)} of 214 MB`; },
-    });
-    $("loadrow").hidden = true;
-    $("gpu").textContent = painter.gpuName ? `On ${painter.gpuName}` : "Painted on this device";
-    $("go").textContent = "Weave hero"; $("go").disabled = false;
-    stats.load = (performance.now() - t0) / 1000;
-    weave("first");
-  } catch (e) {
-    $("say").innerHTML = `<span class="err">${e.message}</span>`;
-    $("go").textContent = "Try again"; $("go").disabled = false; loading = false;
-  }
+// ---------- the painter, loading in the background from the moment the page opens ----------
+let painter = null, loadErr = null;
+const CACHE = "ender-painter-v1";
+async function cachedFetch(url) {
+  let cache = null;
+  try { cache = await caches.open(CACHE); const hit = await cache.match(url); if (hit) return hit.arrayBuffer(); } catch {}
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Download failed (${r.status}) for ${url}.`);
+  if (cache) { try { await cache.put(url, r.clone()); } catch {} }
+  return r.arrayBuffer();
 }
+const t0 = performance.now();
+(async () => {
+  if (!navigator.gpu) throw new Error("This browser has no WebGPU, so it can't paint heroes. Safari on iOS 26 or recent Chrome on Android can.");
+  const manifest = await (await fetch("model/manifest.json")).json();
+  painter = await createPainter({
+    manifest,
+    fetchChunk: (f) => cachedFetch("model/" + f),
+    onProgress: (p) => { $("net").textContent = p < 1 ? `Gathering threads ${Math.round(p * 100)}%` : ""; },
+  });
+  $("net").textContent = "";
+  stats.load = (performance.now() - t0) / 1000;
+  schedule();
+})().catch((e) => { loadErr = e; $("net").innerHTML = `<span class="err">${e.message}</span>`; if (waiting) failReveal(); });
 
-const stats = { load: 0, runs: [] };
-function showStats(ms) {
-  stats.runs.push(ms.total);
-  const avg = stats.runs.reduce((a, b) => a + b, 0) / stats.runs.length;
-  $("stats").innerHTML = `Painted in <b>${(ms.total / 1000).toFixed(2)} s</b> (model ${(ms.unet / 1000).toFixed(2)} s, image ${(ms.decode / 1000).toFixed(2)} s, cutout ${(ms.cut / 1000).toFixed(2)} s) \u00b7 average ${(avg / 1000).toFixed(2)} s over ${stats.runs.length} \u00b7 loaded in ${stats.load.toFixed(0)} s`;
+// ---------- background painting: always paint the newest choices, keep the result out of sight ----------
+const stats = { load: 0 };
+let done = null, running = false, timer = 0, waiting = false;
+function schedule() {
+  clearTimeout(timer);
+  if (!painter || !ready()) return;
+  timer = setTimeout(paintLatest, waiting ? 0 : 250);
 }
-
-const SAY = {
-  first: "Your hero is woven from the Loom.",
-  garb: "Rewoven in new garb.", colours: "Rewoven in new colours.", face: "A new face from the same threads.", again: "Woven again.",
-  "rank-reset": "Rank cleared. The look settles back.",
-};
-async function weave(why, aff) {
-  if (!painter) return;
-  if (busy) { queued = [why, aff]; return; }
-  busy = true; $("go").disabled = true;
-  const old = $("hero"); const hadHero = heroDrawn;
-  if (hadHero) { $("prev").hidden = false; $("prev").style.backgroundImage = `url(${old.toDataURL("image/webp", 0.7)})`; }
-  $("say").textContent = why === "rank" ? `${AFFS.find((a) => a[0] === aff)[1]} rank ${state.ranks[aff]}: the hero is rewoven…` : "Weaving…";
-  fx.start(topGlow());
+async function paintLatest() {
+  if (running || !painter || !ready()) return;
+  const key = keyOf();
+  if (done?.key === key) { if (waiting) show(); return; }
+  running = true;
   try {
+    const t = performance.now();
     const r = await painter.paint({ traits: traits(), seed: state.seed });
     const tm = performance.now();
-    const keyed = applyMatte(r.rgba, await painter.matte(r.rgba));
-    r.ms.cut = performance.now() - tm; r.ms.total += r.ms.cut;
-    await fx.reveal(keyed);
-    heroDrawn = true;
-    showStats(r.ms);
-    $("say").textContent = why === "rank" ? `${AFFS.find((a) => a[0] === aff)[1]} rank ${state.ranks[aff]} shows in the hero's look.` : SAY[why] || "";
-  } catch (e) {
-    fx.stop(); $("say").innerHTML = `<span class="err">${e.message}</span>`;
-  }
-  busy = false; $("go").disabled = false;
-  if (queued) { const q = queued; queued = null; weave(...q); }
+    const m = await painter.matte(r.rgba);
+    const img = await createImageBitmap(applyMatte(r.rgba, m));
+    done = { key, img, ms: { ...r.ms, cut: performance.now() - tm, total: performance.now() - t } };
+  } catch (e) { loadErr = e; }
+  running = false;
+  if (loadErr && waiting) return failReveal();
+  if (keyOf() !== done?.key) return schedule();
+  if (waiting) show();
 }
-let heroDrawn = false;
 
-// Cut-out: the 320x320 matte from the on-device cutout model, scaled up bilinearly to the 512x512 painting.
 function applyMatte(rgba, m) {
   const W = 512, S = 320, px = new Uint8ClampedArray(rgba);
-  if (!m) return new ImageData(px, W, W);
-  for (let y = 0; y < W; y++) {
+  if (m) for (let y = 0; y < W; y++) {
     const sy = Math.max(0, (y + 0.5) * S / W - 0.5), y0 = Math.min(S - 1, sy | 0), y1 = Math.min(S - 1, y0 + 1), fy = sy - y0;
     for (let x = 0; x < W; x++) {
       const sx = Math.max(0, (x + 0.5) * S / W - 0.5), x0 = Math.min(S - 1, sx | 0), x1 = Math.min(S - 1, x0 + 1), fx = sx - x0;
@@ -201,77 +224,116 @@ function applyMatte(rgba, m) {
   return new ImageData(px, W, W);
 }
 
-// ---------- the materializing weave ----------
+// ---------- reveal ----------
+function reveal() {
+  if (!ready()) return;
+  waiting = true;
+  $("go").disabled = true;
+  $("say").textContent = "The Loom draws tight…";
+  fx.climax(true);
+  if (loadErr) return failReveal();
+  if (done?.key === keyOf()) return show();
+  if (!painter) $("say").textContent = "The Loom draws tight… still gathering threads.";
+  schedule();
+}
+function failReveal() {
+  waiting = false; fx.climax(false);
+  $("say").innerHTML = `<span class="err">${loadErr.message}</span>`;
+  $("go").disabled = false;
+}
+async function show() {
+  waiting = false;
+  const { img, ms } = done;
+  await fx.burst();                    // threads collapse, white flash
+  const c = $("hero").getContext("2d");
+  c.clearRect(0, 0, 512, 512); c.drawImage(img, 0, 0);
+  document.getElementById("app").classList.add("revealed");
+  $("hero").animate([{ opacity: 0, transform: "scale(1.18)", filter: "brightness(2.4) blur(6px)" }, { opacity: 1, transform: "scale(1)", filter: "brightness(1) blur(0)" }], { duration: 900, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" });
+  $("flash").animate([{ opacity: 1 }, { opacity: 0 }], { duration: 900, easing: "ease-out", fill: "forwards" });
+  fx.afterglow(colours());
+  const ranks = AFFS.filter(([k]) => state.ranks[k]).map(([k, n]) => `${n} ${state.ranks[k]}`);
+  $("say").textContent = ranks.length ? `Woven with ${ranks.join(", ")}.` : "Woven from the Loom.";
+  $("stats").innerHTML = `Painted on this phone in <b>${(ms.total / 1000).toFixed(1)} s</b> (model ${(ms.unet / 1000).toFixed(1)}, image ${(ms.decode / 1000).toFixed(1)}, cutout ${(ms.cut / 1000).toFixed(1)}) &middot; threads loaded in ${stats.load.toFixed(0)} s`;
+}
+function backToChoices() {
+  document.getElementById("app").classList.remove("revealed");
+  $("hero").getAnimations().forEach((a) => a.cancel());
+  $("hero").style.opacity = 0;
+  fx.reset(power() / MAXP, colours());
+  renderControls();
+}
+
+// ---------- the Loom sigil: threads that gather as power rises ----------
 const fx = (() => {
-  const c = $("fx"), g = c.getContext("2d"), W = 512;
+  const c = $("fx"), g = c.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let raf = 0, threads = [], motes = [], color = "#9fc3ff", t0 = 0, mode = "idle", reveal = null;
-  // A loose figure the threads gather around: head, shoulders, body, seen from behind.
-  const target = () => { const r = Math.random(); if (r < 0.15) return [180 + Math.random() * 40, 120 + Math.random() * 50]; if (r < 0.45) return [120 + Math.random() * 170, 170 + Math.random() * 70]; return [130 + Math.random() * 150, 230 + Math.random() * 250]; };
-  const spawn = () => { const side = Math.random() * 4 | 0; const p = [[Math.random() * W, -20], [W + 20, Math.random() * W], [Math.random() * W, W + 20], [-20, Math.random() * W]][side]; const [tx, ty] = target(); return { x: p[0], y: p[1], tx, ty, life: 0, speed: 0.012 + Math.random() * 0.02, w: 0.6 + Math.random() * 1.6, cx: W / 2 + (Math.random() - 0.5) * 400, cy: W / 2 + (Math.random() - 0.5) * 400 }; };
+  let W = 0, H = 0, dpr = 1;
+  const size = () => { const r = c.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1); W = r.width; H = r.height; c.width = W * dpr; c.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  size(); addEventListener("resize", size);
+  let level = 0, shown = 0, cols = ["#9fc3ff", "#c9a8ff"], threads = [], rings = [], motes = [], mode = "gather", climaxT = 0, after = 0;
+  const cx = () => W * 0.5, cy = () => H * 0.5;
+  const spawn = (col) => {
+    const a = Math.random() * Math.PI * 2, R = Math.max(W, H) * (0.45 + Math.random() * 0.2);
+    return { a, r0: R, life: 0, speed: 0.008 + Math.random() * 0.012, w: 0.6 + Math.random() * 1.8, col: col || cols[(Math.random() * cols.length) | 0], twist: (Math.random() - 0.5) * 2.4 };
+  };
   function frame(now) {
-    const t = (now - t0) / 1000;
-    g.clearRect(0, 0, W, W);
-    if (mode === "weave" || mode === "reveal") {
-      if (threads.length < 70 && mode === "weave") for (let i = 0; i < 3; i++) threads.push(spawn());
-      g.lineCap = "round";
-      for (const th of threads) {
-        th.life = Math.min(1, th.life + th.speed);
-        const e = 1 - (1 - th.life) ** 3;
-        const bx = (1 - e) ** 2 * th.x + 2 * (1 - e) * e * th.cx + e * e * th.tx, by = (1 - e) ** 2 * th.y + 2 * (1 - e) * e * th.cy + e * e * th.ty;
-        g.strokeStyle = color; g.globalAlpha = 0.25 + 0.5 * (1 - th.life * 0.6) * (mode === "reveal" ? Math.max(0, 1 - reveal.p * 1.4) : 1);
-        g.lineWidth = th.w;
-        g.beginPath(); g.moveTo(th.x, th.y); g.quadraticCurveTo(th.cx, th.cy, bx, by); g.stroke();
-        if (th.life >= 1 && Math.random() < 0.03) Object.assign(th, spawn());
-      }
-      // the silhouette glows brighter the longer the weave runs
-      const glow = Math.min(1, t / 2.5) * (mode === "reveal" ? Math.max(0, 1 - reveal.p) : 1);
-      const rg = g.createRadialGradient(210, 260, 10, 210, 300, 240);
-      rg.addColorStop(0, color); rg.addColorStop(1, "transparent");
-      g.globalAlpha = 0.18 * glow + 0.06 * Math.sin(t * 5) * glow; g.fillStyle = rg; g.fillRect(0, 0, W, W);
-      if (Math.random() < 0.6) motes.push({ x: 120 + Math.random() * 200, y: 200 + Math.random() * 300, v: 0.4 + Math.random(), a: 1 });
-      for (const m of motes) { m.y -= m.v; m.a -= 0.012; g.globalAlpha = Math.max(0, m.a); g.fillStyle = "#fff6dc"; g.fillRect(m.x, m.y, 2, 2); }
-      motes = motes.filter((m) => m.a > 0);
-      g.globalAlpha = 1;
+    g.clearRect(0, 0, W, H);
+    shown += (level - shown) * 0.06;
+    const k = mode === "climax" ? 1 : shown;
+    const want = Math.round(24 + k * 170);
+    if (mode !== "after") while (threads.length < want) threads.push(spawn());
+    const X = cx(), Y = cy(), core = 18 + k * 60;
+    g.lineCap = "round";
+    for (const t of threads) {
+      t.life += t.speed * (mode === "climax" ? 3.2 : 1 + k);
+      if (t.life >= 1) { if (mode === "after" || threads.length > want) { t.dead = true; continue; } Object.assign(t, spawn()); continue; }
+      const e = t.life * t.life, r = t.r0 * (1 - e) + core * 0.3 * e, a = t.a + t.twist * e;
+      const r2 = t.r0 * (1 - Math.max(0, e - 0.22)), a2 = t.a + t.twist * Math.max(0, e - 0.22);
+      g.strokeStyle = t.col; g.globalAlpha = (0.3 + 0.65 * t.life) * (mode === "after" ? 0.5 : 1); g.lineWidth = t.w;
+      g.beginPath(); g.moveTo(X + Math.cos(a2) * r2, Y + Math.sin(a2) * r2 * 1.2); g.lineTo(X + Math.cos(a) * r, Y + Math.sin(a) * r * 1.2); g.stroke();
     }
-    if (mode === "reveal") revealStep(now);
-    raf = requestAnimationFrame(frame);
-  }
-  // The new hero is drawn onto the hero canvas band by band, like a shuttle crossing the loom.
-  const hero = $("hero").getContext("2d");
-  let img = null, prevImg = null;
-  const BANDS = 32, DUR = reduce ? 1 : 1100;
-  function revealStep(now) {
-    const p = Math.min(1, (now - reveal.t) / DUR); reveal.p = p;
-    hero.clearRect(0, 0, W, W);
-    if (prevImg) { hero.globalAlpha = 1 - p; hero.drawImage(prevImg, 0, 0); hero.globalAlpha = 1; }
-    const bh = W / BANDS;
-    for (let i = 0; i < BANDS; i++) {
-      const start = (i / BANDS) * 0.55, q = Math.min(1, Math.max(0, (p - start) / 0.45));
-      if (q <= 0) continue;
-      const y = W - (i + 1) * bh, left = i % 2 === 0;
-      const w = W * q, x = left ? 0 : W - w;
-      hero.save(); hero.beginPath(); hero.rect(x, y, w, bh + 0.5); hero.clip(); hero.drawImage(img, 0, 0); hero.restore();
-      if (q < 1) { g.globalAlpha = 0.9; g.fillStyle = color; g.fillRect(left ? w - 3 : W - w, y, 3, bh); g.globalAlpha = 1; }
+    threads = threads.filter((t) => !t.dead);
+    // the sigil: three rings, one lit per kind of choice, spinning faster as power rises
+    if (mode !== "after") {
+      const spin = now / 1000 * (0.3 + k * 1.6);
+      const lit = [state.garb ? 1 : 0.15, state.pal !== null ? 1 : 0.15, Math.min(1, 0.15 + Object.values(state.ranks).reduce((a, b) => a + b, 0) / 9)];
+      [core * 1.0, core * 1.45, core * 1.95].forEach((R, i) => {
+        g.globalAlpha = 0.25 + 0.6 * lit[i]; g.strokeStyle = cols[i % cols.length]; g.lineWidth = 1.5 + lit[i] * 1.5;
+        g.setLineDash([R * 0.5, R * 0.18]); g.beginPath(); g.ellipse(X, Y, R, R * 1.1, (i % 2 ? -1 : 1) * spin * (1 + i * 0.3), 0, Math.PI * 2); g.stroke();
+      });
+      g.setLineDash([]);
+      const glow = g.createRadialGradient(X, Y, 0, X, Y, core * 2.6);
+      glow.addColorStop(0, "rgba(255,246,220," + (0.25 + k * 0.6) + ")"); glow.addColorStop(0.35, cols[0] + "88"); glow.addColorStop(1, "transparent");
+      g.globalAlpha = mode === "climax" ? 0.9 + 0.1 * Math.sin(now / 40) : 0.6 + 0.15 * Math.sin(now / 300);
+      g.fillStyle = glow; g.fillRect(X - core * 3, Y - core * 3, core * 6, core * 6);
     }
-    if (p >= 1) { mode = "idle"; reveal.done(); }
+    for (const r of rings) { r.t += 1 / 40; if (r.t <= 0) continue; g.globalAlpha = Math.max(0, 1 - r.t); g.strokeStyle = r.col; g.lineWidth = 3 * (1 - r.t) + 0.5; g.beginPath(); g.ellipse(X, Y, 20 + r.t * r.R, (20 + r.t * r.R) * 1.1, 0, 0, Math.PI * 2); g.stroke(); }
+    rings = rings.filter((r) => r.t < 1);
+    if (Math.random() < 0.3 + k) motes.push({ x: X + (Math.random() - 0.5) * W * 0.8, y: Y + H * 0.4, v: 0.5 + Math.random() * 1.5, a: 1, c: cols[(Math.random() * cols.length) | 0] });
+    for (const m of motes) { m.y -= m.v; m.a -= 0.01; g.globalAlpha = Math.max(0, m.a) * 0.8; g.fillStyle = m.c; g.fillRect(m.x, m.y, 2, 2); }
+    motes = motes.filter((m) => m.a > 0);
+    g.globalAlpha = 1;
+    requestAnimationFrame(frame);
   }
+  requestAnimationFrame(frame);
   return {
-    start(col) { color = col; if (mode === "idle") { threads = []; t0 = performance.now(); } mode = "weave"; if (!raf) raf = requestAnimationFrame(frame); },
-    stop() { mode = "idle"; },
-    reveal(imageData) {
-      return new Promise(async (res) => {
-        prevImg = heroDrawn ? await createImageBitmap($("hero")) : null;
-        img = await createImageBitmap(imageData);
-        reveal = { t: performance.now(), p: 0, done: res };
-        mode = "reveal";
+    feed(col, lv, cs) {
+      level = lv; cols = cs;
+      rings.push({ t: 0, R: Math.max(W, H) * 0.6, col });
+      if (!reduce) for (let i = 0; i < 36; i++) threads.push(spawn(col));
+    },
+    climax(on) { mode = on ? "climax" : "gather"; climaxT = performance.now(); },
+    burst() {
+      return new Promise((res) => {
+        const wait = Math.max(0, 700 - (performance.now() - climaxT)); // let the climax build at least a moment
+        setTimeout(() => {
+          rings.push({ t: 0, R: Math.max(W, H) * 1.2, col: "#fff6dc" }, { t: -0.15, R: Math.max(W, H), col: cols[0] });
+          $("flash").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, fill: "forwards" }).finished.then(res);
+        }, reduce ? 0 : wait);
       });
     },
+    afterglow(cs) { cols = cs; mode = "after"; },
+    reset(lv, cs) { level = lv; cols = cs; mode = "gather"; },
   };
 })();
-
-if (!navigator.gpu) {
-  $("say").innerHTML = `<span class="err">This browser has no WebGPU, so it can't paint heroes. Safari on iOS 26 or recent Chrome on Android can.</span>`;
-  $("go").disabled = true;
-}
 </script>
