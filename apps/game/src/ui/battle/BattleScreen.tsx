@@ -377,6 +377,14 @@ export function BattleScreen({
   // ───────────── flow ─────────────
   const finish = (outcome: "victory" | "defeat") => {
     seq.current = null;
+    if (outcome === "victory" && lesson?.straightOn) {
+      // No victory screen: the fight hands straight on to the next lesson.
+      setCaption(null);
+      setCoach(null);
+      sfx.victory();
+      onEnd({ outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats, foe: lastFoe(battle) });
+      return;
+    }
     setCaption(null);
     setPhase({ k: "end", outcome });
     setCoach(null);

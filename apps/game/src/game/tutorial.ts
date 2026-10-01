@@ -25,6 +25,8 @@ export type Lesson = {
   slow: number;
   coach: Partial<Record<CoachKey, string>>;
   setup: { waves: FoeKind[][]; foeScale: { hp: number; atk: number } };
+  /** A win goes straight on to the next step, with no victory screen (the last fight before the Loom). */
+  straightOn?: boolean;
 };
 
 export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
@@ -60,6 +62,8 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
   },
   parry: {
     step: "parry",
+    // Strike, dodge and parry are learned: straight into the Loom to learn the skill tree.
+    straightOn: true,
     title: "A Husk lurches out",
     commands: "basic",
     defense: "both",
