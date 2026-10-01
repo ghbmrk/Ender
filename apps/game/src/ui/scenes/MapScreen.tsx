@@ -5,7 +5,7 @@ import { rootLabel, heroFigure, lookFor, partyRoots } from "../../game/hero";
 import { getState as getStoreState } from "../../state/store";
 import { backdropFor } from "../../art/registry";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
-import { finishExpedition, nodeById, reachable, stepTo } from "../../game/flow";
+import { finishExpedition, leaveShrine, nodeById, reachable, stepTo } from "../../game/flow";
 import { setState, toast, useStore, type MapNode } from "../../state/store";
 import { Head } from "../battle/Figure";
 import { useStage } from "../Stage";
@@ -46,6 +46,10 @@ export function MapScreen() {
   useStore((s) => s.panel);
   const [reveal, setReveal] = useState<{ node: MapNode; open: boolean } | null>(null);
   const [omen, setOmen] = useState<MapNode | null>(null);
+  const rest = useStore((s) => s.rest);
+  useEffect(() => {
+    if (rest) sfx.loot(2);
+  }, [rest]);
   // Health bars start where you last saw them and settle to where they are now.
   const [settled, setSettled] = useState(false);
   useEffect(() => {
@@ -53,7 +57,8 @@ export function MapScreen() {
     return () => clearTimeout(t);
   }, []);
   const bossNext = ex ? reachable().filter((n) => n.kind === "boss") : [];
-  const omenKey = ex && bossNext.length && ex.at ? ex.plan.runId : null;
+  // The Boss's moment waits for a Shrine's rest to be dismissed, so the two never stack.
+  const omenKey = ex && bossNext.length && ex.at && !rest ? ex.plan.runId : null;
   useEffect(() => {
     if (!omenKey || warned.has(omenKey)) return;
     warned.add(omenKey);
@@ -198,6 +203,36 @@ export function MapScreen() {
               )}
             </span>
           </button>
+        </div>
+      )}
+      {rest && (
+        <div className="shrine-rest" data-testid="shrine-rest">
+          <div className="sr-card">
+            <i className="sr-glow">✧</i>
+            <b>You rest at the Shrine</b>
+            <span className="sr-gain">{rest.gained > 0 ? `+${rest.gained} health` : "You are already whole"}</span>
+            <div className="gbar hp hero">
+              <div style={{ width: `${(rest.hp / rest.max) * 100}%` }} />
+            </div>
+            <small>
+              {rest.hp}/{rest.max}. The Loom is open here if you want to rework it.
+            </small>
+            <div className="sr-actions">
+              <button className="big" onClick={() => setState({ rest: null, screen: "loom" })} data-testid="shrine-loom">
+                Rework Loom
+              </button>
+              <button
+                className="big primary"
+                onClick={() => {
+                  setState({ rest: null });
+                  leaveShrine().catch((e) => toast((e as Error).message, "loss"));
+                }}
+                data-testid="shrine-continue"
+              >
+                Move on
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {omen && omen.encounter && (

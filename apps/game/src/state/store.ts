@@ -30,6 +30,8 @@ export type State = {
   loom: any | null;
   /** Where the Loom may be edited: the Crossing or a Shrine (§79). */
   loomEditable: boolean;
+  /** A Shrine rest in progress on the map: what it mended, before you rework the Loom or move on. */
+  rest?: { gained: number; hp: number; max: number } | null;
   expedition: Expedition | null;
   /** The fight in progress: which map node it came from. */
   battle: { nodeId: string; kind: string; waves: string[][]; difficulty: number } | null;

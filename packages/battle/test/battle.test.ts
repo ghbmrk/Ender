@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   AttackTracker,
   Battle,
+  DUEL_ATK,
+  DUEL_FIELD_CAP,
+  DUEL_HP,
   DefenseTracker,
   FOES,
   ROOTS,
@@ -16,6 +19,7 @@ import {
   type Defense,
   type Evidence,
   type FoeKind,
+  type Grade,
   type LoomNode,
   type Role,
 } from "../src";
@@ -386,5 +390,37 @@ describe("§97 required design test: builds differ materially", () => {
     expect(b.ap).toBeGreaterThanOrEqual(1.2 * a.ap);
     expect(buildA().actions[0]!.name).toBe("Crush");
     expect(buildB().actions[0]!.name).toBe("Flurry");
+  });
+});
+
+describe("duel balance", () => {
+  // The Loom a first run carries to its Boss (taken from a playtest): one Action and two Modifiers.
+  const FIRST_RUN_LOOM = [
+    { id: "f7", formId: "f7", name: "Nyund Sigil", role: "modifier", affinities: ["veil", "burden"], technicalScore: 59.4, evidence: "attuned", q: -1, r: 0 },
+    { id: "f2", formId: "f2", name: "Venesk Veil", role: "modifier", affinities: ["knots", "veil"], technicalScore: 78.2, evidence: "attuned", q: 1, r: -1 },
+    { id: "f1", formId: "f1", name: "Oberith Sigil", role: "action", affinities: ["burden", "veil"], technicalScore: 37.8, evidence: "attuned", q: 1, r: 0 },
+  ] as LoomNode[];
+  const wins = (waves: FoeKind[][], tier: keyof typeof DUEL_HP, grade: Grade, defend: (k: number) => Defense) => {
+    let n = 0;
+    for (let i = 0; i < 30; i++) {
+      const b = new Battle({ seed: `duel${i}`, party: [{ root: "iron", loom: compileLoom(FIRST_RUN_LOOM, 1) }], waves, difficulty: 1, fieldCap: DUEL_FIELD_CAP, foeScale: { hp: DUEL_HP[tier], atk: DUEL_ATK[tier] } });
+      simulate(b, { grade, defend });
+      if (b.outcome === "victory") n++;
+    }
+    return n;
+  };
+  const decent = (k: number): Defense => (k % 3 === 2 ? "hit" : k % 3 ? "dodge" : "parry");
+  const strong = (k: number): Defense => (k % 4 === 3 ? "hit" : "parry");
+  it("a first-run Boss is a real fight: decent play wins some, strong play wins nearly always", () => {
+    const d = wins([["king"]], "boss", "good", decent);
+    expect(d).toBeGreaterThanOrEqual(5);
+    expect(d).toBeLessThanOrEqual(25);
+    expect(wins([["king"]], "boss", "perfect", strong)).toBeGreaterThanOrEqual(27);
+  });
+  it("ordinary fights stay easy and Elites sit between", () => {
+    expect(wins([["husk"], ["hound"]], "normal", "good", decent)).toBe(30);
+    const e = wins([["ironbound"], ["husk"]], "elite", "good", decent);
+    expect(e).toBeGreaterThan(wins([["king"]], "boss", "good", decent));
+    expect(e).toBeLessThan(30);
   });
 });

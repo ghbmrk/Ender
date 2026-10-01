@@ -121,9 +121,9 @@ export async function stepTo(node: MapNode) {
       healed[r] = Math.min(max, hp + Math.round(max * SHRINE_MEND));
       gained += healed[r]! - hp;
     }
-    setState({ expedition: { ...cur, partyHp: { ...cur.partyHp, ...healed } } });
-    toast(gained > 0 ? `A Shrine: you rest and recover ${gained} health. Rework your Loom freely here.` : "A Shrine: rework your Loom freely here.", gained > 0 ? "gain" : "info");
-    setState({ loomEditable: true, screen: "loom" });
+    // The rest is its own moment on the map; from there you rework the Loom or move straight on.
+    const root = partyRoots()[0]!;
+    setState({ expedition: { ...cur, partyHp: { ...cur.partyHp, ...healed } }, loomEditable: true, rest: { gained, hp: healed[root]!, max: ROOTS[root].hp } });
   } else if (node.kind === "attunement") {
     // Crafting lives on the Loom now: an Attunement opens it so any Forms you carry can be woven.
     toast("An Attunement: weave any Forms you carry.", "info");

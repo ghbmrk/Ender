@@ -140,3 +140,15 @@ export const FOES: Record<FoeKind, FoeDef> = {
     phases: [{ at: 0.5, summon: ["wisp", "wisp"] }],
   },
 };
+
+/** Duels: one foe on the field at a time, so an encounter's foes come one after another. */
+export const DUEL_FIELD_CAP = 1;
+/** Foes were tuned for three heroes; a lone hero meets them at this share of their HP. */
+export const DUEL_HP = { normal: 0.45, elite: 0.45, boss: 0.3 } as const;
+/**
+ * And at this share of their attack. A Boss was built to wear down three heroes; with a run's first Loom, a
+ * balance sim of its duel (good presses, a third of blows each parried, dodged and taken) won 0 of 30 at full
+ * HP and attack, and about half at these values, while players who parry well still win comfortably
+ * (test/battle.test.ts holds it there).
+ */
+export const DUEL_ATK = { normal: 1, elite: 1, boss: 0.85 } as const;
