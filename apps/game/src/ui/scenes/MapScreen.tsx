@@ -101,8 +101,14 @@ export function MapScreen() {
   const Back = backdropFor(ex.plan.realmId, false)?.default;
   const go = (n: MapNode) => {
     if (reveal) return;
+    // Tapping where you stand, with one way on, takes that way.
+    if (n.id === ex.at && reach.length === 1) return go(reach[0]!);
     if (!next.has(n.id)) {
-      if (n.layer > anchor) setNudge((k) => k + 1);
+      if (n.layer > anchor) {
+        setNudge((k) => k + 1);
+        // Say it in words too: a flash alone reads as nothing happening.
+        toast(reach.length === 1 ? `That stop is further on. Tap the glowing ${KIND[reach[0]!.kind]?.name ?? "stop"} first.` : "That stop is further on. Tap a glowing one first.");
+      }
       return;
     }
     sfx.step();

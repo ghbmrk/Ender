@@ -34,10 +34,50 @@
   transform: translate(var(--lx), var(--ly));
   transition: transform 110ms cubic-bezier(0.6, 0, 0.9, 0.5);
 }
-/* The foe draws back before it strikes. */
+/* A foe's blow: it rears up and back for as long as the blow's ring takes to close (--wind-ms), then lunges in so
+   it lands on the hero exactly at the impact (--strike-ms); the vector and scale come from the screen. */
 .battle .unit.windup {
   transform: translate(calc(var(--lx) * -0.12), calc(var(--ly) * -0.12)) scale(1.04);
   transition: transform 360ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.battle .unit.foe.windup {
+  transform: translate(calc(var(--lx) * -0.15), calc(var(--ly) * -0.15)) scale(1.22) rotate(-6deg);
+  transition: transform var(--wind-ms, 360ms) cubic-bezier(0.25, 0.1, 0.4, 1);
+}
+.battle .unit.foe.rewind {
+  transform: translate(calc(var(--lx) * 0.7), calc(var(--ly) * 0.7)) scale(calc(1 + (var(--ls, 1) - 1) * 0.7)) rotate(-4deg);
+  transition: transform var(--wind-ms, 200ms) cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.battle .unit.foe.lunge {
+  transform: translate(var(--lx), var(--ly)) scale(var(--ls, 1));
+  transition: transform var(--strike-ms, 110ms) cubic-bezier(0.55, 0, 1, 0.6);
+}
+/* A red glow builds behind the foe while it winds up and flares as it strikes (opacity only: no repaint). */
+.battle .unit .menace {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #ff3a1acc, #ff3a1a55 55%, transparent);
+  transform: scale(1.5);
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  pointer-events: none;
+  will-change: opacity;
+}
+.battle .unit.foe.windup .menace,
+.battle .unit.foe.rewind .menace {
+  opacity: 0.85;
+  transition: opacity var(--wind-ms, 360ms) ease-in;
+}
+.battle .unit.foe.lunge .menace {
+  opacity: 1;
+  transition-duration: 80ms;
+}
+/* The foe's name plate steps aside while it strikes rather than flying about with the blow. */
+.battle .unit.foe.windup .foe-tag,
+.battle .unit.foe.rewind .foe-tag,
+.battle .unit.foe.lunge .foe-tag {
+  opacity: 0;
+  transition: opacity 60ms;
 }
 
 /* Breathing idle: the 0×0 bob box sits on the feet, so it scales from the ground up. */
@@ -2213,7 +2253,7 @@
   text-align: left;
 }
 .battle .hint {
-  top: 640px !important;
+  top: 700px !important;
 }
 /* Resting cards are dimmed but solid, so the hero's legs never show through them. */
 .stage .battle .bpanel.arc .cards-idle {
@@ -2567,6 +2607,10 @@
   pointer-events: none;
   box-shadow: 0 0 18px #0009;
 }
+/* Rings queued behind the one the next tap answers. */
+.battle .cue-ring.queued {
+  border-style: dashed;
+}
 .battle .cue-mark {
   position: absolute;
   box-sizing: border-box;
@@ -2814,4 +2858,47 @@
 /* Each realm's painting gets its own layer, so pressing Set out repaints the button, not three paintings. */
 .realm-card .realm-head.has-art {
   will-change: transform;
+}
+
+/* Loom: a Modifier's boost to the skills it touches. */
+.loom-board .boost-link {
+  pointer-events: none;
+  animation: boost-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+.loom-board .boost-plus {
+  fill: #1d1822;
+  font: 800 52px var(--display);
+}
+@keyframes boost-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+/* Weave sheet: what a reveal found, in two numbers with what each means. */
+.weave-sheet .ws-eval {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin: 6px 0 18px;
+}
+.weave-sheet .ws-eval > span {
+  display: grid;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: #1d182214;
+  border: 2px solid #8f642055;
+}
+.weave-sheet .ws-eval small {
+  font: 700 26px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.weave-sheet .ws-eval b {
+  font: 800 56px/1.1 var(--display);
+}
+.weave-sheet .ws-eval i {
+  font-size: 26px;
+  opacity: 0.8;
 }

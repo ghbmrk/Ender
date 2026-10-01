@@ -59,7 +59,10 @@ const cmds = {
     const onScreen = async (loc) => {
       for (const el of await loc.all()) {
         const b = await el.boundingBox().catch(() => null);
-        if (b && b.y + b.height / 2 > 0 && b.y + b.height / 2 < 844 && b.x + b.width / 2 > 0 && b.x + b.width / 2 < 390) return b;
+        if (!(b && b.y + b.height / 2 > 0 && b.y + b.height / 2 < 844 && b.x + b.width / 2 > 0 && b.x + b.width / 2 < 390)) continue;
+        // Covered by something else (a panel over the hub): the player can't see it either.
+        const top = await el.evaluate((n, [x, y]) => { const t = document.elementFromPoint(x, y); return !!t && (n === t || n.contains(t)); }, [b.x + b.width / 2, b.y + b.height / 2]).catch(() => false);
+        if (top) return b;
       }
       return null;
     };
@@ -68,6 +71,14 @@ const cmds = {
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
     await run(Number(after));
     return { tapped: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)], shot: await shot() };
+  },
+  // For checking fixes only; not part of the player's controls.
+  async probe({ x, y }) {
+    return await page.evaluate(([x, y]) => {
+      const el = document.elementFromPoint(x, y);
+      const toasts = [...document.querySelectorAll(".toast")].map((t) => t.textContent);
+      return { el: el ? el.outerHTML.slice(0, 200) : null, toasts };
+    }, [+x, +y]);
   },
   async swipe({ x1, y1, x2, y2 }) {
     const steps = 8;

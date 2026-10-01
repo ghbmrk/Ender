@@ -36,3 +36,13 @@
   pointer-events: none;
   opacity: 0.9;
 }
+
+/* Map: the stops you can go to take a tap well around them, and the hero marker never eats it. */
+.map-node.next::before {
+  content: "";
+  position: absolute;
+  inset: -22px;
+}
+.map-marker {
+  pointer-events: none;
+}

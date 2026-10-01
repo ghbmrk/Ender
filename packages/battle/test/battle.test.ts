@@ -238,7 +238,8 @@ describe("combat rules (§61–72)", () => {
   it("Parry: no damage, +1 AP, +10 Break to the attacker (Iron +20%); full Parry counters at 65% Basic", () => {
     const b = new Battle({ seed: "p", party: party(), waves: [["husk"]], difficulty: 1 });
     const husk = b.unit("husk-1");
-    const plan = { actor: husk.id, attack: FOES.husk.attacks[0]!, targets: ["iron"] };
+    // A two-blow attack (normal foes strike once, so build one).
+    const plan = { actor: husk.id, attack: { ...FOES.husk.attacks[0]!, hits: [{ t: 900, power: 0.7 }, { t: 1250, power: 0.7 }] }, targets: ["iron"] };
     const iron = b.unit("iron");
     const ev = b.resolveFoe(plan, ["parry", "perfect-parry"]);
     expect(iron.hp).toBe(iron.maxHp);

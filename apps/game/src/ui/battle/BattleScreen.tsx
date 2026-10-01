@@ -50,13 +50,22 @@ const BASIC_BEATS = [600];
 /** How long a contracting ring takes to close on its marker. */
 /** How long a timing ring takes to close on its mark. Always the same, so the rhythm is learnable. */
 const RING_LEAD = 900;
-const IMPACT_LEAD = 900;
 /** Rings close from this radius to the mark's radius at a constant speed, then keep closing past it. */
 const RING_FROM = 330;
 const MARK_R = 70;
 const RING_V = (RING_FROM - MARK_R) / RING_LEAD;
 /** How long a ring keeps closing past its mark before it fades (the late edge of the widest window). */
 const RING_TAIL = 150;
+/**
+ * Ring leads. Every ring closes at the same speed, so its lead sets its size. A foe's heavy blow gets a wide ring
+ * (more warning), a light jab a small late one; a skill's lead-in beats are small quick rings and its last beat a
+ * wide finisher. A rhythm of mixed blows reads as rings of different sizes.
+ */
+const hitLead = (power: number) => (power >= 1.2 ? 1150 : power <= 0.5 ? 700 : 950);
+const beatLead = (i: number, n: number) => (n === 1 ? RING_LEAD : i === n - 1 ? 1100 : 700);
+/** The foe's lunge: it leaves this long before the impact and lands on the hero exactly at it, then recovers. */
+const STRIKE_MS = 160;
+const RECOVER_MS = 140;
 /** A ring's radius when `left` ms remain until its beat or impact (negative once past). */
 const ringR = (left: number) => Math.max(14, MARK_R + RING_V * left);
 
@@ -78,12 +87,14 @@ type AttackSeq = {
   /** When the timed beats begin (after the weak-point window). */
   beatsAt: number;
   beats: number[];
+  /** Each beat's ring lead (see beatLead). */
+  leads: number[];
   tracker: AttackTracker;
   pressed: { t: number; grade: Grade }[];
   /** Slow-motion factor while a lesson teaches this input (1 = real time). */
   scale: number;
 };
-type DefendSeq = { k: "defend"; scale: number; plan: FoePlan; t0: number; impacts: number[]; tracker: DefenseTracker; shown: (Defense | null)[]; landed: boolean[] };
+type DefendSeq = { k: "defend"; scale: number; plan: FoePlan; t0: number; impacts: number[]; leads: number[]; tracker: DefenseTracker; shown: (Defense | null)[]; landed: boolean[] };
 type Seq = AttackSeq | DefendSeq;
 
 type Phase =
@@ -512,6 +523,9 @@ export function BattleScreen({
     const weak = !!action?.weakPoint;
     const weakMs = weak ? RULES.weakPointMs + (hero.farSight ? 300 : 0) : 0;
     const beats = action ? TEMPLATES[action.template].beats : BASIC_BEATS;
+    const leads = beats.map((_, i) => beatLead(i, beats.length));
+    // How far the first rings must start before the beats' clock does.
+    const ahead = Math.max(0, ...beats.map((b, i) => leads[i]! - b));
     const t = battle.unit(foe);
     const [cx, cy] = chest(t);
     const b = figureBox(t.figure, figScale(t));
@@ -529,12 +543,13 @@ export function BattleScreen({
       action,
       target: foe,
       ally,
-      t0: performance.now() + Math.max(150, weak ? 150 : RING_LEAD - (beats[0] ?? RING_LEAD)),
+      t0: performance.now() + Math.max(150, weak ? 150 : ahead),
       weakMs,
       weakPts,
       weakHit: weak ? null : false,
       beatsAt: weakMs,
       beats,
+      leads,
       tracker: new AttackTracker(beats),
       pressed: [],
       scale: slowScale(),
@@ -547,7 +562,7 @@ export function BattleScreen({
   const tickAttack = (s: AttackSeq, t: number) => {
     if (s.weakHit === null && t > s.weakMs) {
       s.weakHit = false;
-      s.beatsAt = t;
+      s.beatsAt = t + Math.max(0, ...s.beats.map((b, i) => s.leads[i]! - b));
     }
     if (s.weakHit === null) return;
     const bt = t - s.beatsAt;
@@ -555,8 +570,9 @@ export function BattleScreen({
     const k = debug.timeScale * s.scale;
     const color = s.action ? AFF_COLOR[s.action.dominant] ?? "#efe3c8" : "#efe3c8";
     s.beats.forEach((beat, i) => {
-      if (s.pressed.length <= i && beat - bt <= RING_LEAD + 60) cues()?.ensure(i, chest(battle.unit(s.target)), s.t0 + (s.beatsAt + beat - RING_LEAD) * k, k, color);
+      if (s.pressed.length <= i && beat - bt <= s.leads[i]! + 60) cues()?.ensure(i, chest(battle.unit(s.target)), s.t0 + (s.beatsAt + beat - s.leads[i]!) * k, k, color, s.leads[i]);
     });
+    cues()?.focus(s.pressed.length);
     for (const _ of s.tracker.expire(bt)) gradeFeedback(s, "miss");
     if (debug.autoplay) {
       const next = s.beats.findIndex((b, i) => s.tracker.result()[i] === "miss" && s.pressed.length <= i && bt >= b);
@@ -655,7 +671,9 @@ export function BattleScreen({
       return;
     }
     const impacts = plan.attack.hits.map((h) => h.t);
-    seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + Math.max(150, IMPACT_LEAD - impacts[0]!), impacts, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
+    const leads = plan.attack.hits.map((h) => hitLead(h.power));
+    const ahead = Math.max(0, ...impacts.map((at, i) => leads[i]! - at));
+    seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + Math.max(150, ahead), impacts, leads, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
     setPhase({ k: "defend" });
     say("defend");
   };
@@ -693,8 +711,9 @@ export function BattleScreen({
     s.tracker.expire(t);
     const k = debug.timeScale * s.scale;
     s.impacts.forEach((imp, i) => {
-      if (!s.tracker.resultAt(i) && imp - t <= IMPACT_LEAD + 60) cues()?.ensure(i, chest(battle.unit(s.plan.targets[0]!)), s.t0 + (imp - IMPACT_LEAD) * k, k, "#ff6b6b");
+      if (!s.tracker.resultAt(i) && imp - t <= s.leads[i]! + 60) cues()?.ensure(i, chest(battle.unit(s.plan.targets[0]!)), s.t0 + (imp - s.leads[i]!) * k, k, "#ff6b6b", s.leads[i]);
     });
+    cues()?.focus(s.impacts.findIndex((_, i) => s.tracker.resultAt(i) === null));
     s.impacts.forEach((at, i) => {
       const r = s.tracker.resultAt(i);
       if (r && s.shown[i] === null) defendFeedback(s, i, r);
@@ -783,9 +802,36 @@ export function BattleScreen({
   const tl = battle.timeline();
   const active = phase.k === "command" || phase.k === "ally" ? battle.unit(phase.actor) : battle.current;
   const strikeHero = s?.k === "attack" && s.weakHit !== null && s.beats.some((b) => clock - s.beatsAt > b - 90 && clock - s.beatsAt < b + 160) ? s.actor : null;
-  const lungingFoe = s?.k === "defend" && s.impacts.some((at) => clock > at - 140 && clock < at + 100) ? s.plan.actor : null;
+  const pose = s?.k === "defend" ? foePose(s, clock) : null;
+  const lungingFoe = s?.k === "defend" && pose === "lunge" ? s.plan.actor : null;
   // The foe draws back before each blow, so the timing reads in its body as well as the ring.
-  const windingFoe = s?.k === "defend" && !lungingFoe && s.impacts.some((at) => clock > at - 520 && clock <= at - 140) ? s.plan.actor : null;
+  const windingFoe = s?.k === "defend" && pose === "windup" ? s.plan.actor : null;
+  const rewindingFoe = s?.k === "defend" && pose === "rewind" ? s.plan.actor : null;
+  /**
+   * The striking foe's motion, in step with the rings: it winds up for exactly as long as the blow's ring takes to
+   * close, then lunges in so its blow lands on the hero (where the defence ring closes) at the impact.
+   */
+  const strikeVec = (u: Unit) => {
+    if (s?.k !== "defend" || u.id !== s.plan.actor) return undefined;
+    const k = debug.timeScale * s.scale;
+    const [fx_, fy] = posOf(u);
+    const [hx, hy] = chest(battle.unit(s.plan.targets[0]!));
+    const h = figureBox(u.figure, figScale(u)).h;
+    // It grows as it comes at the camera, up to about the hero's size (a big boss barely grows).
+    const S = duel ? Math.min(1.5, Math.max(1, 900 / h)) : 1.15;
+    // Feet move so the foe's chest (10px in, 55% up its figure, scaled about the feet) meets the hero's shoulder.
+    const tx = hx + 60 - fx_ - S * -10;
+    const ty = hy - 30 - fy - S * -0.55 * h;
+    const next = s.impacts.find((at) => at - STRIKE_MS >= clock) ?? s.impacts[s.impacts.length - 1]!;
+    return {
+      ["--lx" as string]: `${Math.round(tx)}px`,
+      ["--ly" as string]: `${Math.round(ty)}px`,
+      ["--ls" as string]: S,
+      // A frame or two goes on the render that starts the lunge, so the dash itself is a little shorter.
+      ["--strike-ms" as string]: `${Math.round((STRIKE_MS - 30) * k)}ms`,
+      ["--wind-ms" as string]: `${Math.max(120, Math.round((next - STRIKE_MS - clock) * k))}ms`,
+    };
+  };
   /** In a duel a lunge closes most of the gap to the opponent. */
   const lungeVec = (u: Unit) => {
     if (!duel) return undefined;
@@ -819,8 +865,9 @@ export function BattleScreen({
             return (
               <div
                 key={u.id}
-                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${u.enraged && u.alive ? "enraged" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe ? "windup" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
-                style={{ left: x, top: y, zIndex: Math.round(y), ...lungeVec(u) }}
+                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${u.enraged && u.alive ? "enraged" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe ? "windup" : ""} ${u.id === rewindingFoe ? "rewind" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
+                // A foe lunging in comes in front of the hero (still under the rings), so the blow lands where it can be seen.
+                style={{ left: x, top: y, zIndex: u.id === lungingFoe || u.id === rewindingFoe ? 3000 : Math.round(y), ...(strikeVec(u) ?? lungeVec(u)) }}
                 onPointerDown={(e) => {
                   if (seq.current) return;
                   e.stopPropagation();
@@ -831,6 +878,7 @@ export function BattleScreen({
               >
                 <div className="shadow" />
                 <div className="hit" style={hitBox(u)} />
+                {u.side === "foe" && <div className="menace" style={hitBox(u)} />}
                 {isTarget && (
                   <div className="reticle">
                     <div />
@@ -1384,9 +1432,16 @@ function poseKey(s: Seq, t: number) {
     const bt = t - s.beatsAt;
     return `a${s.weakHit === null ? "w" : ""}${s.beats.some((b) => bt > b - 90 && bt < b + 160) ? "s" : ""}`;
   }
-  const lunge = s.impacts.some((at) => t > at - 140 && t < at + 100);
-  const wind = !lunge && s.impacts.some((at) => t > at - 520 && t <= at - 140);
-  return `d${lunge ? "l" : ""}${wind ? "w" : ""}`;
+  // Which blow the foe is winding up for is part of the key, so a chained blow restarts the wind-up.
+  return `d${foePose(s, t) ?? ""}${s.impacts.findIndex((at) => at - STRIKE_MS >= t)}`;
+}
+
+/** The foe's pose at sequence time t: lunging in to land a blow on its impact, or winding up while its ring closes. */
+function foePose(s: DefendSeq, t: number): "lunge" | "windup" | "rewind" | null {
+  if (s.impacts.some((at) => t > at - STRIKE_MS && t < at + RECOVER_MS)) return "lunge";
+  const i = s.impacts.findIndex((at, j) => t > at - s.leads[j]! && t <= at - STRIKE_MS);
+  // In a chain the foe stays close after the first blow and draws back only a little before each next one.
+  return i < 0 ? null : i > 0 && t > s.impacts[0]! ? "rewind" : "windup";
 }
 
 /**
