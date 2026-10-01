@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "../api";
 import { enterGame, signIn } from "../game/launch";
 import { paintedBackdrop, paintedFigure } from "../art/painted";
 import { Fig } from "./battle/Figure";
@@ -14,6 +15,12 @@ import { heroFigure } from "../game/hero";
  */
 export function Landing() {
   const [busy, setBusy] = useState(false);
+  // Warm the save while the title shows (a first visit creates the character here), so signing in is quick.
+  useEffect(() => {
+    const warm = () => void api.character().catch(() => undefined);
+    const id = "requestIdleCallback" in window ? requestIdleCallback(warm, { timeout: 1500 }) : setTimeout(warm, 300);
+    return () => ("cancelIdleCallback" in window ? cancelIdleCallback(id as number) : clearTimeout(id as number));
+  }, []);
   // Sign-in is a placeholder: it is remembered, and it leads straight into the game.
   const begin = async () => {
     sfx.unlock();

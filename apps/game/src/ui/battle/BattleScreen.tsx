@@ -408,7 +408,7 @@ export function BattleScreen({
     } else {
       const plan = battle.planFoe(u.id);
       setPhase({ k: "wait" });
-      later(d + 100, () => startDefend(plan));
+      later(d + 40, () => startDefend(plan));
     }
   };
 
@@ -545,7 +545,7 @@ export function BattleScreen({
     events.push(...battle.settle());
     const d = play(events);
     if (s.command === "basic" && lesson?.commands === "basic") later(d + 300, () => say("ap"));
-    later(d + 140, advance);
+    later(d + 60, advance);
   };
 
   // ───────────── enemy attacks ─────────────
@@ -646,7 +646,7 @@ export function BattleScreen({
     const events = battle.resolveFoe(s.plan, s.tracker.result());
     events.push(...battle.settle());
     const d = play(events.filter((e) => e.type !== "defend"));
-    later(d + 140, () => {
+    later(d + 60, () => {
       setCaption(null);
       advance();
     });

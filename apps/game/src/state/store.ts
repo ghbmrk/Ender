@@ -92,9 +92,27 @@ let state: State = {
 const listeners = new Set<() => void>();
 
 export const getState = () => state;
-export function setState(patch: Partial<State> | ((s: State) => Partial<State>)) {
-  state = { ...state, ...(typeof patch === "function" ? patch(state) : patch) };
+/** Set while a screen change waits one frame (see setState); later updates join it rather than render early. */
+let pending = false;
+const notify = () => {
+  pending = false;
   for (const l of listeners) l();
+};
+export function setState(patch: Partial<State> | ((s: State) => Partial<State>)) {
+  const prev = state;
+  const p = typeof patch === "function" ? patch(state) : patch;
+  state = { ...state, ...p };
+  if (pending) return;
+  // A tap that changes the screen or opens a panel lets the pressed button show first (one frame), then draws the
+  // new screen, so the tap always answers at once even when the next screen takes a moment to build.
+  const ev = typeof window !== "undefined" ? (window.event as Event | undefined)?.type : undefined;
+  const userTap = ev === "click" || ev === "pointerup" || ev === "pointerdown" || ev === "keydown";
+  if (userTap && ((p.screen !== undefined && p.screen !== prev.screen) || (p.panel !== undefined && p.panel !== prev.panel))) {
+    pending = true;
+    requestAnimationFrame(() => setTimeout(notify, 0));
+    return;
+  }
+  notify();
 }
 export const subscribe = (l: () => void) => {
   listeners.add(l);

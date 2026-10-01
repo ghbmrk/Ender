@@ -99,10 +99,16 @@ export async function installInPageServer() {
   };
 
   const realFetch = window.fetch.bind(window);
+  let lastYield = 0;
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const path = url.startsWith("/") ? url : new URL(url, location.href).origin === location.origin ? new URL(url).pathname + new URL(url).search : "";
     if (!path.startsWith("/api/")) return realFetch(input, init);
+    // The server runs on the page's own thread, so let the screen show the tap first (one frame), then answer.
+    if (performance.now() - lastYield > 40) {
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+      lastYield = performance.now();
+    }
     const method = (init?.method ?? "GET").toUpperCase();
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
     const out = await server.handle(method, path, body);
