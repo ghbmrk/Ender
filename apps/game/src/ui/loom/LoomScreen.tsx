@@ -256,15 +256,22 @@ export function LoomScreen() {
   const radius = rank >= 8 ? 2 : 1;
   // While placing, the cells that glow are the ones where the new node wakes up without putting another to sleep.
   const openCells = cells.filter(({ q, r }) => hexDist(q, r) > 0 && hexDist(q, r) <= radius && !nodes.some((n) => n.q === q && n.r === r));
+  // The Form in hand, tapped from the tray or dragged on the board: the cells worth dropping it on glow.
+  const held = pending ?? (drag?.moved ? drag.node : null);
   const goodCells = useMemo(() => {
-    if (!pending) return new Set<string>();
-    const asleep = compiled.dormantNodeIds.length;
-    const good = openCells.filter(({ q, r }) => {
-      const c = compileLoom([...nodes, { ...pending, q, r }], rank);
-      return !c.dormantNodeIds.includes(pending.id) && c.dormantNodeIds.length <= asleep;
-    });
-    return new Set((good.length ? good : openCells).map(({ q, r }) => `${q},${r}`));
-  }, [pending, nodes, rank]);
+    if (!held) return new Set<string>();
+    const base = nodes.filter((n) => n.id !== held.id);
+    const free = cells.filter(({ q, r }) => hexDist(q, r) > 0 && hexDist(q, r) <= radius && !base.some((n) => n.q === q && n.r === r));
+    const asleep = compileLoom(base, rank).dormantNodeIds.length;
+    const boosts = (c: CompiledLoom) => c.actions.reduce((t, a) => t + a.modifiers.length, 0);
+    const baseBoosts = boosts(compileLoom(base, rank));
+    const tried = free.map(({ q, r }) => ({ q, r, c: compileLoom([...base, { ...held, q, r }], rank) }));
+    const good = tried.filter(({ c }) => !c.dormantNodeIds.includes(held.id) && c.dormantNodeIds.length <= asleep);
+    // A Modifier does its work beside an Action, so where it boosts one, only those cells glow.
+    const best = held.role === "modifier" ? good.filter(({ c }) => boosts(c) > baseBoosts) : [];
+    const pick = best.length ? best : good.length ? good : tried;
+    return new Set(pick.map(({ q, r }) => `${q},${r}`));
+  }, [held?.id, nodes, rank]);
   const byCell = new Map(shown.map((n) => [`${n.q},${n.r}`, n]));
   const dormant = new Set(shownC.dormantNodeIds);
 
@@ -313,7 +320,7 @@ export function LoomScreen() {
           const locked = hexDist(q, r) > radius;
           const hover = drag?.moved && drag.over && drag.over !== "tray" && drag.over.q === q && drag.over.r === r;
           const open = !locked && !byCell.has(`${q},${r}`) && hexDist(q, r) > 0;
-          const glow = (lesson && hero === mine && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`)) || (!!placing && open && goodCells.has(`${q},${r}`));
+          const glow = (lesson && hero === mine && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`)) || (!!held && !locked && hexDist(q, r) > 0 && goodCells.has(`${q},${r}`) && !(drag?.moved && hover));
           return <path key={`${q},${r}`} d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />;
         })}
         {/* painted links */}
