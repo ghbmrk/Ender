@@ -2450,3 +2450,16 @@
     animation: none !important;
   }
 }
+/* The painted cover: keep the idol and the demon on its dais in frame; the braziers flicker. */
+.landing .cv-bg:not(.composed) {
+  object-position: 50% 30%;
+}
+.landing .cv-paint:has(.on-cover) .cv-torch {
+  background:
+    radial-gradient(circle at 14% 64%, #ffb85a77 0%, #ff7a2a2a 16%, transparent 34%),
+    radial-gradient(circle at 87% 60%, #ffb85a77 0%, #ff7a2a2a 16%, transparent 34%),
+    radial-gradient(circle at 50% 8%, #ff9a3a44 0%, transparent 22%);
+}
+.landing .cv-party.on-cover > div {
+  filter: brightness(0.42) sepia(0.7) saturate(1.3) drop-shadow(0 -4px 10px #ff9a3a99);
+}

@@ -60,7 +60,21 @@ function CoverPainting() {
   return (
     <div className="cv-paint">
       {cover ? (
-        <img className="cv-bg" src={cover} alt="" draggable={false} />
+        <>
+          <img className="cv-bg" src={cover} alt="" draggable={false} />
+          {/* A small party at the foot of the stair, looking up at what waits on the dais. */}
+          <div className="cv-party on-cover">
+            <div style={{ position: "absolute", left: 300, bottom: 0 }}>
+              <Fig bake figure="warden" scale={1.15} />
+            </div>
+            <div style={{ position: "absolute", left: 170, bottom: -12 }}>
+              <Fig bake figure="binder" scale={1.25} />
+            </div>
+            <div style={{ position: "absolute", left: 420, bottom: -6 }}>
+              <Fig bake figure="ranger" scale={1.1} />
+            </div>
+          </div>
+        </>
       ) : (
         <>
           {hall && <img className="cv-bg composed" src={hall} alt="" draggable={false} />}
