@@ -123,4 +123,17 @@ export const sfx = {
   victory: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.35, "triangle", 0.1, undefined, i * 0.12)),
   defeat: () => [392, 330, 262].forEach((f, i) => tone(f, 0.5, "triangle", 0.1, undefined, i * 0.2)),
   turn: () => tone(520, 0.1, "sine", 0.06, 620),
+  /** A step on the map: a soft footfall and a small chime as the route moves on. */
+  step: () => {
+    noise(0.09, 0.22, 500, 0.9);
+    tone(740, 0.18, "sine", 0.05, 880, 0.06);
+  },
+  /** Loot tiles landing one after another, each a step higher (delays match the tiles' pop-in). */
+  loot: (n: number) => {
+    for (let i = 0; i < Math.min(n, 6); i++) tone(880 * Math.pow(1.122, i), 0.16, "triangle", 0.07, undefined, 0.12 + i * 0.09);
+  },
+  /** A panel or sheet opening. */
+  open: () => noise(0.16, 0.12, 1400, 0.6),
+  /** A new best climb. */
+  best: () => [659, 784, 988, 1319].forEach((f, i) => tone(f, 0.3, "triangle", 0.08, undefined, 0.4 + i * 0.08)),
 };

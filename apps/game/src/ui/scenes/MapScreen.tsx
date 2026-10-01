@@ -1,3 +1,4 @@
+import { sfx } from "../battle/sfx";
 import { FOES, PARTY, ROOTS, type FoeKind, type RootId } from "@ender/battle";
 import { rootLabel, heroFigure, lookFor, partyRoots } from "../../game/hero";
 import { getState as getStoreState } from "../../state/store";
@@ -56,6 +57,7 @@ export function MapScreen() {
   const Back = backdropFor(ex.plan.realmId, false)?.default;
   const go = (n: MapNode) => {
     if (!next.has(n.id)) return;
+    sfx.step();
     stepTo(n).catch((e) => toast((e as Error).message, "loss"));
   };
   const here = ex.at ? nodeById(ex.at) : null;

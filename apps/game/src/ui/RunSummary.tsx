@@ -1,10 +1,18 @@
 import { returnToCrossing } from "../game/flow";
+import { useEffect } from "react";
 import { useStore } from "../state/store";
+import { sfx } from "./battle/sfx";
 import { Panel } from "./Panel";
 import { essenceColor, essenceGlyph, essenceName } from "../economy/format";
 
 export function RunSummary() {
   const s = useStore((st) => st.runSummary);
+  useEffect(() => {
+    if (!s) return;
+    sfx.loot(1 + Object.keys(s.totals?.essences ?? {}).length + (s.totals?.forms ? 1 : 0));
+    if (s.newBest) sfx.best();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s]);
   if (!s) return null;
   const title = s.outcome === "victory" ? "Expedition complete" : s.outcome === "death" ? "Driven back" : "You withdrew";
   return (

@@ -92,7 +92,6 @@ export function CreateHero() {
   }
 
   const change = (part: Part) => {
-    sfx.tap();
     setLook((l) => {
       const pal = PALETTES.findIndex(([p, s2]) => p === l.primary && s2 === l.secondary);
       if (part === "garb") return { ...l, garb: next(GARBS, l.garb ?? "armour") };
@@ -109,7 +108,6 @@ export function CreateHero() {
     });
   };
   const roll = () => {
-    sfx.tap();
     setLook(lookFromSeed(newSeed()));
     setName(randomName());
   };
@@ -135,6 +133,7 @@ export function CreateHero() {
   const parts = Object.keys(SIDE) as Part[];
   const [lit, setLit] = useState<{ p: Part; n: number } | null>(null);
   const tapPart = (p: Part) => {
+    sfx.tap();
     change(p);
     setLit((l) => ({ p, n: (l?.n ?? 0) + 1 }));
   };
@@ -196,7 +195,7 @@ export function CreateHero() {
         </button>
       ))}
 
-      <button className="ch-exit" onClick={() => (sfx.tap(), setState({ screen: "title" }))} data-testid="to-heroes">
+      <button className="ch-exit" onClick={() => setState({ screen: "title" })} data-testid="to-heroes">
         ‹ Heroes
       </button>
       <header className="ch-head">

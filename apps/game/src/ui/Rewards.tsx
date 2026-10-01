@@ -1,10 +1,15 @@
+import { useEffect } from "react";
 import { setState, useStore } from "../state/store";
+import { sfx } from "./battle/sfx";
 import { Panel } from "./Panel";
 import { essenceColor, essenceGlyph, essenceName } from "../economy/format";
 
 /** Spoils after a fight or a Mystery (§78): Essences, Veiled Forms, Mirror charges. No equipment. */
 export function Rewards() {
   const r = useStore((s) => s.rewards);
+  useEffect(() => {
+    if (r) sfx.loot((r.crowns > 0 ? 1 : 0) + Object.keys(r.essences ?? {}).length + (r.forms?.length ?? 0));
+  }, [r]);
   if (!r) return null;
   const close = () => setState({ panel: null, rewards: null });
   return (

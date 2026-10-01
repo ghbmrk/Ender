@@ -1,3 +1,4 @@
+import { sfx } from "./battle/sfx";
 import { useEffect, useMemo } from "react";
 import { ArtDefs } from "../art/defs";
 import { battleSetup, endBattle } from "../game/flow";
@@ -72,12 +73,24 @@ export function App() {
   const screen = useStore((s) => s.screen);
   const panel = useStore((s) => s.panel);
   useEffect(() => {
+    if (panel) sfx.open();
+  }, [panel]);
+  useEffect(() => {
     if (DEMO) setState({ screen: DEMO === "loom" ? "loom" : "battle" });
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setState((s) => (s.panel === "summary" ? {} : { panel: null }));
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Every button outside a fight answers with a soft tap; fights have their own sounds.
+    const onTap = (e: PointerEvent) => {
+      const b = (e.target as Element | null)?.closest?.("button");
+      if (b && !(b as HTMLButtonElement).disabled && !b.closest(".battle")) sfx.tap();
+    };
+    document.addEventListener("pointerdown", onTap);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onTap);
+    };
   }, []);
 
   return (
