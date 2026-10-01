@@ -1,3 +1,5 @@
+// First, before any module reads the save: a newly published build starts the player fresh.
+import "./game/freshBuild";
 import { useEffect, useState, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import { toast, useStore } from "./state/store";

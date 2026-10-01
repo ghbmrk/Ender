@@ -2959,3 +2959,47 @@
   font-size: 18px;
   color: #43296f;
 }
+
+/* Turn handoff: the screen's edges glow gold on your turn and red on the foe's, cross-fading (opacity only);
+   your cards rise into place when the turn comes back, and settle as it passes. */
+.battle .turn-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.battle .turn-tint i {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 340ms ease-out;
+}
+.battle .turn-tint .t-party {
+  background: radial-gradient(ellipse 80% 70% at 50% 62%, transparent 62%, #ecc56a2e 100%);
+}
+.battle .turn-tint .t-foe {
+  background: radial-gradient(ellipse 80% 70% at 50% 45%, transparent 58%, #c8241a40 100%);
+}
+.battle .turn-tint i.on {
+  opacity: 1;
+}
+.stage .battle .bpanel.arc > .cards .card {
+  animation: turn-rise 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) backwards;
+}
+.stage .battle .bpanel.arc > .cards .card:nth-child(2) { animation-delay: 30ms; }
+.stage .battle .bpanel.arc > .cards .card:nth-child(3) { animation-delay: 60ms; }
+.stage .battle .bpanel.arc > .cards .card:nth-child(4) { animation-delay: 90ms; }
+@keyframes turn-rise {
+  from { transform: translateY(26px); opacity: 0.55; }
+}
+.stage .battle .bpanel.arc .cards-idle .cards {
+  animation: turn-settle 240ms ease-out backwards;
+}
+@keyframes turn-settle {
+  from { transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .turn-tint i { transition: none; }
+  .stage .battle .bpanel.arc > .cards .card,
+  .stage .battle .bpanel.arc .cards-idle .cards { animation: none; }
+}

@@ -8,7 +8,9 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sha="$(git -C "$root" rev-parse --short HEAD)"
 pages="${PAGES_DIR:-${TMPDIR:-/tmp}/ender-hero-painter}"
-(cd "$root/apps/game" && pnpm -s build:pages >/dev/null 2>&1)
+# Every publish starts players fresh (the game wipes its save on the first load of a new build id).
+reset_id="$sha-$(date -u +%Y%m%d%H%M%S)"
+(cd "$root/apps/game" && VITE_RESET_ID="$reset_id" pnpm -s build:pages >/dev/null 2>&1)
 # Guard: this build must carry the painter (the game paints its characters on device only when it does).
 grep -q '\./model/' "$root/apps/game/dist-pages/assets/"index-*.js || { echo "publish-pages: build has no painter path (VITE_PAINTER_BASE); not publishing" >&2; exit 1; }
 if [ -d "$pages/.git" ]; then git -C "$pages" fetch -q origin main && git -C "$pages" reset -q --hard origin/main

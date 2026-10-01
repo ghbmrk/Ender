@@ -65,6 +65,8 @@ const hitLead = (power: number) => (power >= 1.2 ? 1150 : power <= 0.5 ? 700 : 9
 const beatLead = (i: number, n: number) => (n === 1 ? RING_LEAD : i === n - 1 ? 1100 : 700);
 /** The foe's lunge: it leaves this long before the impact and lands on the hero exactly at it, then recovers. */
 const STRIKE_MS = 160;
+/** The beat between the turn passing to the foe and its first ring starting: the edge turns red, the foe gathers. */
+const TURN_IN = 320;
 const RECOVER_MS = 140;
 /** A ring's radius when `left` ms remain until its beat or impact (negative once past). */
 const ringR = (left: number) => Math.max(14, MARK_R + RING_V * left);
@@ -419,6 +421,12 @@ export function BattleScreen({
     return d;
   };
 
+  // Whose turn the screen shows. A wait keeps the last side, so the tint doesn't flicker between blows.
+  const sideRef = useRef<"party" | "foe">("party");
+  if (phase.k === "command" || phase.k === "ally" || phase.k === "attack") sideRef.current = "party";
+  else if (phase.k === "defend") sideRef.current = "foe";
+  const side = sideRef.current;
+
   // ───────────── flow ─────────────
   const finish = (outcome: "victory" | "defeat") => {
     seq.current = null;
@@ -469,6 +477,7 @@ export function BattleScreen({
       });
     } else {
       const plan = battle.planFoe(u.id);
+      sideRef.current = "foe";
       setPhase({ k: "wait" });
       later(d + 40, () => startDefend(plan));
     }
@@ -676,7 +685,7 @@ export function BattleScreen({
     const impacts = plan.attack.hits.map((h) => h.t);
     const leads = plan.attack.hits.map((h) => hitLead(h.power));
     const ahead = Math.max(0, ...impacts.map((at, i) => leads[i]! - at));
-    seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + Math.max(150, ahead), impacts, leads, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
+    seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + Math.max(TURN_IN, ahead), impacts, leads, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
     setPhase({ k: "defend" });
     say("defend");
   };
@@ -847,6 +856,12 @@ export function BattleScreen({
 
   return (
     <div className={`battle phase-${phase.k} ${finale ? "finale" : ""}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
+      {/* Whose turn it is, felt at the screen's edges: gold for yours, red for the foe's, cross-fading so the
+          handoff is a breath rather than a cut. Opacity only. */}
+      <div className="turn-tint" aria-hidden>
+        <i className={`t-party ${side === "party" ? "on" : ""}`} />
+        <i className={`t-foe ${side === "foe" ? "on" : ""}`} />
+      </div>
       <div
         className="world"
         style={{ top: worldTop, transformOrigin: cam ? `${cam.at[0]}px ${cam.at[1]}px` : undefined, animation: cam ? `cam-${cam.k}-${cam.n % 2} ${CAM_MS[cam.k]}ms ease-out` : undefined }}
