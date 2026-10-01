@@ -3060,3 +3060,81 @@
 @media (prefers-reduced-motion: reduce) {
   .spoils-strip { animation-duration: 1ms; animation-delay: 0s; opacity: 1; }
 }
+
+/* A defence lesson holding time: the scene dims around the hero, the tip and the button to press stay bright. */
+.battle.frozen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3010;
+  background: radial-gradient(ellipse 70% 55% at 50% 55%, transparent 30%, #0b0910b0 100%);
+  pointer-events: none;
+  animation: fadein 160ms ease-out both;
+}
+.battle.frozen .coach {
+  z-index: 3090;
+}
+
+/* ── Attacks with a body: coil, strike, recoil ──
+   The figure is one baked image, so the motion is in how it bends: the bob box sits on the feet and every pose
+   turns and squashes about them. Foes lean in toward the lower left, the hero toward the upper right (--lean).
+   Transform and opacity only. */
+.battle .unit.foe { --lean: -1; }
+.battle .unit.party { --lean: 1; }
+/* Coil: rear back and crouch, then a tremble just before release. */
+.battle .unit.windup .bob {
+  animation: coil var(--wind-ms, 260ms) cubic-bezier(0.3, 0, 0.6, 1) forwards;
+}
+@keyframes coil {
+  0% { transform: none; }
+  70% { transform: rotate(calc(var(--lean) * -8deg)) scale(1.06, 0.9); }
+  80% { transform: rotate(calc(var(--lean) * -9deg)) scale(1.07, 0.89) translateX(3px); }
+  90% { transform: rotate(calc(var(--lean) * -8deg)) scale(1.06, 0.9) translateX(-3px); }
+  100% { transform: rotate(calc(var(--lean) * -9deg)) scale(1.07, 0.89); }
+}
+/* Strike: uncoil into the blow, stretched along it, then settle into the follow-through. */
+.battle .unit.lunge .bob {
+  animation: strike-body 240ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+@keyframes strike-body {
+  0% { transform: rotate(calc(var(--lean) * -9deg)) scale(0.94, 1.08); }
+  35% { transform: rotate(calc(var(--lean) * 13deg)) scale(1.16, 0.88); }
+  100% { transform: rotate(calc(var(--lean) * 7deg)) scale(1.04, 0.97); }
+}
+/* Between chained blows: a short pull back, not a full reset. */
+.battle .unit.rewind .bob {
+  animation: rewind-body var(--wind-ms, 200ms) ease-out forwards;
+}
+@keyframes rewind-body {
+  from { transform: rotate(calc(var(--lean) * 7deg)) scale(1.04, 0.97); }
+  to { transform: rotate(calc(var(--lean) * -5deg)) scale(1.04, 0.93); }
+}
+/* The streak behind a striking figure: from its middle back along the way it came. */
+.battle .unit .trail {
+  position: absolute;
+  left: 0;
+  top: calc(var(--fh, 200px) * -1);
+  width: 520px;
+  height: 90px;
+  margin-top: -45px;
+  transform-origin: 0 50%;
+  rotate: calc(atan2(var(--ly), var(--lx)) + 180deg);
+  background: linear-gradient(90deg, #fff4dccc, #fff4dc55 35%, transparent);
+  border-radius: 0 50% 50% 0;
+  pointer-events: none;
+  animation: trail 300ms ease-out forwards;
+}
+.battle .unit.foe .trail {
+  background: linear-gradient(90deg, #ff6b5ad0, #ff6b5a55 35%, transparent);
+}
+@keyframes trail {
+  0% { opacity: 0; transform: scaleX(0.2) scaleY(0.6); }
+  25% { opacity: 1; transform: scaleX(1) scaleY(1); }
+  100% { opacity: 0; transform: scaleX(0.6) scaleY(0.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .unit.windup .bob,
+  .battle .unit.lunge .bob,
+  .battle .unit.rewind .bob,
+  .battle .unit .trail { animation: none; }
+}

@@ -72,7 +72,7 @@ const RECOVER_MS = 140;
 const ringR = (left: number) => Math.max(14, MARK_R + RING_V * left);
 
 type Floater = { id: number; x: number; y: number; text: string; cls: string; delay: number };
-type Fx = { id: number; kind: "slash" | "splat" | "spark" | "bloom" | "whoosh"; x: number; y: number; color: string; delay: number };
+type Fx = { id: number; kind: "slash" | "claw" | "splat" | "spark" | "bloom" | "whoosh"; x: number; y: number; color: string; delay: number };
 
 type AttackSeq = {
   k: "attack";
@@ -96,7 +96,7 @@ type AttackSeq = {
   /** Slow-motion factor while a lesson teaches this input (1 = real time). */
   scale: number;
 };
-type DefendSeq = { k: "defend"; scale: number; plan: FoePlan; t0: number; impacts: number[]; leads: number[]; tracker: DefenseTracker; shown: (Defense | null)[]; landed: boolean[] };
+type DefendSeq = { k: "defend"; scale: number; plan: FoePlan; t0: number; impacts: number[]; leads: number[]; tracker: DefenseTracker; shown: (Defense | null)[]; landed: boolean[]; frozenAt?: number };
 type Seq = AttackSeq | DefendSeq;
 
 type Phase =
@@ -125,9 +125,10 @@ const CAM_MS: Record<CamKick, number> = { shake: 200, big: 320, punch: 260, fina
 
 let uid = 0;
 /** Sequence time in ms (debug ?speed= slows it down for screenshots). */
-const elapsed = (s: { t0: number; scale: number }) => (performance.now() - s.t0) / (debug.timeScale * s.scale);
+const elapsed = (s: { t0: number; scale: number; frozenAt?: number }) => ((s.frozenAt ?? performance.now()) - s.t0) / (debug.timeScale * s.scale);
 /** Sequence time at an input event: judged from when the finger landed, not from when the handler got to run. */
-const elapsedAt = (s: { t0: number; scale: number }, e: { timeStamp: number }) => {
+const elapsedAt = (s: { t0: number; scale: number; frozenAt?: number }, e: { timeStamp: number }) => {
+  if (s.frozenAt) return elapsed(s);
   const now = performance.now();
   const at = e.timeStamp > now - 250 && e.timeStamp <= now ? e.timeStamp : now;
   return (at - s.t0) / (debug.timeScale * s.scale);
@@ -197,6 +198,8 @@ export function BattleScreen({
   const [skipArmed, setSkipArmed] = useState(false);
   const said = useRef(new Set<CoachKey>());
   const slowLeft = useRef(lesson?.slow ?? 0);
+  /** A defence lesson holding time at the point of contact until the player presses. */
+  const [frozen, setFrozen] = useState(false);
   /** Coach the player once per moment (lessons only). */
   const say = (key: CoachKey) => {
     const text = lesson?.coach[key];
@@ -720,8 +723,21 @@ export function BattleScreen({
       const i = s.tracker.result().findIndex((_, j) => s.tracker.resultAt(j) === null);
       if (i >= 0 && t >= s.impacts[i]! - 20) pressDefend(s, t, "parry");
     }
-    s.tracker.expire(t);
     const k = debug.timeScale * s.scale;
+    // Defence lessons: a blow the player hasn't answered stops at the point of contact, and the tip says to press
+    // now. Time stands still until they do (the press then lands exactly on the mark).
+    if (lesson && lesson.defense !== "none" && !s.frozenAt) {
+      const i = s.impacts.findIndex((_, j) => s.tracker.resultAt(j) === null);
+      if (i >= 0 && t >= s.impacts[i]!) {
+        s.frozenAt = s.t0 + s.impacts[i]! * k;
+        cues()?.hold(true);
+        setFrozen(true);
+        said.current.delete("now");
+        say("now");
+        return;
+      }
+    }
+    s.tracker.expire(t);
     s.impacts.forEach((imp, i) => {
       if (!s.tracker.resultAt(i) && imp - t <= s.leads[i]! + 60) cues()?.ensure(i, chest(battle.unit(s.plan.targets[0]!)), s.t0 + (imp - s.leads[i]!) * k, k, "#ff6b6b", s.leads[i]);
     });
@@ -734,7 +750,8 @@ export function BattleScreen({
         s.landed[i] = true;
         for (const id of s.plan.targets) {
           flinch(id);
-          spawnFx("splat", chest(battle.unit(id)), "#6b1a28");
+          spawnFx("claw", chest(battle.unit(id)), "#ff5a4a");
+          spawnFx("splat", chest(battle.unit(id)), "#6b1a28", 40);
         }
         kick("big", chest(battle.unit(s.plan.targets[0]!)));
         sfx.hurt();
@@ -814,6 +831,8 @@ export function BattleScreen({
   const tl = battle.timeline();
   const active = phase.k === "command" || phase.k === "ally" ? battle.unit(phase.actor) : battle.current;
   const strikeHero = s?.k === "attack" && s.weakHit !== null && s.beats.some((b) => clock - s.beatsAt > b - 90 && clock - s.beatsAt < b + 160) ? s.actor : null;
+  // The hero coils just before each beat, then strikes on it: anticipation, then the blow.
+  const coilHero = !strikeHero && s?.k === "attack" && s.weakHit !== null && s.beats.some((b) => clock - s.beatsAt > b - 300 && clock - s.beatsAt <= b - 90) ? s.actor : null;
   const pose = s?.k === "defend" ? foePose(s, clock) : null;
   const lungingFoe = s?.k === "defend" && pose === "lunge" ? s.plan.actor : null;
   // The foe draws back before each blow, so the timing reads in its body as well as the ring.
@@ -855,7 +874,7 @@ export function BattleScreen({
   const bossUnit = battle.foes().find((f) => f.tier === "boss");
 
   return (
-    <div className={`battle phase-${phase.k} ${finale ? "finale" : ""}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
+    <div className={`battle phase-${phase.k} ${finale ? "finale" : ""} ${frozen ? "frozen" : ""}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
       {/* Whose turn it is, felt at the screen's edges: gold for yours, red for the foe's, cross-fading so the
           handoff is a breath rather than a cut. Opacity only. */}
       <div className="turn-tint" aria-hidden>
@@ -883,7 +902,7 @@ export function BattleScreen({
             return (
               <div
                 key={u.id}
-                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${u.enraged && u.alive ? "enraged" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe ? "windup" : ""} ${u.id === rewindingFoe ? "rewind" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
+                className={`unit ${u.side} ${u.alive || !downed[u.id] ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${u.enraged && u.alive ? "enraged" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe || u.id === coilHero ? "windup" : ""} ${u.id === rewindingFoe ? "rewind" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
                 // A foe lunging in comes in front of the hero (still under the rings), so the blow lands where it can be seen.
                 style={{ left: x, top: y, zIndex: u.id === lungingFoe || u.id === rewindingFoe ? 3000 : Math.round(y), ...(strikeVec(u) ?? lungeVec(u)) }}
                 onPointerDown={(e) => {
@@ -895,6 +914,8 @@ export function BattleScreen({
                 data-testid={`unit-${u.id}`}
               >
                 <div className="shadow" />
+                {/* A motion streak behind a striking figure, pointing back the way it came. */}
+                {lunge && <div className="trail" style={{ ["--fh" as string]: `${Math.round(figureBox(u.figure, figScale(u)).h * 0.5)}px` }} />}
                 <div className="hit" style={hitBox(u)} />
                 {s?.k === "defend" && u.id === s.plan.actor && <div className="menace" style={hitBox(u)} />}
                 {isTarget && (
@@ -1018,17 +1039,27 @@ export function BattleScreen({
         const press = (kind: "parry" | "dodge") => (e: React.PointerEvent) => {
           if (!live) return;
           e.stopPropagation();
+          if (live.frozenAt) {
+            // Time starts again from the frozen moment, and this press is judged right there.
+            const t = elapsed(live);
+            live.t0 += performance.now() - live.frozenAt;
+            live.frozenAt = undefined;
+            cues()?.hold(false);
+            setFrozen(false);
+            setCoach(null);
+            return pressDefend(live, t, kind);
+          }
           pressDefend(live, elapsedAt(live, e), kind);
         };
         return (
           <div className={`def-arc ${live ? "live" : ""}`}>
-            <button className={`def-btn round dodge ${lesson?.step === "dodge" && coach?.key === "defend" ? "coach-pulse" : ""}`} style={at(ARC.dodge)} onPointerDown={press("dodge")} aria-disabled={!live} data-testid={live ? "dodge" : undefined}>
+            <button className={`def-btn round dodge ${lesson?.step === "dodge" && (coach?.key === "defend" || frozen) ? "coach-pulse" : ""}`} style={at(ARC.dodge)} onPointerDown={press("dodge")} aria-disabled={!live} data-testid={live ? "dodge" : undefined}>
               <span className="def-glyph">⤺</span>
               Dodge
               {live && <small>forgiving</small>}
             </button>
             {lesson?.defense !== "dodge" && (
-              <button className={`def-btn round parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} style={at(ARC.parry)} onPointerDown={press("parry")} aria-disabled={!live} data-testid={live ? "parry" : undefined}>
+              <button className={`def-btn round parry ${lesson?.step === "parry" && (coach?.key === "defend" || frozen) ? "coach-pulse" : ""}`} style={at(ARC.parry)} onPointerDown={press("parry")} aria-disabled={!live} data-testid={live ? "parry" : undefined}>
                 <span className="def-glyph">⚔</span>
                 Parry
                 {live && <small>perfect · counter</small>}
@@ -1457,7 +1488,9 @@ function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq 
 function poseKey(s: Seq, t: number) {
   if (s.k === "attack") {
     const bt = t - s.beatsAt;
-    return `a${s.weakHit === null ? "w" : ""}${s.beats.some((b) => bt > b - 90 && bt < b + 160) ? "s" : ""}`;
+    const strike = s.beats.some((b) => bt > b - 90 && bt < b + 160);
+    const coil = !strike && s.beats.some((b) => bt > b - 300 && bt <= b - 90);
+    return `a${s.weakHit === null ? "w" : ""}${strike ? "s" : coil ? "c" : ""}`;
   }
   // Which blow the foe is winding up for is part of the key, so a chained blow restarts the wind-up.
   return `d${foePose(s, t) ?? ""}${s.impacts.findIndex((at) => at - STRIKE_MS >= t)}`;
@@ -1502,6 +1535,15 @@ function FxMark({ f }: { f: Fx }) {
   switch (f.kind) {
     case "slash":
       return <path className="fx slash" style={style} d={`M${f.x - 150} ${f.y - 110} C${f.x - 40} ${f.y - 40} ${f.x + 40} ${f.y + 10} ${f.x + 160} ${f.y + 100}`} stroke={f.color} strokeWidth={22} strokeLinecap="round" fill="none" />;
+    case "claw":
+      // Three raking strokes, top-right to bottom-left: the way a foe's blow comes in.
+      return (
+        <g className="fx slash" style={style}>
+          {[-46, 0, 46].map((o) => (
+            <path key={o} d={`M${f.x + 130 + o} ${f.y - 120} Q${f.x + 10 + o} ${f.y - 10} ${f.x - 110 + o} ${f.y + 120}`} stroke={f.color} strokeWidth={16} strokeLinecap="round" fill="none" />
+          ))}
+        </g>
+      );
     case "splat":
       return (
         <g className="fx splat" style={{ ...style, transformOrigin: `${f.x}px ${f.y}px` }}>
