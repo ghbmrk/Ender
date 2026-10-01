@@ -868,7 +868,7 @@ export function BattleScreen({
   };
   const onStageDown = (e: React.PointerEvent) => {
     const s = seq.current;
-    // While a lesson holds the blow, a near miss of a defence button (within a button's width of it) counts as that button,
+    // While a lesson holds the blow, a near miss of a defence button (within 1.6 button widths of it) counts as that button,
     // so the player is never stranded; a tap elsewhere only repeats the prompt, so no stray tap earns a Perfect.
     // (The right half of the screen was too wide: card taps and taps on the foe were earning a "Perfect Dodge".)
     if (s?.k === "defend" && s.frozenAt) {
@@ -876,7 +876,7 @@ export function BattleScreen({
       for (const b of (e.currentTarget as Element).querySelectorAll(".def-btn")) {
         const r = b.getBoundingClientRect();
         const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
-        if (d < r.width && (!near || d < near.d)) near = { kind: b.classList.contains("parry") ? "parry" : "dodge", d };
+        if (d < r.width * 1.6 && (!near || d < near.d)) near = { kind: b.classList.contains("parry") ? "parry" : "dodge", d };
       }
       if (near) return unfreeze(s, near.kind);
       said.current.delete("now");
@@ -1100,7 +1100,17 @@ export function BattleScreen({
             key={coach.key}
             // While a blow comes in, the tip moves up under the foe's attack name, clear of the ring on the hero.
             style={phase.k === "defend" ? { top: 720 } : { bottom: STAGE_H - PANEL_TOP + 120 }}
-            onTap={(coach.key === "command" || coach.key === "ap") && phase.k === "command" ? () => chooseCommand(phase.actor, "basic") : undefined}
+            onTap={
+              (coach.key === "command" || coach.key === "ap") && phase.k === "command"
+                ? () => chooseCommand(phase.actor, "basic")
+                : // While a lesson holds the blow, the "Now!" tip is the button too: a tap on it is a deliberate answer.
+                  coach.key === "now" && frozen
+                  ? () => {
+                      const live = seq.current;
+                      if (live?.k === "defend" && live.frozenAt) unfreeze(live, drillRef.current ?? (lesson?.step === "parry" ? "parry" : "dodge"));
+                    }
+                  : undefined
+            }
           />
         )
       ) : (
