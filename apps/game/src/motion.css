@@ -1913,3 +1913,12 @@
 .hub-mote{position:absolute;top:1900px;border-radius:50%;background:#ffd08a;box-shadow:0 0 12px 3px rgba(255,190,100,.7);opacity:0;animation:hub-rise 10s linear infinite}
 @keyframes hub-rise{0%{transform:translate(0,0);opacity:0}10%{opacity:.85}50%{transform:translate(40px,-700px)}90%{opacity:.6}100%{transform:translate(-30px,-1400px);opacity:0}}
 @media (prefers-reduced-motion:reduce){.hub-glow,.hub-mote{animation:none}.hub-mote{display:none}}
+
+/* Loop 58: the Crucible's acts are an even grid of equal buttons, and its prose uses the game's serif. */
+.form-detail .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}
+.form-detail .actions > button{width:100%;min-height:64px;margin:0;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.form-detail .actions > button:only-child,.form-detail .actions > button.primary:first-child:nth-last-child(odd){grid-column:1/-1}
+.form-detail .actions > .check{grid-column:1/-1}
+.form-detail .bind,.form-detail .bind .dim{font-family:var(--serif-body)}
+.form-detail .bind > .dim.small{font-size:15px;line-height:1.35;color:#d9c9a8}
+.form-detail .inscribe-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}.form-detail .inscribe-grid > button{width:100%;box-sizing:border-box;margin:0}
