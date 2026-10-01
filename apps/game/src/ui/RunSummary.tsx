@@ -23,6 +23,16 @@ export function RunSummary() {
             </div>
           </div>
         )}
+        {s.outcome === "death" && s.fellTo && (
+          <div className="sum-fell">
+            {/^The /.test(s.fellTo.name) ? "" : "The "}
+            <b>{s.fellTo.name}</b>
+            {s.fellTo.boss ? ", the Boss," : ""} had <b>{Math.max(1, Math.round(s.fellTo.left * 100))}%</b> of its health left.
+            <div className="gbar hp">
+              <div style={{ width: `${Math.max(2, s.fellTo.left * 100)}%` }} />
+            </div>
+          </div>
+        )}
         {s.outcome === "death" && <p className="dim">You keep everything you found. Rest at the Crossing and try again.</p>}
         {s.totals && (
           <div className="loot">

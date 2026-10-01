@@ -143,7 +143,7 @@ export async function endBattle(r: BattleResult) {
   const b = s.battle!;
   if (r.outcome === "defeat") {
     await api.runNode(ex.plan.runId, { nodeId: b.nodeId, outcome: "defeat", kills: r.kills }).catch(() => null);
-    await finishExpedition("death");
+    await finishExpedition("death", r.foe);
     return;
   }
   const out = await api.runNode(ex.plan.runId, { nodeId: b.nodeId, outcome: "victory", kills: r.kills });
@@ -168,7 +168,7 @@ export async function endBattle(r: BattleResult) {
   setState({ screen: "map", rewards, panel: hasRewards(out.rewards) ? "rewards" : null });
 }
 
-export async function finishExpedition(outcome: "victory" | "death" | "abandon") {
+export async function finishExpedition(outcome: "victory" | "death" | "abandon", fellTo?: BattleResult["foe"]) {
   const ex = getState().expedition;
   if (!ex) return;
   const out = await api.completeRun(ex.plan.runId, { outcome });
@@ -182,7 +182,7 @@ export async function finishExpedition(outcome: "victory" | "death" | "abandon")
   const totals = out.totals ?? (runStart ? { crowns: Math.max(0, (c?.crowns ?? 0) - runStart.crowns), essences, forms: runForms } : undefined);
   const reached = { step: ex.visited.length, of: ex.plan.map.layers.length };
   const newBest = noteRun(ex.plan.realmId, { ...reached, cleared: outcome === "victory" });
-  setState({ runSummary: { ...out, totals, outcome, reached, newBest, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
+  setState({ runSummary: { ...out, totals, outcome, reached, newBest, fellTo, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
 }
 
 export function returnToCrossing() {

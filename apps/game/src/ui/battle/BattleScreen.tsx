@@ -31,7 +31,14 @@ import type { CoachKey, Lesson } from "../../game/tutorial";
 import { Coach } from "../Coach";
 import { lookFor } from "../../game/hero";
 
-export type BattleResult = { outcome: "victory" | "defeat"; kills: Record<string, number>; partyHp: Record<RootId, number>; stats: Battle["stats"] };
+export type BattleResult = {
+  outcome: "victory" | "defeat";
+  kills: Record<string, number>;
+  partyHp: Record<RootId, number>;
+  stats: Battle["stats"];
+  /** On a loss: the foe that stood last, and how much of its health was left. */
+  foe?: { name: string; left: number; boss: boolean };
+};
 
 /** Basic attack: one timed press. */
 const BASIC_BEATS = [600];
@@ -849,7 +856,7 @@ export function BattleScreen({
             </span>
           </div>
           {phase.outcome === "defeat" && !lesson && <p className="end-tip">{defeatTip(battle)}</p>}
-          <button className={`big ${phase.outcome === "victory" ? "primary" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onEnd({ outcome: phase.outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats })} data-testid="battle-continue">
+          <button className={`big ${phase.outcome === "victory" ? "primary" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onEnd({ outcome: phase.outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats, foe: lastFoe(battle) })} data-testid="battle-continue">
             {lesson && phase.outcome === "defeat" ? "Try again" : "Continue"}
           </button>
         </div>
@@ -1209,3 +1216,9 @@ function meetFoe(kind: string): boolean {
 }
 
 export const FOE_NAME = (k: string) => FOES[k as FoeKind]?.name ?? k;
+
+/** The foe still standing (the Boss first), with its share of health left. */
+function lastFoe(b: Battle) {
+  const f = b.living("foe").sort((a, c) => (a.tier === "boss" ? -1 : c.tier === "boss" ? 1 : 0))[0];
+  return f ? { name: f.name, left: f.hp / f.maxHp, boss: f.tier === "boss" } : undefined;
+}
