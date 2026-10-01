@@ -1,5 +1,5 @@
 import { PARTY, ROOTS, type RootId } from "@ender/battle";
-import { lookFor, partyRoots } from "../../game/hero";
+import { heroFigure, lookFor, partyRoots } from "../../game/hero";
 import { getState as getStoreState } from "../../state/store";
 import { backdropFor } from "../../art/registry";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
@@ -91,7 +91,7 @@ export function MapScreen() {
       })}
       {here && (
         <div className="map-marker" style={{ left: pos(here)[0], top: pos(here)[1] }}>
-          <Head figure={ROOTS[getStoreState().hero?.root ?? "iron"].hero} look={getStoreState().hero?.look} size={70} />
+          <Head figure={heroFigure(getStoreState().hero?.root ?? "iron")} look={getStoreState().hero?.look} size={70} />
         </div>
       )}
       {/* Thumb-zone dock: the actions, then the party's health. */}
@@ -115,7 +115,7 @@ export function MapScreen() {
             const hp = ex.partyHp[r] ?? ROOTS[r].hp;
             return (
               <div key={r} className="mp-hero">
-                <Head figure={ROOTS[r].hero} size={72} look={lookFor(r)} />
+                <Head figure={heroFigure(r)} size={72} look={lookFor(r)} />
                 <div className="gbar hp hero">
                   <div style={{ width: `${(hp / ROOTS[r].hp) * 100}%` }} />
                 </div>

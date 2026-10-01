@@ -1,47 +1,47 @@
 import { useMemo, useState } from "react";
-import { ROOTS, type RootId } from "@ender/battle";
-import { HAIRS, PALETTES, SKINS, lookFromSeed, newSeed, randomName, type HeroLook } from "../../art/look";
+import { GARBS, GARB_FIGURE, GARB_NAME, HAIRS, PALETTES, SKINS, lookFromSeed, newSeed, randomName, type Garb, type HeroLook } from "../../art/look";
 import { crossingBackdrop } from "../../art/registry";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
 import { startTutorial, tutorialDone } from "../../game/tutorial";
-import { saveHero } from "../../game/hero";
+import { HERO_ROOT, saveHero } from "../../game/hero";
 import { newBinder } from "../../game/flow";
-import { toast } from "../../state/store";
+import { setState, toast } from "../../state/store";
 import { Fig } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
 import { useStage, useWorldTop } from "../Stage";
 import "../../create.css";
 
-/** What each Root plays like, in one line (§5). */
-const PITCH: Record<RootId, { style: string; line: string }> = {
-  iron: { style: "Knight", line: "Heavy blows. Parries crack a foe's guard." },
-  quick: { style: "Ranger", line: "Fast. Perfect timing lets you act sooner." },
-  bond: { style: "Binder", line: "Steady. Parries and Links refill your AP." },
-};
-const ROOT_ORDER: RootId[] = ["iron", "quick", "bond"];
-type Tab = "skin" | "hair" | "colours" | "head";
-const HEAD_NAME: Record<RootId, [string, string, string]> = {
-  iron: ["Great helm", "Open helm", "Bare"],
-  quick: ["Hood", "Hood down", "Bare"],
-  bond: ["Deep hood", "Circlet", "Bare"],
+type Tab = "garb" | "colours" | "skin" | "hair" | "head";
+const TABS: [Tab, string][] = [
+  ["garb", "Garb"],
+  ["colours", "Colours"],
+  ["skin", "Skin"],
+  ["hair", "Hair"],
+  ["head", "Head"],
+];
+const HEAD_NAME: Record<Garb, [string, string, string]> = {
+  armour: ["Great helm", "Open helm", "Bare"],
+  leathers: ["Hood", "Hood down", "Bare"],
+  robes: ["Deep hood", "Circlet", "Bare"],
 };
 
 /**
- * The first screen of a new game: choose a Root and get a hero no one else has. The look is generated
- * from a seed; the player can re-roll it whole or adjust skin, hair, colours and headwear, then name them.
+ * The first screen of a new game: a hero no one else has, generated from a seed. The player can re-roll
+ * it whole or adjust garb, colours, skin, hair and headwear, then name them. There is no class to pick:
+ * how the hero fights is crafted on the Loom.
  */
 export function CreateHero() {
-  const [root, setRoot] = useState<RootId>("iron");
   const [look, setLook] = useState<HeroLook>(() => lookFromSeed(newSeed()));
   const [name, setName] = useState(() => randomName());
-  const [tab, setTab] = useState<Tab>("colours");
+  const [tab, setTab] = useState<Tab>("garb");
   const [busy, setBusy] = useState(false);
   const worldTop = useWorldTop();
   const { h: stageH } = useStage();
   const Back = crossingBackdrop()?.default;
-  const figure = ROOTS[root].hero;
+  const garb: Garb = look.garb ?? "armour";
+  const figure = GARB_FIGURE[garb];
   // The hero stands between the header and the controls, as large as the phone allows.
-  const panelTop = stageH - 820;
+  const panelTop = stageH - 450;
   const feet = panelTop - 150;
   const figScale = Math.min(3.1, (feet - 300) / 280);
   const patch = (p: Partial<HeroLook>) => (sfx.tap(), setLook((l) => ({ ...l, ...p })));
@@ -53,7 +53,7 @@ export function CreateHero() {
     sfx.unlock();
     setBusy(true);
     try {
-      const hero = { root, name: name.trim() || randomName(), look };
+      const hero = { root: HERO_ROOT, name: name.trim() || randomName(), look };
       // Players who have finished the prologue before go straight to the Crossing with their new hero.
       if (tutorialDone()) {
         saveHero(hero);
@@ -75,9 +75,10 @@ export function CreateHero() {
         fill: `linear-gradient(135deg, ${p} 0 55%, ${s} 55% 80%, ${a} 80%)`,
         pick: () => patch({ primary: p, secondary: s, accent: a }),
       }));
-    return ([0, 1, 2] as const).map((h) => ({ key: String(h), on: look.head === h, label: HEAD_NAME[root][h], pick: () => patch({ head: h }) }));
+    if (tab === "garb") return GARBS.map((g) => ({ key: g, on: garb === g, label: GARB_NAME[g], pick: () => patch({ garb: g }) }));
+    return ([0, 1, 2] as const).map((h) => ({ key: String(h), on: look.head === h, label: HEAD_NAME[garb][h], pick: () => patch({ head: h }) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, look, root]);
+  }, [tab, look]);
 
   return (
     <div className="create-hero" data-testid="create-hero">
@@ -88,12 +89,15 @@ export function CreateHero() {
       </div>
       <div className="ch-spot" style={{ top: feet - 160 }} />
       <div className="ch-figure" style={{ left: 540, top: feet }}>
-        <Fig key={root} figure={figure} look={look} scale={figScale} />
+        <Fig key={figure} figure={figure} look={look} scale={figScale} />
       </div>
 
+      <button className="ch-exit" onClick={() => (sfx.tap(), setState({ screen: "title" }))} data-testid="to-heroes">
+        ‹ Heroes
+      </button>
       <header className="ch-head">
         <h1>Your hero</h1>
-        <p>Your Root is how you fight. Your look is yours alone.</p>
+        <p>Made for you alone. How they fight, you craft as you go.</p>
       </header>
 
       <div className="ch-name" style={{ top: feet + 20 }}>
@@ -101,29 +105,20 @@ export function CreateHero() {
         <button className="ch-dice" onClick={() => (sfx.tap(), setName(randomName()))} aria-label="New name" data-testid="hero-name-dice">
           ⚄
         </button>
+        <button className="ch-reroll" onClick={reroll} data-testid="look-reroll">
+          ⚄ New look
+        </button>
       </div>
 
       {/* Everything you touch sits in the bottom thumb zone. */}
       <div className="ch-panel" style={{ top: panelTop }}>
-        <div className="ch-roots">
-          {ROOT_ORDER.map((r) => (
-            <button key={r} className={`ch-root ${r === root ? "on" : ""}`} onClick={() => (sfx.tap(), setRoot(r))} data-testid={`root-${r}`}>
-              <b>{ROOTS[r].name.replace(" Root", "")}</b>
-              <span className="ch-style">{PITCH[r].style}</span>
-              <span className="ch-line">{PITCH[r].line}</span>
-            </button>
-          ))}
-        </div>
         <div className="ch-look">
           <div className="ch-tabs">
-            {(["colours", "skin", "hair", "head"] as Tab[]).map((t) => (
+            {TABS.map(([t, label]) => (
               <button key={t} className={`ch-tab ${t === tab ? "on" : ""}`} onClick={() => setTab(t)} data-testid={`look-tab-${t}`}>
-                {t === "colours" ? "Colours" : t === "skin" ? "Skin" : t === "hair" ? "Hair" : "Head"}
+                {label}
               </button>
             ))}
-            <button className="ch-reroll" onClick={reroll} data-testid="look-reroll">
-              ⚄ New look
-            </button>
           </div>
           <div className="ch-swatches">
             {swatches.map((s) =>
@@ -138,7 +133,7 @@ export function CreateHero() {
           </div>
         </div>
         <button className="big primary ch-begin" disabled={busy} onClick={begin} data-testid="hero-begin">
-          Begin as {name.trim() || "your hero"}
+          Play as {name.trim() || "your hero"}
         </button>
       </div>
     </div>

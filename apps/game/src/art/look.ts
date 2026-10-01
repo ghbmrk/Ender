@@ -4,8 +4,16 @@ import type { RootId } from "@ender/battle";
  * The player's hero: one Root (their fighting style) and a look generated from a seed, so no two heroes
  * are drawn alike. Every field is a plain value so the look can be saved and re-rolled piece by piece.
  */
+/** What the hero wears, which sets the figure drawn. Purely a look: how they fight is crafted on the Loom. */
+export type Garb = "armour" | "leathers" | "robes";
+export const GARBS: Garb[] = ["armour", "leathers", "robes"];
+export const GARB_FIGURE: Record<Garb, string> = { armour: "warden", leathers: "ranger", robes: "binder" };
+export const GARB_NAME: Record<Garb, string> = { armour: "Plate", leathers: "Leathers", robes: "Robes" };
+
 export type HeroLook = {
   seed: string;
+  /** Missing on heroes made before garb existed; their Root's figure is used instead. */
+  garb?: Garb;
   /** Skin tone, hair colour. */
   skin: string;
   hair: string;
@@ -25,6 +33,7 @@ export type HeroLook = {
   emblem: number;
 };
 
+/** `root` is internal (every new hero starts on the same Root); the player shapes how they fight on the Loom. */
 export type Hero = { root: RootId; name: string; look: HeroLook };
 
 export const SKINS = ["#f6dcc4", "#e2b391", "#c08766", "#8c5a40", "#5a3526", "#3d241a"] as const;
@@ -63,6 +72,7 @@ export function lookFromSeed(seed: string): HeroLook {
   const [primary, secondary, accent] = pick(r, PALETTES);
   return {
     seed,
+    garb: pick(r, GARBS),
     skin: pick(r, SKINS),
     hair: pick(r, HAIRS),
     primary,

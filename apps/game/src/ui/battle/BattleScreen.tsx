@@ -23,7 +23,7 @@ import { SceneBackdrop } from "../../art/SceneBackdrop";
 import { STAGE_H, useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH } from "../affinity";
 import { FIG_SCALE, Fig, Head, figureBox } from "./Figure";
-import { BOSS_ADDS, BOSS_POS, DUEL_BOSS, DUEL_FOE, DUEL_HERO, DUEL_ZOOM, FOE_POS, HERO_POS, PANEL_TOP } from "./layout";
+import { BOSS_ADDS, BOSS_POS, DUEL_HERO_SHARE, FOE_POS, HERO_POS, PANEL_TOP, duelLayout } from "./layout";
 import { sfx } from "./sfx";
 import { debug } from "../../game/debug";
 import type { CoachKey, Lesson } from "../../game/tutorial";
@@ -84,6 +84,9 @@ const RIDER_SHORT: Record<string, string> = {
 const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PERFECT PARRY", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "DODGE", hit: "HIT" };
 const STATUS_GLYPH: Record<string, string> = { marked: "◎", slow: "≋", fracture: "⟋", burn: "♨", poison: "☠" };
 
+type CamKick = "shake" | "big" | "punch";
+const CAM_MS: Record<CamKick, number> = { shake: 200, big: 320, punch: 260 };
+
 let uid = 0;
 /** Sequence time in ms (debug ?speed= slows it down for screenshots). */
 const elapsed = (s: { t0: number; scale: number }) => (performance.now() - s.t0) / (debug.timeScale * s.scale);
@@ -112,7 +115,7 @@ export function BattleScreen({
   const [target, setTarget] = useState<string | null>(null);
   const [floaters, setFloaters] = useState<Floater[]>([]);
   const [fx, setFx] = useState<Fx[]>([]);
-  const [banner, setBanner] = useState<{ id: number; text: string; sub?: string } | null>(null);
+  const [banner, setBanner] = useState<{ id: number; text: string; sub?: string; ms: number } | null>(null);
   const [caption, setCaption] = useState<{ name: string; tell: string; foe: string } | null>(null);
   const [hurt, setHurt] = useState<Record<string, number>>({});
   const [clock, setClock] = useState(0);
@@ -142,8 +145,9 @@ export function BattleScreen({
   // ───────────── positions ─────────────
   /** One hero against one foe at a time: stage them close and large. */
   const duel = battle.party().length === 1 && (setup.fieldCap ?? 5) === 1;
+  const arena = duelLayout(worldTop, PANEL_TOP + stageH - STAGE_H - worldTop, battle.foes().some((f) => f.tier === "boss"));
   const posOf = (u: Unit): [number, number] => {
-    if (duel) return u.side === "party" ? DUEL_HERO : u.tier === "boss" ? DUEL_BOSS : DUEL_FOE;
+    if (duel) return u.side === "party" ? arena.hero : arena.foe;
     if (u.side === "party") return HERO_POS[u.kind as RootId];
     const s = slots.current;
     if (!s[u.id]) {
@@ -166,7 +170,14 @@ export function BattleScreen({
   };
   const figScale = (u: Unit) => {
     const base = u.kind === "ironbound" ? 1.55 : u.kind === "cinder" ? 1.45 : (FIG_SCALE[u.figure] ?? 1.2);
-    return duel ? base * DUEL_ZOOM : u.kind === "ironbound" || u.kind === "cinder" ? base : undefined;
+    if (!duel) return u.kind === "ironbound" || u.kind === "cinder" ? base : undefined;
+    // The hero stands half the arena tall; the foe matches that zoom unless it would crowd the turn bar.
+    const hero = battle.party()[0]!;
+    const heroBase = FIG_SCALE[hero.figure] ?? 1.2;
+    const zoom = Math.max(1.5, Math.min(2.8, (DUEL_HERO_SHARE * arena.h) / figureBox(hero.figure, heroBase).feetY));
+    if (u.side === "party") return base * zoom;
+    const room = arena.foe[1] - arena.top - (u.tier === "boss" ? 20 : 120);
+    return Math.min(base * zoom, room / figureBox(u.figure, 1).feetY);
   };
 
   // ───────────── feedback ─────────────
@@ -174,23 +185,40 @@ export function BattleScreen({
     const [x, y] = Array.isArray(u) ? u : chest(u);
     const id = ++uid;
     setFloaters((f) => [...f, { id, x: x + (Math.random() * 40 - 20), y, text, cls, delay }]);
-    later(1400 + delay, () => setFloaters((f) => f.filter((q) => q.id !== id)));
+    later(1000 + delay, () => setFloaters((f) => f.filter((q) => q.id !== id)));
   };
   const spawnFx = (kind: Fx["kind"], at: [number, number], color: string, delay = 0) => {
     const id = ++uid;
     setFx((f) => [...f, { id, kind, x: at[0], y: at[1], color, delay }]);
-    later(900 + delay, () => setFx((f) => f.filter((q) => q.id !== id)));
+    later(600 + delay, () => setFx((f) => f.filter((q) => q.id !== id)));
   };
   const flinch = (id: string, delay = 0) =>
     later(delay, () => {
       setHurt((h) => ({ ...h, [id]: (h[id] ?? 0) + 1 }));
-      later(320, () => setHurt((h) => ({ ...h, [id]: 0 })));
+      later(260, () => setHurt((h) => ({ ...h, [id]: 0 })));
     });
-  const showBanner = (text: string, sub?: string, ms = 1100) => {
+  const showBanner = (text: string, sub?: string, ms = 900) => {
     const id = ++uid;
-    setBanner({ id, text, sub });
+    setBanner({ id, text, sub, ms });
     later(ms, () => setBanner((b) => (b?.id === id ? null : b)));
   };
+
+  /** Camera kicks: a small shake on every blow, a big one on heavy hits, a punch-in toward Perfects. */
+  const camN = useRef(0);
+  const [cam, setCam] = useState<{ k: CamKick; n: number; at: [number, number] } | null>(null);
+  const kick = (k: CamKick, at: [number, number] = [540, 1100], delay = 0) =>
+    later(delay, () => {
+      const n = ++camN.current;
+      setCam({ k, n, at });
+      later(CAM_MS[k], () => setCam((c) => (c?.n === n ? null : c)));
+    });
+  const [flash, setFlash] = useState<{ id: number; at: [number, number]; color: string } | null>(null);
+  const flashAt = (at: [number, number], color: string, delay = 0) =>
+    later(delay, () => {
+      const id = ++uid;
+      setFlash({ id, at, color });
+      later(220, () => setFlash((f) => (f?.id === id ? null : f)));
+    });
 
   /** Turn engine events into numbers, words and paint. */
   const play = (events: BattleEvent[]) => {
@@ -205,6 +233,7 @@ export function BattleScreen({
           if (!e.dot) {
             spawnFx("splat", chest(t), t.side === "foe" ? "#1d1822" : "#6b1a28", d);
             flinch(t.id, d);
+            kick(e.crit || e.amount >= 60 ? "big" : "shake", chest(t), d);
           }
           later(d, () => (e.amount >= 60 ? sfx.heavy() : t.side === "party" ? sfx.hurt() : sfx.hit()));
           d += 110;
@@ -230,6 +259,8 @@ export function BattleScreen({
           later(d + 200, () => say("broken"));
           float(t, "BROKEN", "broken", d);
           spawnFx("bloom", chest(t), "#ecc56a", d);
+          flashAt(chest(t), "#ecc56a", d);
+          kick("big", chest(t), d);
           later(d, sfx.brk);
           d += 160;
           break;
@@ -267,7 +298,7 @@ export function BattleScreen({
           later(d, () => showBanner(`Wave ${e.index + 1}`));
           break;
         case "round":
-          later(d, () => showBanner(`Round ${e.round}`, undefined, 800));
+          later(d, () => showBanner(`Round ${e.round}`, undefined, 650));
           break;
         case "skip":
           float(battle.unit(e.unit), "Staggered", "fl-status", d);
@@ -294,11 +325,11 @@ export function BattleScreen({
     if (battle.reactions.length) return startDefend(battle.reactions.shift()!);
     const t = battle.nextTurn();
     const d = play(t.events);
-    if (battle.outcome !== "ongoing") return later(d + 700, () => finish(battle.outcome as "victory" | "defeat"));
+    if (battle.outcome !== "ongoing") return later(d + 450, () => finish(battle.outcome as "victory" | "defeat"));
     const u = t.actor;
     if (t.skipped) {
       setPhase({ k: "wait" });
-      return later(Math.max(700, d + 400), advance);
+      return later(Math.max(450, d + 250), advance);
     }
     if (u.side === "party") {
       later(d, () => {
@@ -320,8 +351,8 @@ export function BattleScreen({
 
   useEffect(() => {
     const names = battle.living("foe").map((f) => f.name);
-    showBanner(title ?? (names.length > 2 ? `${names[0]} and ${names.length - 1} more` : names.join(" & ")), boss ? "a Boss bars the way" : undefined, 1300);
-    later(1400, advance);
+    showBanner(title ?? (names.length > 2 ? `${names[0]} and ${names.length - 1} more` : names.join(" & ")), boss ? "a Boss bars the way" : undefined, 850);
+    later(800, advance);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -370,7 +401,7 @@ export function BattleScreen({
       action,
       target: foe,
       ally,
-      t0: performance.now() + 250,
+      t0: performance.now() + 150,
       weakMs,
       weakPts,
       weakHit: weak ? null : false,
@@ -408,7 +439,11 @@ export function BattleScreen({
     float([chest(t)[0], chest(t)[1] - 140], g === "perfect" ? "PERFECT" : g === "good" ? "GOOD" : "MISS", `grade ${g}`);
     const color = s.action ? AFF_COLOR[s.action.dominant] : "#efe3c8";
     spawnFx("slash", chest(t), color);
-    if (g === "perfect") spawnFx("bloom", chest(t), color);
+    if (g === "perfect") {
+      spawnFx("bloom", chest(t), color);
+      flashAt(chest(t), "#fff4dc");
+      kick("punch", chest(t));
+    }
     (g === "perfect" ? sfx.perfect : g === "good" ? sfx.good : sfx.miss)();
     say(g);
   };
@@ -435,7 +470,7 @@ export function BattleScreen({
     events.push(...battle.settle());
     const d = play(events);
     if (s.command === "basic" && lesson?.commands === "basic") later(d + 300, () => say("ap"));
-    later(d + 650, advance);
+    later(d + 320, advance);
   };
 
   // ───────────── enemy attacks ─────────────
@@ -445,11 +480,11 @@ export function BattleScreen({
     if (plan.healTarget || !plan.attack.hits.length) {
       setPhase({ k: "wait" });
       sfx.telegraph();
-      later(900, () => {
+      later(600, () => {
         const events = battle.resolveFoe(plan, []);
         events.push(...battle.settle());
         const d = play(events);
-        later(d + 700, () => {
+        later(d + 380, () => {
           setCaption(null);
           advance();
         });
@@ -460,13 +495,13 @@ export function BattleScreen({
     if (lesson?.defense === "none") {
       // First lesson: the foe's blows go wide, so the player only has to learn to strike.
       setPhase({ k: "wait" });
-      later(1100, () => {
+      later(800, () => {
         const victim = battle.unit(plan.targets[0]!);
         float([chest(victim)[0] + 60, chest(victim)[1] - 120], "MISSES", "def dodge");
         const events = battle.resolveFoe(plan, plan.attack.hits.map(() => "dodge"));
         events.push(...battle.settle());
         const d = play(events.filter((e) => e.type !== "defend"));
-        later(d + 600, () => {
+        later(d + 320, () => {
           setCaption(null);
           advance();
         });
@@ -488,6 +523,8 @@ export function BattleScreen({
     if (r.includes("parry")) {
       sfx.parry();
       spawnFx("spark", chest(victim), "#ecc56a");
+      flashAt(chest(victim), "#ecc56a");
+      kick(r === "perfect-parry" ? "punch" : "shake", chest(victim));
     } else {
       sfx.dodge();
       spawnFx("whoosh", chest(victim), "#b3cbf5");
@@ -510,6 +547,7 @@ export function BattleScreen({
           flinch(id);
           spawnFx("splat", chest(battle.unit(id)), "#6b1a28");
         }
+        kick("big", chest(battle.unit(s.plan.targets[0]!)));
         sfx.hurt();
       }
     });
@@ -530,7 +568,7 @@ export function BattleScreen({
     const events = battle.resolveFoe(s.plan, s.tracker.result());
     events.push(...battle.settle());
     const d = play(events.filter((e) => e.type !== "defend"));
-    later(d + 600, () => {
+    later(d + 320, () => {
       setCaption(null);
       advance();
     });
@@ -573,11 +611,24 @@ export function BattleScreen({
   const active = phase.k === "command" || phase.k === "ally" ? battle.unit(phase.actor) : battle.current;
   const strikeHero = s?.k === "attack" && s.weakHit !== null && s.beats.some((b) => clock - s.beatsAt > b - 90 && clock - s.beatsAt < b + 160) ? s.actor : null;
   const lungingFoe = s?.k === "defend" && s.impacts.some((at) => clock > at - 140 && clock < at + 100) ? s.plan.actor : null;
+  // The foe draws back before each blow, so the timing reads in its body as well as the ring.
+  const windingFoe = s?.k === "defend" && !lungingFoe && s.impacts.some((at) => clock > at - 520 && clock <= at - 140) ? s.plan.actor : null;
+  /** In a duel a lunge closes most of the gap to the opponent. */
+  const lungeVec = (u: Unit) => {
+    if (!duel) return undefined;
+    const [hx, hy] = arena.hero;
+    const [fx_, fy] = arena.foe;
+    const k = u.side === "party" ? 0.42 : -0.38;
+    return { ["--lx" as string]: `${Math.round((fx_ - hx) * k)}px`, ["--ly" as string]: `${Math.round((fy - hy) * k)}px` };
+  };
   const bossUnit = battle.foes().find((f) => f.tier === "boss");
 
   return (
     <div className={`battle phase-${phase.k}`} onPointerDown={onStageDown} data-testid="battle" data-phase={phase.k}>
-      <div className="world" style={{ top: worldTop }}>
+      <div
+        className="world"
+        style={{ top: worldTop, transformOrigin: cam ? `${cam.at[0]}px ${cam.at[1]}px` : undefined, animation: cam ? `cam-${cam.k}-${cam.n % 2} ${CAM_MS[cam.k]}ms ease-out` : undefined }}
+      >
       <div className="backdrop">
         <SceneBackdrop id={backdropId(realmId, boss)} Drawn={Backdrop} />
       </div>
@@ -594,8 +645,8 @@ export function BattleScreen({
             return (
               <div
                 key={u.id}
-                className={`unit ${u.side} ${u.alive ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
-                style={{ left: x, top: y, zIndex: Math.round(y) }}
+                className={`unit ${u.side} ${u.alive ? "" : "dead"} ${u.broken ? "is-broken" : ""} ${hurt[u.id] ? "hurt" : ""} ${lunge ? "lunge" : ""} ${u.id === windingFoe ? "windup" : ""} ${active?.id === u.id ? "active" : ""} ${isTarget ? "targeted" : ""} ${phase.k === "ally" && u.side === "party" && u.id !== phase.actor ? "pickable" : ""}`}
+                style={{ left: x, top: y, zIndex: Math.round(y), ...lungeVec(u) }}
                 onPointerDown={(e) => {
                   if (seq.current) return;
                   e.stopPropagation();
@@ -620,6 +671,8 @@ export function BattleScreen({
             );
           })}
       </div>
+
+      {flash && <div key={flash.id} className="flash" style={{ left: flash.at[0], top: flash.at[1], ["--flash" as string]: flash.color }} />}
 
       {/* paint: slashes, splats, sparks */}
       <svg className="fx-layer" viewBox="0 0 1080 1920">
@@ -654,7 +707,7 @@ export function BattleScreen({
         </div>
       )}
       {banner && (
-        <div className="banner" key={banner.id}>
+        <div className="banner" key={banner.id} style={{ animationDuration: `${banner.ms}ms` }}>
           <div>{banner.text}</div>
           {banner.sub && <small>{banner.sub}</small>}
         </div>
@@ -663,7 +716,7 @@ export function BattleScreen({
       {lesson ? (
         coach && phase.k !== "end" && <Coach text={coach.text} key={coach.key} style={{ bottom: STAGE_H - PANEL_TOP + 24 }} />
       ) : (
-        <Hint phase={phase} s={s} b={battle} top={PANEL_TOP + stageH - STAGE_H - 70} />
+        <Hint duel={duel} phase={phase} s={s} b={battle} top={PANEL_TOP + stageH - STAGE_H - 70} />
       )}
       {lesson && onSkip && phase.k === "command" && (
         <button className="skip-tutorial" onPointerDown={(e) => e.stopPropagation()} onClick={onSkip} data-testid="skip-tutorial">
@@ -673,6 +726,12 @@ export function BattleScreen({
 
       <div className="bpanel" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
         <PartyStrip b={battle} active={active?.side === "party" ? active.id : null} />
+        {/* Between turns the hero's cards stay in place, dimmed, so the panel never empties and the thumbs know where to go. */}
+        {(phase.k === "wait" || phase.k === "intro") && battle.living("party")[0] && (
+          <div className="cards-idle" aria-hidden>
+            <Commands b={battle} actor={battle.living("party")[0]!.id} ally={false} basicOnly={lesson?.commands === "basic"} onPick={() => {}} onCancel={() => {}} idle />
+          </div>
+        )}
         {(phase.k === "command" || phase.k === "ally") && <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "command" ? "basic" : coach?.key === "skill" ? "actions" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />}
         {phase.k === "defend" && s?.k === "defend" && (
           <div className="defense">
@@ -845,6 +904,7 @@ function Commands({
   pulse,
   onPick,
   onCancel,
+  idle,
 }: {
   b: Battle;
   actor: string;
@@ -853,6 +913,8 @@ function Commands({
   pulse?: "basic" | "actions" | null;
   onPick: (actor: string, cmd: string) => void;
   onCancel: () => void;
+  /** A dimmed, inert copy shown between turns. */
+  idle?: boolean;
 }) {
   const u = b.unit(actor);
   const actions = basicOnly ? [] : b.actionsOf(actor);
@@ -866,8 +928,8 @@ function Commands({
       </div>
     );
   return (
-    <div className="cards" data-testid="commands">
-      <button className={`card basic ${pulse === "basic" ? "coach-pulse" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid="cmd-basic">
+    <div className="cards" data-testid={idle ? undefined : "commands"}>
+      <button className={`card basic ${pulse === "basic" ? "coach-pulse" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid={idle ? undefined : "cmd-basic"}>
         <div className="card-top">
           <span className="card-name">Basic</span>
           <span className="card-ap gain">+2 AP</span>
@@ -885,7 +947,7 @@ function Commands({
             style={{ ["--aff" as string]: AFF_COLOR[a.dominant], ["--aff-deep" as string]: AFF_DEEP[a.dominant] }}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => can && onPick(actor, a.nodeId)}
-            data-testid={`cmd-${a.template}`}
+            data-testid={idle ? undefined : `cmd-${a.template}`}
           >
             <div className="card-top">
               <span className="card-name">
@@ -911,13 +973,13 @@ function Commands({
   );
 }
 
-function Hint({ phase, s, b, top }: { phase: Phase; s: Seq | null; b: Battle; top: number }) {
+function Hint({ duel, phase, s, b, top }: { duel: boolean; phase: Phase; s: Seq | null; b: Battle; top: number }) {
   let text = "";
   if (phase.k === "command") {
     const u = b.unit(phase.actor);
     const acts = b.actionsOf(phase.actor);
     const cheapest = Math.min(...acts.map((a) => b.costOf(phase.actor, a.nodeId)));
-    text = acts.length && u.ap < cheapest ? "Basic builds AP. Your crafted Actions spend it." : "Tap a foe to target, then a command.";
+    text = acts.length && u.ap < cheapest ? "Basic builds AP. Your crafted Actions spend it." : duel ? "" : "Tap a foe to target, then a command.";
   } else if (phase.k === "defend" && s?.k === "defend") text = s.impacts.length > 1 ? `${s.impacts.length} blows: defend each one` : "Dodge is forgiving. Parry is tight but earns AP.";
   if (!text) return null;
   return (

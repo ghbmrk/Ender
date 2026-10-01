@@ -1,7 +1,7 @@
 import { PARTY, ROOTS, compileLoom, type BattleSetup, type FoeKind, type LoomNode, type RootId } from "@ender/battle";
 import { api } from "../api";
 import { getState, setState, toast, type MapNode } from "../state/store";
-import { DUEL_FIELD_CAP, DUEL_HP, partyRoots, saveHero } from "./hero";
+import { DUEL_FIELD_CAP, DUEL_HP, heroFigure, partyRoots, saveHero } from "./hero";
 import { lookFromSeed, newSeed, randomName } from "../art/look";
 import type { BattleResult } from "../ui/battle/BattleScreen";
 
@@ -43,7 +43,7 @@ export async function continueGame() {
   if (!getState().hero) {
     const hero = { root: "iron" as const, name: randomName(), look: lookFromSeed(newSeed()) };
     saveHero(hero);
-    toast(`Meet your hero, ${hero.name}. Make another with New Party.`, "info");
+    toast(`Meet your hero, ${hero.name}. Make another with New hero.`, "info");
   }
   setState({ screen: getState().expedition ? "map" : "crossing", panel: null, loomEditable: !getState().expedition });
 }
@@ -55,7 +55,7 @@ export function compiledParty() {
   const rank = snap?.rank ?? live?.rank ?? 1;
   const nodesOf = (root: RootId) => (snap ? (snap.heroes?.[root] ?? []) : (live?.heroes?.[root]?.nodes ?? [])) as LoomNode[];
   const hero = getState().hero;
-  return partyRoots().map((root) => ({ root, loom: compileLoom(nodesOf(root), rank), ...(hero?.root === root ? { name: hero.name } : {}) }));
+  return partyRoots().map((root) => ({ root, loom: compileLoom(nodesOf(root), rank), ...(hero?.root === root ? { name: hero.name, figure: heroFigure(root) } : {}) }));
 }
 
 /** Leaving a Shrine locks the Loom again and saves the snapshot the party fights with. */

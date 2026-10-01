@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { continueGame, newBinder } from "../game/flow";
+import { continueGame } from "../game/flow";
 import { goTo, savedStep, tutorialDone } from "../game/tutorial";
-import { ROOTS } from "@ender/battle";
+import { heroFigure } from "../game/hero";
 import { setState, toast, useStore } from "../state/store";
 import { crossingBackdrop } from "../art/registry";
 import { SceneBackdrop } from "../art/SceneBackdrop";
@@ -57,7 +57,7 @@ export function Title() {
       {me ? (
         <div className="title-party">
           <div style={{ position: "absolute", left: 540, top: 1360 }}>
-            <Fig figure={ROOTS[me.root].hero} look={me.look} scale={1.9} />
+            <Fig figure={heroFigure(me.root)} look={me.look} scale={1.9} />
           </div>
         </div>
       ) : (
@@ -78,21 +78,17 @@ export function Title() {
         <h1>ENDER</h1>
         <p className="tagline">You never earn a skill. You make one.</p>
       </div>
+      {/* Hero select: the saved hero to continue, or a new one. A new player never sees this screen first. */}
       <div className="title-actions">
-        {hasSave ? (
-          <>
-            <button className="big primary" disabled={busy} onClick={() => go(resume)} data-testid="continue">
-              Continue
-            </button>
-            <button className="big" disabled={busy} onClick={() => go(async () => setState({ screen: "create" }))} data-testid="new-binder">
-              New Party
-            </button>
-          </>
-        ) : (
-          <button className="big primary" disabled={busy} onClick={() => go(async () => setState({ screen: "create" }))} data-testid="begin">
-            Begin
+        {me && <div className="title-hero-name">{me.name}</div>}
+        {(hasSave || me) && (
+          <button className="big primary" disabled={busy} onClick={() => go(resume)} data-testid="continue">
+            Continue
           </button>
         )}
+        <button className={`big ${hasSave || me ? "" : "primary"}`} disabled={busy} onClick={() => go(async () => setState({ screen: "create" }))} data-testid="new-hero">
+          New hero
+        </button>
         <button className={`small ${dev ? "toggled" : "ghost"}`} onClick={toggleDev} data-testid="dev-toggle">
           Developer provenance: {dev ? "on" : "off"}
         </button>

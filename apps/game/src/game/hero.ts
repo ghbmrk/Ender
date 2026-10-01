@@ -1,6 +1,6 @@
 import type { RootId } from "@ender/battle";
 import { PARTY, ROOTS } from "@ender/battle";
-import type { Hero } from "../art/look";
+import { GARB_FIGURE, type Hero } from "../art/look";
 import { getState, setState } from "../state/store";
 
 /**
@@ -43,6 +43,15 @@ export const DUEL_HP = { normal: 0.45, elite: 0.45, boss: 0.5 } as const;
 export const lookFor = (root: string) => {
   const h = getState().hero;
   return h && h.root === root ? h.look : undefined;
+};
+
+/** Every new hero starts on this Root; there is no class pick, because skills are crafted on the Loom. */
+export const HERO_ROOT: RootId = "iron";
+
+/** The figure drawn for a Root: the hero's chosen garb for the player's Root, else the Root's own figure. */
+export const heroFigure = (root: RootId) => {
+  const h = getState().hero;
+  return h && h.root === root && h.look.garb ? GARB_FIGURE[h.look.garb] : ROOTS[root].hero;
 };
 
 /** A Root's display name: the hero's own name for the player's Root, else "Iron Root" etc. */

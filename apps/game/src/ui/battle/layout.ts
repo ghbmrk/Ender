@@ -18,9 +18,14 @@ export const BOSS_ADDS: [number, number][] = [
 ];
 export const PANEL_TOP = 1440;
 
-/** Duels (one hero, one foe): the two stand closer and larger, so the figures carry more detail. */
-export const DUEL_HERO: [number, number] = [315, 1400];
-export const DUEL_FOE: [number, number] = [770, 1120];
-export const DUEL_BOSS: [number, number] = [745, 1150];
-/** How much larger than the party-scale figures duellists are drawn. */
-export const DUEL_ZOOM = 1.8;
+/**
+ * Duels (one hero, one foe) fill the arena between the turn bar and the command panel, so the two
+ * figures are as large and close as the phone allows. `panel` is the panel's top in world px.
+ */
+export function duelLayout(worldTop: number, panel: number, bossBar: boolean) {
+  const top = 175 - worldTop + (bossBar ? 150 : 0);
+  const h = panel - top;
+  return { top, h, hero: [300, panel - 36] as [number, number], foe: [770, Math.round(top + h * 0.64)] as [number, number] };
+}
+/** The hero's height (feet to crown) as a share of the arena's. */
+export const DUEL_HERO_SHARE = 0.5;

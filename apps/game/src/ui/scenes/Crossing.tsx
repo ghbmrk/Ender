@@ -1,5 +1,5 @@
 import { PARTY, ROOTS } from "@ender/battle";
-import { lookFor, partyRoots, rootLabel } from "../../game/hero";
+import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { crossingBackdrop } from "../../art/registry";
 import { refreshLoom } from "../../game/flow";
 import { setState, toast, useStore } from "../../state/store";
@@ -70,7 +70,7 @@ export function Crossing() {
       <div className="hub-party">
         {partyRoots().map((r) => (
           <div key={r} className="hub-hero">
-            <Head figure={ROOTS[r].hero} size={92} look={lookFor(r)} />
+            <Head figure={heroFigure(r)} size={92} look={lookFor(r)} />
             <span>{rootLabel(r)}</span>
           </div>
         ))}

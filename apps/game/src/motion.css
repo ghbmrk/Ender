@@ -1,0 +1,295 @@
+/* Motion: smooth and quick. Replaces the earlier stop-motion steps() timings in battle, adds
+   breathing idles, dashes, wind-ups, knockback and camera kicks. Loaded last. */
+
+/* ── Figures ── */
+.battle .unit {
+  transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --lx: 120px;
+  --ly: -60px;
+}
+.battle .unit.foe {
+  --lx: -140px;
+  --ly: 90px;
+  animation: enter-foe 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards;
+}
+.battle .unit.party {
+  animation: enter-hero 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards;
+}
+@keyframes enter-foe {
+  from {
+    transform: translateX(260px);
+    opacity: 0;
+  }
+}
+@keyframes enter-hero {
+  from {
+    transform: translateX(-260px);
+    opacity: 0;
+  }
+}
+/* A dash in: fast, accelerating. The return uses the slower ease-out above. */
+.battle .unit.lunge,
+.battle .unit.party.lunge,
+.battle .unit.foe.lunge {
+  transform: translate(var(--lx), var(--ly));
+  transition: transform 110ms cubic-bezier(0.6, 0, 0.9, 0.5);
+}
+/* The foe draws back before it strikes. */
+.battle .unit.windup {
+  transform: translate(calc(var(--lx) * -0.12), calc(var(--ly) * -0.12)) scale(1.04);
+  transition: transform 360ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* Breathing idle: the 0×0 bob box sits on the feet, so it scales from the ground up. */
+.battle .unit .bob {
+  transform-origin: 0 0;
+  animation: breathe 2.4s ease-in-out infinite alternate;
+}
+.battle .unit.foe .bob {
+  animation: breathe-foe 1.9s ease-in-out infinite alternate;
+}
+.battle .unit.active.party .bob {
+  animation-duration: 1.3s;
+}
+@keyframes breathe {
+  from {
+    transform: translateY(0) scale(1, 1);
+  }
+  to {
+    transform: translateY(-3px) scale(1.012, 1.026);
+  }
+}
+@keyframes breathe-foe {
+  from {
+    transform: translateY(0) rotate(-0.8deg) scale(1, 1);
+  }
+  to {
+    transform: translateY(-9px) rotate(0.9deg) scale(1.01, 1.03);
+  }
+}
+
+/* Struck: a white flash and a knockback away from the blow. */
+.battle .unit.foe {
+  --kx: 40px;
+}
+.battle .unit.party {
+  --kx: -40px;
+}
+.battle .unit.hurt .bob {
+  animation: knock 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.battle .unit.hurt .fig {
+  filter: none;
+  animation: hit-flash 220ms ease-out;
+}
+@keyframes knock {
+  0% {
+    transform: translateX(var(--kx)) skewX(-4deg) scale(1.04, 0.96);
+  }
+  60% {
+    transform: translateX(calc(var(--kx) * -0.15));
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes hit-flash {
+  0% {
+    filter: brightness(3) saturate(0);
+  }
+  100% {
+    filter: none;
+  }
+}
+.battle .unit.dead .bob {
+  animation: fall 520ms cubic-bezier(0.5, 0, 0.8, 0.4) forwards;
+}
+.battle .unit.is-broken .bob {
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.battle .unit.active.party::before {
+  animation: ring 900ms ease-in-out infinite alternate;
+}
+@keyframes ring {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.6;
+    transform: scale(1.06);
+  }
+}
+.battle .reticle > div {
+  animation: spin 5s linear infinite;
+}
+
+/* ── Paint and numbers ── */
+.battle .fx.slash {
+  animation: slash 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.battle .fx.splat {
+  animation: splat 420ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+.battle .fx.spark {
+  animation: splat 320ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+.battle .fx.bloom {
+  animation: bloom 480ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+.battle .floater {
+  animation: floatup 950ms cubic-bezier(0.15, 0.9, 0.3, 1) both;
+}
+.battle .floater.crit,
+.battle .floater.grade.perfect,
+.battle .floater.broken {
+  animation-name: floatup-big;
+}
+@keyframes floatup-big {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -30%) scale(0.4);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -70%) scale(1.5);
+  }
+  30% {
+    transform: translate(-50%, -80%) scale(1.15);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(1.05);
+  }
+}
+.battle .weak-point {
+  animation: pulse 260ms ease-in-out infinite alternate;
+}
+.battle .banner {
+  animation: bannerin 900ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.battle .tell {
+  animation: tellin 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.battle .gbar > div {
+  transition: width 240ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.battle-end {
+  animation: fadein 220ms ease-out both;
+}
+.battle .card {
+  animation: cardin 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* A burst of light where a Perfect, Parry or Break lands. */
+.flash {
+  position: absolute;
+  z-index: 3150;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 8%, var(--flash) 22%, transparent 62%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: flash 220ms ease-out both;
+}
+@keyframes flash {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+/* ── Camera kicks (two copies of each so a repeat restarts the animation) ── */
+@keyframes cam-shake-0 {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-7px, 4px); }
+  50% { transform: translate(6px, -3px); }
+  75% { transform: translate(-3px, 2px); }
+  100% { transform: none; }
+}
+@keyframes cam-shake-1 {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-7px, 4px); }
+  50% { transform: translate(6px, -3px); }
+  75% { transform: translate(-3px, 2px); }
+  100% { transform: none; }
+}
+@keyframes cam-big-0 {
+  0% { transform: translate(0, 0) scale(1.03); }
+  15% { transform: translate(-18px, 10px) scale(1.03); }
+  35% { transform: translate(15px, -8px) scale(1.02); }
+  55% { transform: translate(-9px, 5px) scale(1.01); }
+  75% { transform: translate(4px, -2px); }
+  100% { transform: none; }
+}
+@keyframes cam-big-1 {
+  0% { transform: translate(0, 0) scale(1.03); }
+  15% { transform: translate(-18px, 10px) scale(1.03); }
+  35% { transform: translate(15px, -8px) scale(1.02); }
+  55% { transform: translate(-9px, 5px) scale(1.01); }
+  75% { transform: translate(4px, -2px); }
+  100% { transform: none; }
+}
+@keyframes cam-punch-0 {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes cam-punch-1 {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* ── Controls answer the thumb at once ── */
+.stage button {
+  transition: transform 60ms ease-out, filter 60ms ease-out;
+}
+.stage button:active:not(:disabled) {
+  transform: scale(0.95);
+  filter: brightness(1.18);
+}
+.stage .def-btn:active {
+  transform: scale(0.97);
+  filter: brightness(1.35);
+}
+/* Two or more command cards share the row instead of leaving an empty third column. */
+.stage .cards {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.cards-idle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  opacity: 0.4;
+  filter: saturate(0.5);
+  pointer-events: none;
+}
+.cards-idle .card {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle .world {
+    animation: none !important;
+  }
+  .battle .unit .bob {
+    animation: none;
+  }
+}
+
+/* The world is its own layer, so coach bubbles, captions and banners always sit above the figures
+   (and a camera kick, which also makes a layer, cannot reorder them mid-shake). */
+.battle .world {
+  z-index: 0;
+}

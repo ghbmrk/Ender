@@ -27,7 +27,7 @@ import { AFF_COLOR, AFF_DEEP, AFF_GLYPH, ROLE_GLYPH, ROLE_NAME } from "../affini
 import { Head } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
 import { goTo } from "../../game/tutorial";
-import { lookFor, partyRoots, rootLabel } from "../../game/hero";
+import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { Coach } from "../Coach";
 import { CardArt } from "../CardArt";
 
@@ -232,7 +232,7 @@ export function LoomScreen() {
       <div className="hero-tabs">
         {roots.map((r) => (
           <button key={r} className={`hero-tab ${r === hero ? "on" : ""} ${lesson && r === mine && hero !== mine ? "coach-pulse" : ""}`} onClick={() => (setHero(r), setDiff([]), setSelected(null))} data-testid={`loom-tab-${r}`}>
-            <Head figure={ROOTS[r].hero} size={64} look={lookFor(r)} />
+            <Head figure={heroFigure(r)} size={64} look={lookFor(r)} />
             <span>{rootLabel(r)}</span>
           </button>
         ))}
@@ -274,7 +274,7 @@ export function LoomScreen() {
         {hexDist(0, 0) === 0 && <circle cx={CX} cy={CY - 10} r={0} />}
       </svg>
       <div className="root-head" style={{ left: CX - 50, top: CY - 70 }}>
-        <Head figure={ROOTS[hero].hero} size={100} look={lookFor(hero)} />
+        <Head figure={heroFigure(hero)} size={100} look={lookFor(hero)} />
       </div>
       {/* hit targets for board nodes (HTML, so long-press and drag work on touch) */}
       {nodes.map((n) => {

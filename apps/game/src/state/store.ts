@@ -45,7 +45,14 @@ export type State = {
 };
 
 let state: State = {
-  screen: "title",
+  // A new player goes straight into making their hero; a returning one gets the hero select.
+  screen: (() => {
+    try {
+      return localStorage.getItem("ender:hero") || localStorage.getItem("ender:tutorial") ? "title" : "create";
+    } catch {
+      return "create";
+    }
+  })(),
   panel: null,
   character: null,
   loom: null,

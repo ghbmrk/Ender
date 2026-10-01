@@ -25,13 +25,11 @@ const snapTip = async () => {
 };
 
 await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html") + "?autoplay=1");
-await page.waitForSelector(tid("begin"), { timeout: 60000 });
-await page.screenshot({ path: `${shots}/prologue-00-title.png` });
-await page.click(tid("begin"));
-await page.waitForSelector(tid("create-hero"));
+// A new player lands straight in hero creation.
+await page.waitForSelector(tid("create-hero"), { timeout: 60000 });
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${shots}/prologue-00-create.png` });
-await page.click(tid("root-quick"));
+await page.click(tid("look-tab-garb"));
 await page.click(tid("look-reroll"));
 await page.waitForTimeout(300);
 await page.screenshot({ path: `${shots}/prologue-00-create-2.png` });

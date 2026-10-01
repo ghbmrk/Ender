@@ -17,9 +17,9 @@ const tid = (t) => `[data-testid="${t}"]`;
 const visible = async (sel) => (await page.$(sel)) !== null;
 
 await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html") + "?autoplay=1");
-await page.waitForSelector(tid("new-binder"), { timeout: 60000 });
+await page.waitForSelector(tid("new-hero"), { timeout: 60000 });
 await shot("flow-title");
-await page.click(tid("new-binder"));
+await page.click(tid("new-hero"));
 await page.waitForSelector(tid("hero-begin"));
 await page.click(tid("hero-begin"));
 await page.waitForSelector(tid("crossing"));
