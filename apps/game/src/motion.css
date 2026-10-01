@@ -1320,3 +1320,24 @@
   pointer-events: auto;
   cursor: pointer;
 }
+
+/* "Drops" labels a Realm's Essence chips, so they read as loot rather than tags. */
+.chips-label {
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--rules-ink, #3a2c1c);
+  opacity: 0.8;
+  align-self: center;
+}
+.realm-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.realm-actions button.primary {
+  flex: 1;
+}
+.realm-actions button.realm-more {
+  margin-left: 0 !important;
+}

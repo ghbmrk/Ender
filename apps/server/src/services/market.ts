@@ -412,7 +412,7 @@ export function bazaarView(ctx: Ctx, charId: string) {
   const dearest = [...essencesOut].sort((a, b) => b.priceRatio - a.priceRatio)[0]!;
   return {
     snapshot: { id: s.id, date: s.date, index: s.index, total: ctx.world.snapshots.length },
-    headline: `${dearest.name} is ${dearest.status === "dear" ? "dear" : "the costliest Essence"} this turning (×${dearest.priceRatio}).`,
+    headline: priceHeadline(dearest.name, dearest.priceRatio),
     spread,
     essences: essencesOut,
     offers: offersView(ctx),
@@ -479,4 +479,12 @@ export function sellPreview(ctx: Ctx, charId: string, artifactId: string) {
   const a = getArtifact(ctx, artifactId, charId);
   const quote = productionQuote(ctx, charId, a);
   return { quote, salvage: round(salvageValue(trueEvaluation(ctx, a).technicalScore) * (1 - spreadFor(ctx, charId))) };
+}
+
+/** The Gate's one line on the market, in words a new player reads at a glance. */
+function priceHeadline(name: string, ratio: number) {
+  if (ratio >= 2.5) return `${name} sells for ${Math.round(ratio)} times its usual price right now. Realms that drop it pay well.`;
+  if (ratio >= 1.8) return `${name} sells for about twice its usual price right now. Realms that drop it pay well.`;
+  if (ratio >= 1.25) return `${name} is selling above its usual price right now.`;
+  return `Prices are steady right now. ${name} sells best.`;
 }

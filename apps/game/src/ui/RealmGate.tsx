@@ -35,14 +35,12 @@ export function RealmGate() {
             </div>
             <p className="dim">{r.tagline}</p>
             <div className="realm-chips">
+              <span className="chips-label">Drops</span>
               {r.expectedEssences.slice(0, 3).map((e: any) => (
                 <span key={e.essence} className="ess-chip" style={{ color: essenceColor(e.essence), borderColor: essenceColor(e.essence) }}>
                   {essenceGlyph(e.essence)} {e.name}
                 </span>
               ))}
-              <button className="realm-more" onClick={() => setOpen(open === r.id ? null : r.id)} data-testid={`realm-more-${r.id}`}>
-                {open === r.id ? "Less" : "Details"}
-              </button>
             </div>
             {open === r.id && (
               <div className="realm-details">
@@ -83,9 +81,15 @@ export function RealmGate() {
             ))}
               </div>
             )}
-            <button className="primary" disabled={busy} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
-              Set out
-            </button>
+            {/* Details sits beside Set out, so the Essences get their row to themselves. */}
+            <div className="realm-actions">
+                <button className="realm-more" onClick={() => setOpen(open === r.id ? null : r.id)} data-testid={`realm-more-${r.id}`}>
+                  {open === r.id ? "Less" : "Details"}
+                </button>
+              <button className="primary" disabled={busy} onClick={() => go(r.id)} data-testid={`enter-${r.id}`}>
+                Set out
+              </button>
+            </div>
           </div>
         ))}
       </div>
