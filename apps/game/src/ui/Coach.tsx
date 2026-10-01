@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
-import "../coach.css";
 
 /** A short, non-blocking tip from the prologue. `**bold**` marks the word to act on. */
 export function Coach({ text, style, action, onTap }: { text: string; style?: CSSProperties; action?: { label: string; onClick: () => void; testId?: string }; onTap?: () => void }) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
+  // A tip with a button is that button: a tap anywhere on it counts.
+  onTap ??= action?.onClick;
   return (
     <div
       className={`coach ${onTap ? "tappable" : ""}`}

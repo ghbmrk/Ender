@@ -4,8 +4,8 @@
 // time only moves during `wait` and for a short reaction gap after each tap.
 import { chromium } from "@playwright/test";
 import { createServer } from "node:http";
-import { mkdirSync, appendFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, appendFileSync, readFileSync } from "node:fs";
+import { extname, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../..");
 const out = resolve(process.argv[2] ?? "/tmp/blind");
 const port = Number(process.argv[3] ?? 7777);
@@ -17,12 +17,27 @@ const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => { errors.push(e.message); log(`PAGEERROR ${e.message}`); });
 await page.clock.install();
-await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html"));
+// The split build, served over http, is exactly what the published artifact runs.
+const split = resolve(root, "apps/game/dist-split");
+const types = { ".js": "text/javascript", ".css": "text/css", ".wasm": "application/wasm", ".webp": "image/webp", ".woff2": "font/woff2", ".html": "text/html" };
+const files = createServer((req, res) => {
+  const path = resolve(split, "." + decodeURIComponent(new URL(req.url, "http://x").pathname.replace(/\/$/, "/index.html")));
+  if (!path.startsWith(split)) return res.writeHead(403).end();
+  try {
+    const body = readFileSync(path);
+    res.writeHead(200, { "content-type": types[extname(path)] ?? "application/octet-stream" }).end(body);
+  } catch {
+    res.writeHead(404).end();
+  }
+}).listen(port + 1);
+await page.goto(`http://127.0.0.1:${port + 1}/index.html`);
 await page.clock.runFor(4000);
 let n = 0;
 const run = (ms) => page.clock.runFor(ms);
 async function shot() {
   const p = `${out}/s${String(++n).padStart(3, "0")}.png`;
+  // CSS transitions run on real time, not the frozen clock: let them settle as an eye would.
+  await new Promise((r) => setTimeout(r, 350));
   await page.screenshot({ path: p });
   return p;
 }
@@ -66,6 +81,9 @@ createServer(async (req, res) => {
   const args = Object.fromEntries(u.searchParams);
   try {
     if (!cmds[c]) throw new Error(`unknown command ${c}`);
+    // A finger can't land off the glass: say so rather than silently tapping nothing.
+    for (const k of ["x", "x1", "x2"]) if (k in args && (+args[k] < 0 || +args[k] > 390)) throw new Error(`${k}=${args[k]} is off the screen: x goes from 0 to 390`);
+    for (const k of ["y", "y1", "y2"]) if (k in args && (+args[k] < 0 || +args[k] > 844)) throw new Error(`${k}=${args[k]} is off the screen: y goes from 0 to 844`);
     const r = await cmds[c](args);
     log(`${c} ${JSON.stringify(args)} -> ${r.shot ?? ""}${r.error ? " ERR " + r.error : ""}`);
     res.end(JSON.stringify(r) + "\n");

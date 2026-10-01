@@ -12,6 +12,8 @@ import "./styles.css";
 import "./frame.css";
 import "./painted.css";
 import "./motion.css";
+// Coach styles load with the first part: the single-file build dropped them when only the lazy Coach imported them.
+import "./coach.css";
 import "./blind.css";
 
 /**
