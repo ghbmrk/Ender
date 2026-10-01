@@ -45,7 +45,7 @@ export function Landing() {
           </div>
           <div className="rf-hero" style={{ left: 290, top: 1580 }}>
             <div className="rf-hero-move">
-              <Fig figure="binder" scale={2.05} />
+              <Fig bake figure="binder" scale={2.05} />
             </div>
           </div>
           <div className="rf-ring" style={{ left: 770, top: 1000 }} />

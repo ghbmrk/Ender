@@ -59,19 +59,19 @@ export function Title() {
       {me ? (
         <div className="title-party">
           <div style={{ position: "absolute", left: 540, top: 1360 }}>
-            <Fig figure={heroFigure(me.root)} look={me.look} scale={1.9} />
+            <Fig bake figure={heroFigure(me.root)} look={me.look} scale={1.9} />
           </div>
         </div>
       ) : (
       <div className="title-party">
         <div style={{ position: "absolute", left: 260, top: 1260 }}>
-          <Fig figure="binder" scale={1.6} />
+          <Fig bake figure="binder" scale={1.6} />
         </div>
         <div style={{ position: "absolute", left: 800, top: 1270 }}>
-          <Fig figure="ranger" scale={1.6} className="flip" />
+          <Fig bake figure="ranger" scale={1.6} className="flip" />
         </div>
         <div style={{ position: "absolute", left: 540, top: 1360 }}>
-          <Fig figure="warden" scale={1.75} />
+          <Fig bake figure="warden" scale={1.75} />
         </div>
       </div>
       )}

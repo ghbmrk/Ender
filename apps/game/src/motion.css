@@ -2344,3 +2344,9 @@
   }
   .landing .reel-loom { opacity: 0; }
 }
+
+/* Fight figures keep their own layer, so moving or breathing never re-runs their drop-shadow filters. */
+.battle .unit .fig-svg,
+.battle .unit .fig-img {
+  will-change: transform;
+}

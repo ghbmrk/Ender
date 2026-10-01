@@ -106,6 +106,12 @@ const CAM_MS: Record<CamKick, number> = { shake: 200, big: 320, punch: 260, fina
 let uid = 0;
 /** Sequence time in ms (debug ?speed= slows it down for screenshots). */
 const elapsed = (s: { t0: number; scale: number }) => (performance.now() - s.t0) / (debug.timeScale * s.scale);
+/** Sequence time at an input event: judged from when the finger landed, not from when the handler got to run. */
+const elapsedAt = (s: { t0: number; scale: number }, e: { timeStamp: number }) => {
+  const now = performance.now();
+  const at = e.timeStamp > now - 250 && e.timeStamp <= now ? e.timeStamp : now;
+  return (at - s.t0) / (debug.timeScale * s.scale);
+};
 
 export function BattleScreen({
   setup,
@@ -402,7 +408,7 @@ export function BattleScreen({
     } else {
       const plan = battle.planFoe(u.id);
       setPhase({ k: "wait" });
-      later(d + 250, () => startDefend(plan));
+      later(d + 100, () => startDefend(plan));
     }
   };
 
@@ -538,7 +544,7 @@ export function BattleScreen({
     events.push(...battle.settle());
     const d = play(events);
     if (s.command === "basic" && lesson?.commands === "basic") later(d + 300, () => say("ap"));
-    later(d + 320, advance);
+    later(d + 140, advance);
   };
 
   // ───────────── enemy attacks ─────────────
@@ -639,7 +645,7 @@ export function BattleScreen({
     const events = battle.resolveFoe(s.plan, s.tracker.result());
     events.push(...battle.settle());
     const d = play(events.filter((e) => e.type !== "defend"));
-    later(d + 320, () => {
+    later(d + 140, () => {
       setCaption(null);
       advance();
     });
@@ -650,7 +656,7 @@ export function BattleScreen({
     const s = seq.current;
     if (!s || s.k !== "attack") return;
     const p = toStage(e.clientX, e.clientY);
-    pressAttack(s, elapsed(s), { x: p.x, y: p.y - worldTop });
+    pressAttack(s, elapsedAt(s, e), { x: p.x, y: p.y - worldTop });
   };
 
   const tapHero = (id: string) => {
@@ -734,7 +740,7 @@ export function BattleScreen({
                   </div>
                 )}
                 <div className="bob">
-                  <Fig look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
+                  <Fig bake look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
                 </div>
                 {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} />}
                 {u.side === "party" && <HeroTag u={u} h={figureBox(u.figure, figScale(u)).h} />}
@@ -826,13 +832,13 @@ export function BattleScreen({
           {(phase.k === "command" || phase.k === "ally") && <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "command" ? "basic" : coach?.key === "skill" ? "actions" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />}
           {phase.k === "defend" && s?.k === "defend" && (
             <div className="defense">
-              <button className={`def-btn dodge ${lesson?.step === "dodge" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "dodge"))} data-testid="dodge">
+              <button className={`def-btn dodge ${lesson?.step === "dodge" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsedAt(s, e), "dodge"))} data-testid="dodge">
                 <span className="def-glyph">⤺</span>
                 DODGE
                 <small>forgiving</small>
               </button>
               {lesson?.defense !== "dodge" && (
-                <button className={`def-btn parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "parry"))} data-testid="parry">
+                <button className={`def-btn parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsedAt(s, e), "parry"))} data-testid="parry">
                   <span className="def-glyph">⚔</span>
                   PARRY
                   <small>tight · +1 AP · Break</small>
