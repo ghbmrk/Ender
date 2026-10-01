@@ -191,7 +191,8 @@ export function CreateHero() {
           <span className="ch-part">
             {NAME[p]} <span className="ch-val">{value(p)}</span>
           </span>
-          <span className="ch-cta">tap to change</span>
+          {/* The hint says it once: after the first change, the labels just show what you picked. */}
+          {!lit && <span className="ch-cta">tap to change</span>}
         </button>
       ))}
 

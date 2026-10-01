@@ -1523,3 +1523,9 @@
   color: #f4d58c;
   text-shadow: 0 0 50px #f4d58c;
 }
+
+/* The hero's name is set in the game's display face, like every other name in Ender. */
+.stage .ch-name input {
+  font-family: var(--display);
+  letter-spacing: 0.02em;
+}
