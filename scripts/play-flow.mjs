@@ -102,6 +102,13 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
     continue;
   }
   if (await visible(tid("battle"))) {
+    // While a foe attacks, autoplay parries on its own; stay out of the way. (In this container's software
+    // rendering, battle frames can still take 300ms+, so the bot's parries land late: trust the battle
+    // sim in packages/battle for balance, not this bot.)
+    if (await visible(tid("parry"))) {
+      await page.waitForTimeout(2500);
+      continue;
+    }
     if (await visible(tid("battle-continue"))) {
       fights++;
       await shot(`flow-battle-end-${fights}`);

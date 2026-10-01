@@ -59,7 +59,7 @@ export function MapScreen() {
     warned.add(omenKey);
     sfx.telegraph();
     setOmen(bossNext[0]!);
-    const t = setTimeout(() => setOmen(null), 2600);
+    const t = setTimeout(() => setOmen(null), 4200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [omenKey]);
@@ -207,6 +207,12 @@ export function MapScreen() {
           </span>
           <b>{FOES[omen.encounter.waves.flat()[0] as FoeKind]?.name ?? "The Boss"}</b>
           <small>waits at the top of the climb</small>
+          {/* One thing worth knowing before the fight: the blow that ends most runs, and how it announces itself. */}
+          {heaviest(omen.encounter.waves.flat()[0] as FoeKind) && (
+            <span className="bo-tip">
+              Its heaviest blow is <b>{heaviest(omen.encounter.waves.flat()[0] as FoeKind)!.name}</b>. When you see “{heaviest(omen.encounter.waves.flat()[0] as FoeKind)!.tell}”, get ready to parry.
+            </span>
+          )}
         </button>
       )}
       {/* Thumb-zone dock: your health on the left, the Loom on the right. */}
@@ -243,3 +249,6 @@ export function MapScreen() {
 
 /** "A Keeper", "An Ironbound Keeper", "The Bound King". */
 const withArticle = (name: string) => (/^The /.test(name) || name === "Something" ? name : `${/^[AEIOU]/.test(name) ? "An" : "A"} ${name}`);
+
+/** A foe's hardest-hitting attack (by its biggest single blow). */
+const heaviest = (kind: FoeKind) => [...(FOES[kind]?.attacks ?? [])].sort((a, b) => Math.max(...b.hits.map((x) => x.power)) - Math.max(...a.hits.map((x) => x.power)))[0];
