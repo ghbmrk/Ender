@@ -1,0 +1,2 @@
+/* Fixes from the blind new-player loop (scripts/blind). Kept in their own file so they never collide with
+   other threads appending to motion.css. Loaded last, so these rules win ties. */

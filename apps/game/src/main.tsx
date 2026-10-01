@@ -7,6 +7,7 @@ import "./styles.css";
 import "./frame.css";
 import "./painted.css";
 import "./motion.css";
+import "./blind.css";
 
 // Developer / test surface. Gameplay never depends on it.
 (window as any).__ender = { debug, getState, setState, api };
