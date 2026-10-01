@@ -28,6 +28,14 @@ await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html") + "?a
 await page.waitForSelector(tid("begin"), { timeout: 60000 });
 await page.screenshot({ path: `${shots}/prologue-00-title.png` });
 await page.click(tid("begin"));
+await page.waitForSelector(tid("create-hero"));
+await page.waitForTimeout(400);
+await page.screenshot({ path: `${shots}/prologue-00-create.png` });
+await page.click(tid("root-quick"));
+await page.click(tid("look-reroll"));
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${shots}/prologue-00-create-2.png` });
+await page.click(tid("hero-begin"));
 
 let fights = 0;
 for (let step = 0; step < 1500; step++) {

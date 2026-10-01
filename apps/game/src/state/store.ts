@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import type { RootId } from "@ender/battle";
 
 /** Scenes drawn on the portrait stage. Menu sheets (panels) open over them at the device's own pixel size. */
-export type Screen = "title" | "crossing" | "map" | "battle" | "loom";
+export type Screen = "title" | "create" | "crossing" | "map" | "battle" | "loom";
 export type Panel = null | "gate" | "crucible" | "bazaar" | "grimoire" | "inventory" | "provenance" | "rewards" | "summary" | "codex";
 
 export type Toast = { id: number; text: string; tone?: "gain" | "loss" | "info" | "mastery" };
@@ -40,6 +40,8 @@ export type State = {
   tutorial: import("../game/tutorial").TutStep | null;
   /** Bumped each time a practice fight starts, so a retry gets a fresh battle. */
   tutorialRun?: number;
+  /** The player's own hero (made in the prologue); null for saves from before heroes were made. */
+  hero: import("../art/look").Hero | null;
 };
 
 let state: State = {
@@ -62,6 +64,14 @@ let state: State = {
   toasts: [],
   world: null,
   tutorial: null,
+  hero: (() => {
+    try {
+      const v = localStorage.getItem("ender:hero");
+      return v ? JSON.parse(v) : null;
+    } catch {
+      return null;
+    }
+  })(),
 };
 const listeners = new Set<() => void>();
 

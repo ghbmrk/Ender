@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { continueGame, newBinder } from "../game/flow";
-import { goTo, savedStep, startTutorial, tutorialDone } from "../game/tutorial";
+import { goTo, savedStep, tutorialDone } from "../game/tutorial";
+import { ROOTS } from "@ender/battle";
 import { setState, toast, useStore } from "../state/store";
 import { crossingBackdrop } from "../art/registry";
 import { SceneBackdrop } from "../art/SceneBackdrop";
@@ -11,6 +12,7 @@ import { useWorldTop } from "./Stage";
 
 export function Title() {
   const dev = useStore((s) => s.devMode);
+  const me = useStore((s) => s.hero);
   const [hasSave, setHasSave] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -52,6 +54,13 @@ export function Title() {
       <div className="backdrop dimmed">
         <SceneBackdrop id="title" Drawn={Back} />
       </div>
+      {me ? (
+        <div className="title-party">
+          <div style={{ position: "absolute", left: 540, top: 1360 }}>
+            <Fig figure={ROOTS[me.root].hero} look={me.look} scale={1.9} />
+          </div>
+        </div>
+      ) : (
       <div className="title-party">
         <div style={{ position: "absolute", left: 260, top: 1260 }}>
           <Fig figure="binder" scale={1.6} />
@@ -63,6 +72,7 @@ export function Title() {
           <Fig figure="warden" scale={1.75} />
         </div>
       </div>
+      )}
       </div>
       <div className="title-card">
         <h1>ENDER</h1>
@@ -74,12 +84,12 @@ export function Title() {
             <button className="big primary" disabled={busy} onClick={() => go(resume)} data-testid="continue">
               Continue
             </button>
-            <button className="big" disabled={busy} onClick={() => go(() => (tutorialDone() ? newBinder() : startTutorial()))} data-testid="new-binder">
+            <button className="big" disabled={busy} onClick={() => go(async () => setState({ screen: "create" }))} data-testid="new-binder">
               New Party
             </button>
           </>
         ) : (
-          <button className="big primary" disabled={busy} onClick={() => go(startTutorial)} data-testid="begin">
+          <button className="big primary" disabled={busy} onClick={() => go(async () => setState({ screen: "create" }))} data-testid="begin">
             Begin
           </button>
         )}

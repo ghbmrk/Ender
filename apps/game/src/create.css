@@ -1,0 +1,152 @@
+/* Create-your-hero: the hero up top, every control in the bottom thumb zone. */
+.create-hero {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.ch-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 70px;
+  text-align: center;
+  color: #f3e6c8;
+  text-shadow: 0 3px 12px #000;
+}
+.ch-head h1 {
+  margin: 0;
+  font-size: 96px;
+  letter-spacing: 2px;
+  color: #f4d58c;
+}
+.ch-head p {
+  margin: 8px 60px 0;
+  font-size: 40px;
+  font-family: var(--serif-body, Georgia, serif);
+}
+.ch-spot {
+  position: absolute;
+  left: 240px;
+  width: 600px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #ecc56a55, transparent 70%);
+}
+.ch-figure {
+  position: absolute;
+}
+.ch-name {
+  position: absolute;
+  left: 160px;
+  right: 160px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.ch-name input {
+  flex: 1;
+  min-width: 0;
+  height: 120px;
+  padding: 0 28px;
+  border-radius: 18px;
+  border: 4px solid #c9953a;
+  background: #1a1218e6;
+  color: #f4d58c;
+  font: inherit;
+  font-size: 54px;
+  text-align: center;
+}
+.stage button.ch-dice {
+  width: 120px;
+  height: 120px;
+  font-size: 64px;
+  padding: 0;
+}
+.ch-panel {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-bottom: var(--safe-b, 0px);
+}
+.ch-roots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.stage button.ch-root {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 20px 22px;
+  text-align: left;
+  color: #f3e6c8;
+}
+.ch-root b {
+  font-size: 50px;
+  color: #f4d58c;
+}
+.ch-root .ch-style {
+  font-size: 36px;
+  color: #c9b48a;
+}
+.ch-root .ch-line {
+  font-size: 36px;
+  line-height: 1.2;
+  font-family: var(--serif-body, Georgia, serif);
+}
+.stage button.ch-root.on,
+.stage button.ch-tab.on,
+.stage button.ch-chip.on {
+  outline: 6px solid #f4d58c;
+  outline-offset: 2px;
+}
+.ch-tabs {
+  display: flex;
+  gap: 14px;
+}
+.stage button.ch-tab,
+.stage button.ch-reroll {
+  height: 120px;
+  padding: 0 24px;
+  font-size: 40px;
+  color: #f3e6c8;
+}
+.stage button.ch-reroll {
+  margin-left: auto;
+}
+.ch-swatches {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  padding: 0 6px;
+  min-height: 124px;
+  align-items: center;
+}
+.stage button.ch-swatch {
+  flex: none;
+  box-sizing: border-box;
+  width: 98px;
+  height: 98px;
+  border-radius: 50%;
+  border: 5px solid #120d12;
+  padding: 0;
+}
+.stage button.ch-swatch.on {
+  outline: 7px solid #f4d58c;
+  outline-offset: 3px;
+}
+.stage button.ch-chip {
+  height: 112px;
+  padding: 0 30px;
+  font-size: 40px;
+  color: #f3e6c8;
+}
+.stage button.ch-begin {
+  height: 150px;
+  font-size: 54px;
+}

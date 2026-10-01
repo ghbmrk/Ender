@@ -19,6 +19,7 @@ import { BattleScreen } from "./battle/BattleScreen";
 import { Crossing } from "./scenes/Crossing";
 import { MapScreen } from "./scenes/MapScreen";
 import { LoomScreen } from "./loom/LoomScreen";
+import { CreateHero } from "./scenes/CreateHero";
 
 const params = new URLSearchParams(location.search);
 const DEMO = params.get("demo");
@@ -84,6 +85,7 @@ export function App() {
       <ArtDefs />
       <Stage>
         {screen === "title" && <Title />}
+        {screen === "create" && <CreateHero />}
         {screen === "crossing" && <Crossing />}
         {screen === "map" && <MapScreen />}
         {screen === "battle" && <BattleHost />}

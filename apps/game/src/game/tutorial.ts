@@ -1,4 +1,6 @@
-import type { BattleSetup, FoeKind, LoomNode } from "@ender/battle";
+import type { BattleSetup, FoeKind, LoomNode, RootId } from "@ender/battle";
+import type { Hero } from "../art/look";
+import { saveHero } from "./hero";
 import { api } from "../api";
 import { getState, setState } from "../state/store";
 import { compiledParty, newBinder, refreshLoom } from "./flow";
@@ -17,8 +19,8 @@ export type Lesson = {
   title: string;
   /** "basic" hides crafted Actions; "all" shows them. */
   commands: "basic" | "all";
-  /** Which defence buttons appear. */
-  defense: "dodge" | "both";
+  /** Which defence buttons appear; "none" means the foe's blows simply miss (the first fight is about attacking). */
+  defense: "none" | "dodge" | "both";
   /** How many timed sequences run in slow motion while the player learns them. */
   slow: number;
   coach: Partial<Record<CoachKey, string>>;
@@ -30,7 +32,7 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
     step: "strike",
     title: "A Husk blocks the road",
     commands: "basic",
-    defense: "both",
+    defense: "none",
     slow: 2,
     coach: {
       command: "Tap **Basic** to attack.",
@@ -39,7 +41,7 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
       good: "Good. Tap a touch closer to the mark for a **Perfect**: it hits harder.",
       miss: "Missed the beat. Wait for the ring to meet the mark, then tap.",
     },
-    setup: { waves: [["husk"]], foeScale: { hp: 0.35, atk: 0.4 } },
+    setup: { waves: [["husk"]], foeScale: { hp: 0.5, atk: 0.4 } },
   },
   dodge: {
     step: "dodge",
@@ -54,7 +56,7 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
       hit: "Too early or too late. Tap **DODGE** just as the ring closes.",
       ap: "Each Basic also builds **AP**: the blue pips. Crafted skills spend it.",
     },
-    setup: { waves: [["wisp"]], foeScale: { hp: 1.3, atk: 0.45 } },
+    setup: { waves: [["wisp"]], foeScale: { hp: 0.6, atk: 0.45 } },
   },
   parry: {
     step: "parry",
@@ -68,7 +70,7 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
       dodged: "Safe, but Dodge earns nothing. Try **PARRY** on the next blow.",
       hit: "Parry is tight. Tap it right as the ring closes.",
     },
-    setup: { waves: [["husk"]], foeScale: { hp: 1.6, atk: 0.45 } },
+    setup: { waves: [["husk"]], foeScale: { hp: 0.65, atk: 0.45 } },
   },
   skill: {
     step: "skill",
@@ -77,11 +79,11 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
     defense: "both",
     slow: 0,
     coach: {
-      skill: "Your Loom made new skills. **Crafted Actions** spend the AP that Basic and Parry build.",
+      skill: "Your new skill is ready. **Crafted Actions** spend the AP that Basic and Parry build.",
       broken: "**Broken!** It loses its turn and takes +25% damage. Heavy skills and Parries build Break.",
       ap: "Low on AP? **Basic** builds it back up.",
     },
-    setup: { waves: [["keeper"]], foeScale: { hp: 0.8, atk: 0.5 } },
+    setup: { waves: [["keeper"]], foeScale: { hp: 0.4, atk: 0.4 } },
   },
 };
 
@@ -109,17 +111,19 @@ export function savedStep(): TutStep | null {
   }
 }
 
-/** Quick's first Action, lifted off the board so the player places it themselves in the "form" lesson. */
-const QUICK = "quick" as const;
+/** The hero's Root: its first Action is lifted off the board so the player places it themselves in the "form" lesson. */
+const heroRoot = (): RootId => getState().hero?.root ?? "quick";
 
-export async function startTutorial() {
+export async function startTutorial(hero?: Hero) {
+  if (hero) saveHero(hero);
   await newBinder({ quiet: true });
+  const root = heroRoot();
   const loom = getState().loom;
-  const nodes: LoomNode[] = loom?.heroes?.[QUICK]?.nodes ?? [];
+  const nodes: LoomNode[] = loom?.heroes?.[root]?.nodes ?? [];
   const action = nodes.find((n) => n.role === "action");
   if (action) {
     await api.putLoom(
-      QUICK,
+      root,
       nodes.filter((n) => n.id !== action.id).map((n) => ({ artifactId: n.formId, q: n.q, r: n.r })),
     );
     await refreshLoom();
@@ -159,14 +163,18 @@ export function finishTutorial() {
   setState({ tutorial: null, screen: "crossing", panel: null, loomEditable: true });
 }
 
-/** Skipping puts Quick's lifted Action back so nobody is left without a skill. */
+/** Skipping puts the hero's lifted Action back so nobody is left without a skill. */
+/** The dominant Affinity of each Root's starter Action (server grantStarterKit). */
+const STARTER_AFFINITY: Record<RootId, string> = { iron: "burden", bond: "bond", quick: "flex" };
+
 export async function skipTutorial() {
+  const root = heroRoot();
   const loom = getState().loom;
-  const placed: LoomNode[] = loom?.heroes?.[QUICK]?.nodes ?? [];
-  const pooled: LoomNode | undefined = (loom?.pool ?? []).find((n: LoomNode) => n.role === "action" && n.affinities[0] === "flex");
+  const placed: LoomNode[] = loom?.heroes?.[root]?.nodes ?? [];
+  const pooled: LoomNode | undefined = (loom?.pool ?? []).find((n: LoomNode) => n.role === "action" && n.affinities[0] === STARTER_AFFINITY[root]);
   if (pooled && !placed.some((n) => n.role === "action") && !placed.some((n) => n.q === 1 && n.r === 0)) {
     await api
-      .putLoom(QUICK, [...placed.map((n) => ({ artifactId: n.formId, q: n.q, r: n.r })), { artifactId: pooled.formId, q: 1, r: 0 }])
+      .putLoom(root, [...placed.map((n) => ({ artifactId: n.formId, q: n.q, r: n.r })), { artifactId: pooled.formId, q: 1, r: 0 }])
       .catch(() => null);
     await refreshLoom().catch(() => null);
   }

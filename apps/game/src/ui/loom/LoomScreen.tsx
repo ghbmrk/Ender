@@ -27,6 +27,7 @@ import { AFF_COLOR, AFF_DEEP, AFF_GLYPH, ROLE_GLYPH, ROLE_NAME } from "../affini
 import { Head } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
 import { goTo } from "../../game/tutorial";
+import { lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { Coach } from "../Coach";
 import { CardArt } from "../CardArt";
 
@@ -53,9 +54,13 @@ export function LoomScreen() {
   const editable = useStore((s) => s.loomEditable) || DEMO;
   const inRun = useStore((s) => !!s.expedition);
   const rank = DEMO ? 9 : (server?.rank ?? 1);
-  /** Prologue: the player places Quick's first Form themselves. */
+  /** Prologue: the player places their hero's first Form themselves. */
   const lesson = useStore((s) => s.tutorial === "form") && !DEMO;
-  const [hero, setHero] = useState<RootId>(lesson ? "quick" : "iron");
+  const me = useStore((s) => s.hero);
+  const tutorial = useStore((s) => s.tutorial);
+  const mine: RootId = me?.root ?? "quick";
+  const roots = DEMO ? PARTY : partyRoots();
+  const [hero, setHero] = useState<RootId>(lesson || tutorial ? mine : (me?.root ?? "iron"));
   const [layout, setLayout] = useState<Layout>(() => (DEMO ? (DEMO_LOOMS as Layout) : fromServer(server)));
   const [pool, setPool] = useState<LoomNode[]>(() => (DEMO ? [] : (server?.pool ?? [])));
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -184,18 +189,19 @@ export function LoomScreen() {
   };
 
   const lessonForm = lesson ? (pool.find((n) => n.role === "action") ?? nodes.find((n) => n.role === "action")) : undefined;
-  const lessonPlaced = !!lessonForm && hero === "quick" && nodes.some((n) => n.id === lessonForm.id);
+  const heroName = me?.name ?? ROOTS[mine].name;
+  const lessonPlaced = !!lessonForm && hero === mine && nodes.some((n) => n.id === lessonForm.id);
   const lessonSkill = lessonPlaced ? compiled.actions.find((a) => a.nodeId === lessonForm!.id) : undefined;
   const coach = !lesson
     ? null
-    : hero !== "quick"
-      ? { text: "Open **Quick Root** to place the new Form." }
+    : hero !== mine
+      ? { text: `Open **${heroName}** to place the new Form.` }
       : !lessonPlaced
-        ? { text: "A Form dropped! Forms are the pieces of your skill tree. **Drag it** onto a glowing cell beside Quick's Root." }
+        ? { text: "A Form dropped! Forms are the pieces of your skill tree. **Drag it** onto a glowing cell beside your Root." }
         : !lessonSkill
           ? { text: "It's **dormant**: a node must touch the Root, or share an Affinity with a neighbour. Drag it beside the Root." }
           : {
-              text: `**${lessonSkill.name}** is now Quick's skill. Your Loom is your skill tree: move a Form and the skills change.`,
+              text: `**${lessonSkill.name}** is now ${heroName}'s skill. Your Loom is your skill tree: move a Form and the skills change.`,
               action: { label: "Fight", onClick: () => goTo("skill"), testId: "lesson-fight" },
             };
 
@@ -224,10 +230,10 @@ export function LoomScreen() {
         </button>}
       </header>
       <div className="hero-tabs">
-        {PARTY.map((r) => (
-          <button key={r} className={`hero-tab ${r === hero ? "on" : ""} ${lesson && r === "quick" && hero !== "quick" ? "coach-pulse" : ""}`} onClick={() => (setHero(r), setDiff([]), setSelected(null))} data-testid={`loom-tab-${r}`}>
-            <Head figure={ROOTS[r].hero} size={64} />
-            <span>{ROOTS[r].name}</span>
+        {roots.map((r) => (
+          <button key={r} className={`hero-tab ${r === hero ? "on" : ""} ${lesson && r === mine && hero !== mine ? "coach-pulse" : ""}`} onClick={() => (setHero(r), setDiff([]), setSelected(null))} data-testid={`loom-tab-${r}`}>
+            <Head figure={ROOTS[r].hero} size={64} look={lookFor(r)} />
+            <span>{rootLabel(r)}</span>
           </button>
         ))}
       </div>
@@ -238,7 +244,7 @@ export function LoomScreen() {
           const [x, y] = cellXY(q, r);
           const locked = hexDist(q, r) > radius;
           const hover = drag?.moved && drag.over && drag.over !== "tray" && drag.over.q === q && drag.over.r === r;
-          const glow = lesson && hero === "quick" && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`);
+          const glow = lesson && hero === mine && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`);
           return <path key={`${q},${r}`} d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />;
         })}
         {/* painted links */}
@@ -257,7 +263,7 @@ export function LoomScreen() {
         {/* the Root */}
         <path d={hexPath(CX, CY, HEX - 10)} className="root-cell" />
         <text x={CX} y={CY + 72} className="root-label">
-          {ROOTS[hero].name}
+          {rootLabel(hero)}
         </text>
         {cells.map(({ q, r }) => {
           const n = byCell.get(`${q},${r}`);
@@ -268,7 +274,7 @@ export function LoomScreen() {
         {hexDist(0, 0) === 0 && <circle cx={CX} cy={CY - 10} r={0} />}
       </svg>
       <div className="root-head" style={{ left: CX - 50, top: CY - 70 }}>
-        <Head figure={ROOTS[hero].hero} size={100} />
+        <Head figure={ROOTS[hero].hero} size={100} look={lookFor(hero)} />
       </div>
       {/* hit targets for board nodes (HTML, so long-press and drag work on touch) */}
       {nodes.map((n) => {
@@ -283,7 +289,7 @@ export function LoomScreen() {
         <div className="tray-row">
           {pool.length === 0 && <div className="tray-empty">No unplaced nodes. Attune a Form, then Inscribe it at the Crucible.</div>}
           {pool.map((n) => (
-            <div key={n.id} className={`tray-item ${lesson && n.id === lessonForm?.id && hero === "quick" ? "coach-pulse" : ""}`} onPointerDown={(e) => down(e, n, "pool")} data-testid={`pool-${n.id}`}>
+            <div key={n.id} className={`tray-item ${lesson && n.id === lessonForm?.id && hero === mine ? "coach-pulse" : ""}`} onPointerDown={(e) => down(e, n, "pool")} data-testid={`pool-${n.id}`}>
               <svg viewBox="-80 -80 160 160" width={150} height={150}>
                 <NodeHex n={n} x={0} y={0} small />
               </svg>

@@ -28,6 +28,7 @@ import { sfx } from "./sfx";
 import { debug } from "../../game/debug";
 import type { CoachKey, Lesson } from "../../game/tutorial";
 import { Coach } from "../Coach";
+import { lookFor } from "../../game/hero";
 
 export type BattleResult = { outcome: "victory" | "defeat"; kills: Record<string, number>; partyHp: Record<RootId, number>; stats: Battle["stats"] };
 
@@ -450,6 +451,22 @@ export function BattleScreen({
       return;
     }
     sfx.telegraph();
+    if (lesson?.defense === "none") {
+      // First lesson: the foe's blows go wide, so the player only has to learn to strike.
+      setPhase({ k: "wait" });
+      later(1100, () => {
+        const victim = battle.unit(plan.targets[0]!);
+        float([chest(victim)[0] + 60, chest(victim)[1] - 120], "MISSES", "def dodge");
+        const events = battle.resolveFoe(plan, plan.attack.hits.map(() => "dodge"));
+        events.push(...battle.settle());
+        const d = play(events.filter((e) => e.type !== "defend"));
+        later(d + 600, () => {
+          setCaption(null);
+          advance();
+        });
+      });
+      return;
+    }
     const impacts = plan.attack.hits.map((h) => h.t);
     seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + 150, impacts, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
     setPhase({ k: "defend" });
@@ -588,7 +605,7 @@ export function BattleScreen({
                   </div>
                 )}
                 <div className="bob">
-                  <Fig figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : ""}`} />
+                  <Fig look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : ""}`} />
                 </div>
                 {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} />}
                 {u.side === "party" && <HeroTag u={u} />}
@@ -773,7 +790,7 @@ function Timeline({ b, tl }: { b: Battle; tl: { round: number; ids: string[] }[]
     const u = b.unit(id);
     return (
       <div key={`${soon ? "n" : "c"}${i}-${id}`} className={`tl-cell ${u.side} ${i === 0 && !soon ? "now" : ""} ${u.broken ? "is-broken" : ""}`}>
-        <Head figure={u.figure} size={i === 0 && !soon ? 96 : 72} />
+        <Head look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} size={i === 0 && !soon ? 96 : 72} />
       </div>
     );
   };
@@ -792,7 +809,7 @@ function PartyStrip({ b, active }: { b: Battle; active: string | null }) {
     <div className="party-strip">
       {b.party().map((u) => (
         <div key={u.id} className={`ps ${active === u.id ? "active" : ""} ${u.alive ? "" : "down"}`} data-testid={`hero-${u.id}`}>
-          <Head figure={u.figure} size={86} />
+          <Head look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} size={86} />
           <div className="ps-body">
             <div className="ps-name">
               {u.name}

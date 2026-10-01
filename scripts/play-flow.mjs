@@ -20,6 +20,8 @@ await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html") + "?a
 await page.waitForSelector(tid("new-binder"), { timeout: 60000 });
 await shot("flow-title");
 await page.click(tid("new-binder"));
+await page.waitForSelector(tid("hero-begin"));
+await page.click(tid("hero-begin"));
 await page.waitForSelector(tid("crossing"));
 await page.waitForTimeout(500);
 await shot("flow-crossing");

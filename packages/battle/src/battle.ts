@@ -3,7 +3,7 @@ import { RULES, ROOTS, TEMPLATES, isDodge, isParry, type Affinity, type Defense,
 import { FOES, type FoeAttack, type FoeKind } from "./foes";
 import type { CompiledAction, CompiledLoom, CompiledReaction } from "./loom";
 
-export type HeroSetup = { root: RootId; loom: CompiledLoom; hp?: number };
+export type HeroSetup = { root: RootId; loom: CompiledLoom; hp?: number; /** The player's own name for this hero. */ name?: string };
 export type BattleSetup = {
   seed: string;
   party: HeroSetup[];
@@ -116,7 +116,7 @@ export class Battle {
     for (const h of setup.party) {
       const r = ROOTS[h.root];
       const hp = h.hp === undefined ? r.hp : Math.max(0, Math.min(r.hp, Math.round(h.hp)));
-      this.units.push(this.blank({ id: h.root, side: "party", kind: h.root, name: r.name.replace(" Root", ""), figure: r.hero, maxHp: r.hp, hp, speed: r.speed, power: r.basic, breakTaken: 0, tier: "hero", ap: RULES.apStart, loom: h.loom, alive: hp > 0 }));
+      this.units.push(this.blank({ id: h.root, side: "party", kind: h.root, name: h.name ?? r.name.replace(" Root", ""), figure: r.hero, maxHp: r.hp, hp, speed: r.speed, power: r.basic, breakTaken: 0, tier: "hero", ap: RULES.apStart, loom: h.loom, alive: hp > 0 }));
     }
     this.spawnWave(0);
   }

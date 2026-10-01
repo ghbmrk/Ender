@@ -1,6 +1,7 @@
 import { PARTY, ROOTS, compileLoom, type BattleSetup, type FoeKind, type LoomNode, type RootId } from "@ender/battle";
 import { api } from "../api";
 import { getState, setState, toast, type MapNode } from "../state/store";
+import { partyRoots } from "./hero";
 import type { BattleResult } from "../ui/battle/BattleScreen";
 
 export async function refreshCharacter() {
@@ -46,7 +47,8 @@ export function compiledParty() {
   const live = getState().loom;
   const rank = snap?.rank ?? live?.rank ?? 1;
   const nodesOf = (root: RootId) => (snap ? (snap.heroes?.[root] ?? []) : (live?.heroes?.[root]?.nodes ?? [])) as LoomNode[];
-  return PARTY.map((root) => ({ root, loom: compileLoom(nodesOf(root), rank) }));
+  const hero = getState().hero;
+  return partyRoots().map((root) => ({ root, loom: compileLoom(nodesOf(root), rank), ...(hero?.root === root ? { name: hero.name } : {}) }));
 }
 
 /** Leaving a Shrine locks the Loom again and saves the snapshot the party fights with. */
