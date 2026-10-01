@@ -144,11 +144,14 @@ export function LoomScreen() {
     }
   };
 
+  /** The node just placed: it lands with a pop and a ring of light. */
+  const [landed, setLanded] = useState<string | null>(null);
   const removeToPool = (n: LoomNode) => commit(nodes.filter((x) => x.id !== n.id), [...pool, n]);
   const placeAt = (q: number, r: number) => {
     const n = pool.find((x) => x.formId === placing);
     setPlacing(null);
     if (!n) return;
+    setLanded(n.id);
     commit([...nodes, { ...n, q, r }], pool.filter((x) => x.id !== n.id));
   };
 
@@ -220,9 +223,7 @@ export function LoomScreen() {
       return;
     }
     if (inRun && editable && !DEMO) {
-      leaveShrine()
-        .then(() => toast("The Loom is set. Your party carries this weave until the next Shrine.", "info"))
-        .catch((e) => toast((e as Error).message, "loss"));
+      leaveShrine().catch((e) => toast((e as Error).message, "loss"));
     } else if (inRun) setState({ screen: "map" });
     else setState({ screen: "crossing" });
   };
@@ -290,8 +291,8 @@ export function LoomScreen() {
             ))}
           </div>
         )}
-        {!lesson && <button className="loom-done" onClick={close} data-testid="loom-done">
-          {afterFight ? "Continue" : inRun && editable ? "Leave Shrine" : "Done"}
+        {!lesson && <button className={`loom-done ${afterFight && !raw.length && !pool.length ? "coach-pulse" : ""}`} onClick={close} data-testid="loom-done">
+          {afterFight || (inRun && editable) ? "Continue" : "Done"}
         </button>}
       </header>
       {roots.length > 1 && <div className="hero-tabs">
@@ -335,7 +336,7 @@ export function LoomScreen() {
           const n = byCell.get(`${q},${r}`);
           if (!n || (drag?.moved && n.id === drag.node.id && !preview)) return null;
           const [x, y] = cellXY(q, r);
-          return <NodeHex key={n.id} n={n} x={x} y={y} dormant={dormant.has(n.id)} reason={shownC.dormancy[n.id]} selected={selected === n.id} ghost={drag?.moved && drag.node.id === n.id} />;
+          return <NodeHex key={n.id} landed={landed === n.id} n={n} x={x} y={y} dormant={dormant.has(n.id)} reason={shownC.dormancy[n.id]} selected={selected === n.id} ghost={drag?.moved && drag.node.id === n.id} />;
         })}
         {hexDist(0, 0) === 0 && <circle cx={CX} cy={CY - 10} r={0} />}
       </svg>
@@ -366,7 +367,7 @@ export function LoomScreen() {
       <div className="loom-lower" style={{ top: TRAY_TOP }}>
       <div className={`tray ${drag?.moved && drag.over === "tray" ? "hover" : ""}`}>
         <div className="tray-label">
-          Forms <span className="dim">· {raw.length ? "tap a new Form to weave it" : placing ? "tap a glowing cell" : "tap or drag onto the Loom"}</span>
+          Forms {(raw.length > 0 || pool.length > 0) && <span className="dim">· {raw.length ? "tap a new Form to weave it" : placing ? "tap a glowing cell" : "tap or drag onto the Loom"}</span>}
         </div>
         <div className="tray-row">
           {raw.map((a) => (
@@ -380,7 +381,7 @@ export function LoomScreen() {
               <div className="tray-name">{a.tier === "veiled" ? "New Form" : a.name}</div>
             </div>
           ))}
-          {pool.length === 0 && raw.length === 0 && <div className="tray-empty">No new Forms. Win fights to find them.</div>}
+          {pool.length === 0 && raw.length === 0 && <div className="tray-empty">{afterFight ? "All woven. Your new skills are ready for the next fight." : "No new Forms. Win fights to find them."}</div>}
           {pool.map((n) => (
             <div key={n.id} className={`tray-item ${placing === n.formId ? "picked" : ""} ${lesson && n.id === lessonForm?.id && hero === mine ? "coach-pulse" : ""}`} onPointerDown={(e) => down(e, n, "pool")} data-testid={`pool-${n.id}`}>
               <svg viewBox="-80 -80 160 160" width={150} height={150}>
@@ -477,13 +478,14 @@ function sigil(id: string) {
   return { d: strokes.join(" "), dot: rnd() > 0.5 };
 }
 
-function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost }: { n: LoomNode; x: number; y: number; dormant?: boolean; reason?: string; selected?: boolean; small?: boolean; lifted?: boolean; ghost?: boolean }) {
+function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, landed }: { landed?: boolean; n: LoomNode; x: number; y: number; dormant?: boolean; reason?: string; selected?: boolean; small?: boolean; lifted?: boolean; ghost?: boolean }) {
   const [a, b] = n.affinities;
   const s = small ? 70 : HEX - 12;
   const sg = sigil(n.formId);
   const k = s / 92;
   return (
-    <g className={`node ${dormant ? "dormant" : ""} ${selected ? "selected" : ""} ${lifted ? "lifted" : ""} ${ghost ? "ghost" : ""} ev-${n.evidence}`}>
+    <g style={landed ? { transformOrigin: `${x}px ${y}px` } : undefined} className={`node ${landed ? "landed" : ""} ${dormant ? "dormant" : ""} ${selected ? "selected" : ""} ${lifted ? "lifted" : ""} ${ghost ? "ghost" : ""} ev-${n.evidence}`}>
+      {landed && <path d={hexPath(x, y, s + 10)} className="land-ring" style={{ transformOrigin: `${x}px ${y}px` }} />}
       <path d={hexPath(x, y, s)} fill={AFF_DEEP[a]} stroke="#1d1822" strokeWidth={10} />
       <path d={hexPath(x, y, s - 12)} fill={AFF_COLOR[a]} opacity={0.55} filter="url(#wc)" />
       <path d={hexPath(x, y, s - 4)} fill="none" stroke={AFF_COLOR[b]} strokeWidth={8} opacity={0.95} className="rim" />

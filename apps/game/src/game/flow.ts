@@ -97,9 +97,13 @@ export async function stepTo(node: MapNode) {
   const out = await api.runNode(ex.plan.runId, { nodeId: node.id, outcome: "skip" });
   await refreshCharacter();
   if (node.kind === "shrine") {
-    toast("A Shrine: the Loom may be rewoven here.", "info");
+    toast("A Shrine: rearrange your Loom freely here.", "info");
     setState({ loomEditable: true, screen: "loom" });
-  } else if (node.kind === "attunement") setState({ panel: "crucible", crucibleMode: "craft" });
+  } else if (node.kind === "attunement") {
+    // Crafting lives on the Loom now: an Attunement opens it so any Forms you carry can be woven.
+    toast("An Attunement: weave any Forms you carry.", "info");
+    setState({ loomEditable: true, screen: "loom" });
+  }
   else if (node.kind === "bazaar" || node.kind === "contract") setState({ panel: "bazaar" });
   if (out?.rewards && hasRewards(out.rewards)) setState({ rewards: { ...out.rewards, title: out.title ?? "Found" }, panel: node.kind === "mystery" ? "rewards" : getState().panel });
   if (out?.encounter) setState({ battle: { nodeId: node.id, kind: "combat", waves: out.encounter.waves, difficulty: out.encounter.difficulty }, screen: "battle" });

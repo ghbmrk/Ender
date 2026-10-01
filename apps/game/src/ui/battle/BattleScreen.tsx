@@ -797,7 +797,7 @@ export function BattleScreen({
 
       {phase.k === "end" && (
         <div className={`battle-end ${phase.outcome}`} data-testid="battle-end">
-          <h1>{phase.outcome === "victory" ? "Victory" : lesson ? "Not this time" : "The party falls"}</h1>
+          <h1>{phase.outcome === "victory" ? "Victory" : lesson ? "Not this time" : "Defeated"}</h1>
           <div className="end-stats">
             <span>
               <b>{Math.round(battle.stats.breakDealt)}</b>Break

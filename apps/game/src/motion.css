@@ -642,3 +642,68 @@
 .bpanel.thumb .cards:has(> .card:nth-child(3)) .card {
   justify-content: center;
 }
+
+/* A node placed on the Loom lands with a pop and a ring of light. */
+.loom-board .node.landed {
+  animation: node-land 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes node-land {
+  from {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+.loom-board .land-ring {
+  fill: none;
+  stroke: #fff4cc;
+  stroke-width: 10;
+  animation: land-ring 700ms ease-out both;
+}
+@keyframes land-ring {
+  from {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+/* Forms waiting in the tray float gently so they read as "tap me". */
+.tray-item.raw svg {
+  animation: raw-float 2.4s ease-in-out infinite;
+}
+@keyframes raw-float {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loom-board .node.landed,
+  .loom-board .land-ring,
+  .tray-item.raw svg {
+    animation: none;
+  }
+}
+
+/* Map: layers already climbed slide away below; the choices ahead pulse gently. */
+.map-node.past {
+  opacity: 0;
+  pointer-events: none;
+}
+.map-node.next {
+  animation: node-next 1.4s ease-in-out infinite;
+}
+@keyframes node-next {
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-node.next {
+    animation: none;
+  }
+}
+.map-node.passed {
+  opacity: 0.35;
+}

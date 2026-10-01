@@ -6,11 +6,11 @@ import { essenceName } from "../economy/format";
 export function RunSummary() {
   const s = useStore((st) => st.runSummary);
   if (!s) return null;
-  const title = s.outcome === "victory" ? "Expedition complete" : s.outcome === "death" ? "The party was driven back" : "You withdrew";
+  const title = s.outcome === "victory" ? "Expedition complete" : s.outcome === "death" ? "Driven back" : "You withdrew";
   return (
     <Panel title={title} onClose={returnToCrossing} testId="run-summary">
       <div className="summary">
-        {s.outcome === "death" && <p className="dim">What you gathered before the fall is kept. The party recovers at the Crossing.</p>}
+        {s.outcome === "death" && <p className="dim">You keep everything you found. Rest at the Crossing and try again.</p>}
         {s.totals && (
           <div>
             Gathered: <b>{s.totals.crowns ?? 0} Crowns</b>
@@ -25,7 +25,7 @@ export function RunSummary() {
         )}
         {s.worldTurned && (
           <div className="event">
-            A turning passes while you travel: {s.worldTurned.from} → {s.worldTurned.to}. Prices have moved.
+            Time passed in the world while you were away, and prices have moved.
           </div>
         )}
         {s.worldTurned?.settledProphecies?.map((p: any) => (

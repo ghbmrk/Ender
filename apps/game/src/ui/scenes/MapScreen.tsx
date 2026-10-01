@@ -31,10 +31,14 @@ export function MapScreen() {
   useStore((s) => s.panel);
   if (!ex) return null;
   const layers = ex.plan.map.layers;
+  // The route scrolls as you climb: where you stand sits at the bottom, so the next choice is always under
+  // the thumb, and the layers left to climb spread over the rest of the screen.
+  const anchor = ex.at ? (nodeById(ex.at)?.layer ?? 0) : 0;
+  const step = (BOTTOM - TOP) / Math.max(1, layers.length - 1 - anchor);
   const pos = (n: MapNode): [number, number] => {
     const layer = layers[n.layer]!;
     const i = layer.findIndex((x) => x.id === n.id);
-    const y = BOTTOM - ((BOTTOM - TOP) * n.layer) / Math.max(1, layers.length - 1);
+    const y = BOTTOM - step * (n.layer - anchor);
     const x = layer.length === 1 ? 540 : 200 + (680 * i) / (layer.length - 1);
     // A little hand-drawn wobble, deterministic per node.
     const w = ((n.id.charCodeAt(n.id.length - 1) * 37) % 60) - 30;
@@ -71,7 +75,7 @@ export function MapScreen() {
         {layers.flat().flatMap((n) =>
           n.links.map((l) => {
             const m = nodeById(l);
-            if (!m) return null;
+            if (!m || n.layer < anchor) return null;
             const [x1, y1] = pos(n);
             const [x2, y2] = pos(m);
             const walked = ex.visited.includes(n.id) && ex.visited.includes(l);
@@ -86,7 +90,7 @@ export function MapScreen() {
         return (
           <button
             key={n.id}
-            className={`map-node k-${n.kind} ${next.has(n.id) ? "next" : ""} ${visited ? "visited" : ""} ${ex.at === n.id ? "here" : ""}`}
+            className={`map-node k-${n.kind} ${n.layer < anchor ? "past" : n.layer === anchor && ex.at !== n.id ? "passed" : ""} ${next.has(n.id) ? "next" : ""} ${visited ? "visited" : ""} ${ex.at === n.id ? "here" : ""}`}
             style={{ left: x, top: y }}
             onClick={() => go(n)}
             disabled={!next.has(n.id)}
