@@ -39,7 +39,9 @@ await page.waitForTimeout(400);
 await shot("flow-map");
 
 let fights = 0;
-for (let step = 0; step < 400 && fights < maxFights; step++) {
+let woven = 0;
+let skipRaw = false;
+for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom-done")))); step++) {
   if (await visible(tid("rewards-ok"))) {
     if (fights === 1) await shot("flow-rewards");
     await page.click(tid("rewards-ok"));
@@ -51,6 +53,42 @@ for (let step = 0; step < 400 && fights < maxFights; step++) {
     continue;
   }
   if (await visible(tid("loom-done"))) {
+    // After a fight: weave each raw Form (reveal, pick the first role, place it on a glowing cell), then Continue.
+    if (await visible(tid("weave-sheet"))) {
+      if (!woven) await shot("flow-weave-sheet");
+      if (await visible(`${tid("weave-reveal")}:not([disabled])`)) {
+        await page.click(tid("weave-reveal"));
+        await page.waitForTimeout(500);
+        await shot("flow-weave-revealed");
+        continue;
+      }
+      const role = await page.$('[data-testid^="weave-"].ws-role:not([disabled])');
+      if (role) {
+        await role.click();
+        await page.waitForTimeout(500);
+        continue;
+      }
+      await page.click(".ws-close");
+      skipRaw = true;
+      continue;
+    }
+    const cell = await page.$('[data-testid^="place-"]');
+    if (cell) {
+      await shot("flow-weave-place");
+      await cell.click();
+      woven++;
+      await page.waitForTimeout(500);
+      await shot("flow-weave-placed");
+      continue;
+    }
+    const raw = !skipRaw && (await page.$('[data-testid^="raw-"]'));
+    if (raw) {
+      if (!woven) await shot("flow-weave");
+      await raw.click();
+      await page.waitForTimeout(400);
+      continue;
+    }
+    skipRaw = false;
     await page.click(tid("loom-done"));
     await page.waitForTimeout(300);
     continue;
@@ -86,5 +124,5 @@ for (let step = 0; step < 400 && fights < maxFights; step++) {
   await page.waitForTimeout(300);
 }
 await shot("flow-end");
-console.log(JSON.stringify({ fights, errors: errors.slice(0, 10) }));
+console.log(JSON.stringify({ fights, woven, errors: errors.slice(0, 10) }));
 await browser.close();

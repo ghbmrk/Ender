@@ -2000,3 +2000,143 @@ table,
   background: none;
   box-shadow: none;
 }
+
+/* ── Weave: crafting on the Loom screen ── */
+.loom-spoils {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-top: 8px;
+  font-size: 36px;
+  color: #f4d58c;
+}
+.tray-item.raw .raw-hex {
+  fill: #2a2230;
+  stroke: #f4d58c;
+  stroke-width: 6;
+}
+.tray-item.raw .raw-glyph {
+  font-size: 64px;
+  font-weight: 800;
+  fill: #f4d58c;
+}
+.tray-item.picked {
+  outline: 6px solid #f4d58c;
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+.place-hit {
+  z-index: 4;
+}
+.weave-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 4500;
+  display: flex;
+  align-items: flex-end;
+  background: #05040899;
+  animation: fadein 160ms ease-out both;
+}
+.weave-sheet {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 34px 28px calc(30px + var(--safe-b));
+  border-radius: 34px 34px 0 0;
+  border: 6px solid transparent;
+  border-bottom: 0;
+  background:
+    var(--leather) padding-box,
+    var(--metal) border-box;
+  box-shadow: 0 -20px 60px #000c;
+  animation: sheet-up 200ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(40%);
+    opacity: 0;
+  }
+}
+.ws-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.ws-head h2 {
+  margin: 0;
+  font-size: 56px;
+  color: #f4d58c;
+}
+.ws-sub {
+  font-family: var(--serif-body);
+  font-size: 38px;
+  color: #e8d9b8;
+}
+.stage .ws-close {
+  flex: none;
+  width: 110px;
+  height: 110px;
+  min-width: 0;
+  padding: 0;
+  font-size: 48px;
+}
+.stage .ws-main {
+  min-height: 150px;
+  font-size: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ws-main small {
+  font-size: 30px;
+}
+.ws-cost {
+  font-size: 38px;
+  color: #e8d9b8;
+}
+.ws-cost.short b {
+  color: #ff8a8a;
+}
+.ws-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.stage .ws-role {
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 18px 26px;
+  text-align: left;
+  color: #f3e6c8;
+}
+.ws-role-name {
+  font-size: 48px;
+  color: #f4d58c;
+}
+.ws-role-name small {
+  font-family: var(--serif-body);
+  font-size: 32px;
+  color: #c9b48a;
+  font-weight: 400;
+  margin-left: 12px;
+}
+.ws-role-does {
+  font-family: var(--serif-body);
+  font-size: 36px;
+  line-height: 1.15;
+}
+.ws-role-fit {
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-size: 28px;
+  color: #9fd8b0;
+}
+.ws-role-fit.full {
+  color: #e8a07a;
+}

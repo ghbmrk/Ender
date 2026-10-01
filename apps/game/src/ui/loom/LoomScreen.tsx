@@ -28,6 +28,8 @@ import { Head } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
 import { goTo } from "../../game/tutorial";
 import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
+import { WeaveSheet, isRaw, weaves } from "./Weave";
+import { essenceGlyph } from "../../economy/format";
 import { Coach } from "../Coach";
 import { CardArt } from "../CardArt";
 
@@ -45,14 +47,13 @@ const hexPath = (x: number, y: number, s: number) =>
     return `${i ? "L" : "M"}${(x + s * Math.cos(a)).toFixed(1)} ${(y + s * Math.sin(a)).toFixed(1)}`;
   }).join(" ") + " Z";
 let TRAY_TOP = 1150;
-let TRAY_H = 250;
 function fitLoom(stageH: number, tabs: boolean) {
-  const extra = Math.max(0, stageH - 1920);
-  HEX = Math.round(104 + Math.min(22, extra * 0.05));
-  // A radius-2 board reaches 4.33 hexes above and below its centre.
-  CY = Math.round((tabs ? 290 : 170) + 4.33 * HEX);
-  TRAY_TOP = Math.round(CY + 4.33 * HEX + 30);
-  TRAY_H = Math.round(250 + extra * 0.3);
+  // The lower block (Forms tray + skills summary, ~600) sits on the Continue bar; the board fills and centres in
+  // what is left above it. A radius-2 board is 8.66 hexes tall and 8 wide.
+  const head = tabs ? 290 : 170;
+  TRAY_TOP = stageH - 178 - 600;
+  HEX = Math.round(Math.min(130, (TRAY_TOP - head - 30) / 8.66));
+  CY = Math.round((head + TRAY_TOP - 10) / 2);
 }
 
 type Layout = Record<RootId, LoomNode[]>;
@@ -91,6 +92,18 @@ export function LoomScreen() {
 
   useEffect(() => {
     if (!DEMO && !server) refreshLoom().catch((e) => toast(e.message, "loss"));
+  }, []);
+
+  // ───────────── weaving: new Forms become nodes right here ─────────────
+  const afterFight = useStore((s) => s.afterFight) && !DEMO;
+  const spoils = useStore((s) => s.rewards);
+  const [raw, setRaw] = useState<any[]>([]);
+  const [weaving, setWeaving] = useState<any | null>(null);
+  /** A pool node (by Form id) waiting for the player to tap a cell. */
+  const [placing, setPlacing] = useState<string | null>(null);
+  const loadRaw = () => (DEMO || lesson ? Promise.resolve() : api.inventory().then((inv) => setRaw(inv.artifacts.filter(isRaw))).catch(() => null));
+  useEffect(() => {
+    loadRaw();
   }, []);
   useEffect(() => {
     if (DEMO || !server) return;
@@ -132,6 +145,12 @@ export function LoomScreen() {
   };
 
   const removeToPool = (n: LoomNode) => commit(nodes.filter((x) => x.id !== n.id), [...pool, n]);
+  const placeAt = (q: number, r: number) => {
+    const n = pool.find((x) => x.formId === placing);
+    setPlacing(null);
+    if (!n) return;
+    commit([...nodes, { ...n, q, r }], pool.filter((x) => x.id !== n.id));
+  };
 
   // ───────────── pointer handling ─────────────
   const down = (e: React.PointerEvent, node: LoomNode, from: "board" | "pool") => {
@@ -173,6 +192,8 @@ export function LoomScreen() {
       }
       lastTap.current = { id: d.node.id, t: now };
       setSelected(d.node.id);
+      // Tapping a Form in the tray picks it up: the open cells glow, and a tap places it.
+      if (editable && d.from === "pool") setPlacing(d.node.formId);
       return;
     }
     if (!editable) return;
@@ -193,6 +214,11 @@ export function LoomScreen() {
   };
 
   const close = () => {
+    if (afterFight) {
+      setState({ afterFight: false, rewards: null });
+      leaveShrine().catch((e) => toast((e as Error).message, "loss"));
+      return;
+    }
     if (inRun && editable && !DEMO) {
       leaveShrine()
         .then(() => toast("The Loom is set. Your party carries this weave until the next Shrine.", "info"))
@@ -205,8 +231,13 @@ export function LoomScreen() {
   const heroName = me?.name ?? ROOTS[mine].name;
   const lessonPlaced = !!lessonForm && hero === mine && nodes.some((n) => n.id === lessonForm.id);
   const lessonSkill = lessonPlaced ? compiled.actions.find((a) => a.nodeId === lessonForm!.id) : undefined;
+  const pending = pool.find((n) => n.formId === placing);
   const coach = !lesson
-    ? null
+    ? placing && pending
+      ? { text: `Tap a **glowing cell** to place ${pending.name}. Beside the Root, or touching a matching colour, it wakes up.` }
+      : afterFight && raw.length && weaves() < 3
+        ? { text: raw[0].tier === "veiled" ? "You found a **Form**. Tap it to reveal what it can become." : "Tap the **Form** to weave it into your skills." }
+        : null
     : hero !== mine
       ? { text: `Open **${heroName}** to place the new Form.` }
       : !lessonPlaced
@@ -220,6 +251,17 @@ export function LoomScreen() {
 
   const cells = boardCells(2);
   const radius = rank >= 8 ? 2 : 1;
+  // While placing, the cells that glow are the ones where the new node wakes up without putting another to sleep.
+  const openCells = cells.filter(({ q, r }) => hexDist(q, r) > 0 && hexDist(q, r) <= radius && !nodes.some((n) => n.q === q && n.r === r));
+  const goodCells = useMemo(() => {
+    if (!pending) return new Set<string>();
+    const asleep = compiled.dormantNodeIds.length;
+    const good = openCells.filter(({ q, r }) => {
+      const c = compileLoom([...nodes, { ...pending, q, r }], rank);
+      return !c.dormantNodeIds.includes(pending.id) && c.dormantNodeIds.length <= asleep;
+    });
+    return new Set((good.length ? good : openCells).map(({ q, r }) => `${q},${r}`));
+  }, [pending, nodes, rank]);
   const byCell = new Map(shown.map((n) => [`${n.q},${n.r}`, n]));
   const dormant = new Set(shownC.dormantNodeIds);
 
@@ -229,7 +271,7 @@ export function LoomScreen() {
       <div className="world" style={{ top: worldTop }}>
       <header className="loom-head">
         <div className="loom-title">
-          <h1>The Loom</h1>
+          <h1>{afterFight ? "Weave" : "The Loom"}</h1>
           <div className="loom-sub">
             Rank {rank} · Capacity{" "}
             <b className={shownC.usedCapacity > shownC.capacity ? "bad" : ""}>
@@ -238,8 +280,18 @@ export function LoomScreen() {
             {!editable && <span className="lock"> · locked until a Shrine</span>}
           </div>
         </div>
+        {afterFight && spoils && (
+          <div className="loom-spoils" data-testid="loom-spoils">
+            {spoils.crowns > 0 && <span>+{spoils.crowns} Crowns</span>}
+            {Object.entries(spoils.essences ?? {}).map(([e, q]) => (
+              <span key={e}>
+                {essenceGlyph(e)} +{q as number}
+              </span>
+            ))}
+          </div>
+        )}
         {!lesson && <button className="loom-done" onClick={close} data-testid="loom-done">
-          {inRun && editable ? "Leave Shrine" : "Done"}
+          {afterFight ? "Continue" : inRun && editable ? "Leave Shrine" : "Done"}
         </button>}
       </header>
       {roots.length > 1 && <div className="hero-tabs">
@@ -257,7 +309,8 @@ export function LoomScreen() {
           const [x, y] = cellXY(q, r);
           const locked = hexDist(q, r) > radius;
           const hover = drag?.moved && drag.over && drag.over !== "tray" && drag.over.q === q && drag.over.r === r;
-          const glow = lesson && hero === mine && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`);
+          const open = !locked && !byCell.has(`${q},${r}`) && hexDist(q, r) > 0;
+          const glow = (lesson && hero === mine && !lessonPlaced && hexDist(q, r) === 1 && !byCell.has(`${q},${r}`)) || (!!placing && open && goodCells.has(`${q},${r}`));
           return <path key={`${q},${r}`} d={hexPath(x, y, HEX - 6)} className={`cell ${locked ? "locked" : ""} ${hover ? "hover" : ""} ${glow ? "coach-cell" : ""}`} data-testid={`cell-${q}_${r}`} />;
         })}
         {/* painted links */}
@@ -289,20 +342,47 @@ export function LoomScreen() {
       <div className="root-head" style={{ left: CX - 50, top: CY - 70 }}>
         <Head figure={heroFigure(hero)} size={100} look={lookFor(hero)} />
       </div>
+      {placing &&
+        [...openCells]
+          .sort((a, b) => Number(goodCells.has(`${b.q},${b.r}`)) - Number(goodCells.has(`${a.q},${a.r}`)))
+          .map(({ q, r }) => {
+            const [x, y] = cellXY(q, r);
+            return (
+              <div
+                key={`p${q},${r}`}
+                className="node-hit place-hit"
+                style={{ left: x - HEX * 0.8, top: y - HEX * 0.8, width: HEX * 1.6, height: HEX * 1.6 }}
+                onPointerDown={(e) => (e.stopPropagation(), placeAt(q, r))}
+                data-testid={`place-${q}_${r}`}
+              />
+            );
+          })}
       {/* hit targets for board nodes (HTML, so long-press and drag work on touch) */}
       {nodes.map((n) => {
         const [x, y] = cellXY(n.q, n.r);
         return <div key={n.id} className="node-hit" style={{ left: x - HEX * 0.8, top: y - HEX * 0.8, width: HEX * 1.6, height: HEX * 1.6 }} onPointerDown={(e) => down(e, n, "board")} data-testid={`node-${n.id}`} />;
       })}
 
-      <div className={`tray ${drag?.moved && drag.over === "tray" ? "hover" : ""}`} style={{ top: TRAY_TOP, height: TRAY_H }}>
+      <div className="loom-lower" style={{ top: TRAY_TOP }}>
+      <div className={`tray ${drag?.moved && drag.over === "tray" ? "hover" : ""}`}>
         <div className="tray-label">
-          Forms <span className="dim">· drag onto the Loom · hold for details</span>
+          Forms <span className="dim">· {raw.length ? "tap a new Form to weave it" : placing ? "tap a glowing cell" : "tap or drag onto the Loom"}</span>
         </div>
         <div className="tray-row">
-          {pool.length === 0 && <div className="tray-empty">No unplaced nodes. Attune a Form, then Inscribe it at the Crucible.</div>}
+          {raw.map((a) => (
+            <div key={a.id} className="tray-item raw coach-pulse" onPointerDown={(e) => (e.stopPropagation(), sfx.tap(), setWeaving(a))} data-testid={`raw-${a.id}`}>
+              <svg viewBox="-80 -80 160 160" width={150} height={150}>
+                <path d={hexPath(0, 0, 66)} className="raw-hex" />
+                <text y={18} textAnchor="middle" className="raw-glyph">
+                  {a.tier === "veiled" ? "?" : "✦"}
+                </text>
+              </svg>
+              <div className="tray-name">{a.tier === "veiled" ? "New Form" : a.name}</div>
+            </div>
+          ))}
+          {pool.length === 0 && raw.length === 0 && <div className="tray-empty">No new Forms. Win fights to find them.</div>}
           {pool.map((n) => (
-            <div key={n.id} className={`tray-item ${lesson && n.id === lessonForm?.id && hero === mine ? "coach-pulse" : ""}`} onPointerDown={(e) => down(e, n, "pool")} data-testid={`pool-${n.id}`}>
+            <div key={n.id} className={`tray-item ${placing === n.formId ? "picked" : ""} ${lesson && n.id === lessonForm?.id && hero === mine ? "coach-pulse" : ""}`} onPointerDown={(e) => down(e, n, "pool")} data-testid={`pool-${n.id}`}>
               <svg viewBox="-80 -80 160 160" width={150} height={150}>
                 <NodeHex n={n} x={0} y={0} small />
               </svg>
@@ -312,8 +392,9 @@ export function LoomScreen() {
         </div>
       </div>
 
-      {coach && !drag?.moved && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: 985 }} />}
-      <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} top={TRAY_TOP + TRAY_H + 20} />
+      <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} />
+      </div>
+      {coach && !drag?.moved && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: TRAY_TOP - 175 }} />}
 
       {drag?.moved && (
         <svg className="drag-ghost" viewBox="0 0 1080 1920">
@@ -321,6 +402,18 @@ export function LoomScreen() {
         </svg>
       )}
       </div>
+      {weaving && (
+        <WeaveSheet
+          form={weaving}
+          free={compiled.capacity - compiled.usedCapacity}
+          onClose={() => setWeaving(null)}
+          onWoven={(id) => {
+            setWeaving(null);
+            setPlacing(id);
+            loadRaw();
+          }}
+        />
+      )}
       {detail && <NodeDetail n={detail} compiled={compiled} rank={rank} onClose={() => setDetail(null)} onRemove={editable && nodes.some((x) => x.id === detail.id) ? () => (removeToPool(detail), setDetail(null)) : undefined} />}
     </div>
   );
@@ -348,7 +441,7 @@ function moveNode(nodes: LoomNode[], node: LoomNode, to: { q: number; r: number 
 }
 
 function hitTest(x: number, y: number, rank: number): { q: number; r: number } | "tray" | null {
-  if (y >= TRAY_TOP) return y < TRAY_TOP + TRAY_H ? "tray" : null;
+  if (y >= TRAY_TOP) return "tray";
   const radius = rank >= 8 ? 2 : 1;
   let best: { q: number; r: number } | null = null;
   let bd = Infinity;
@@ -425,13 +518,13 @@ function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost }: {
   );
 }
 
-function CompilePreview({ c, diff, previewing, top }: { c: CompiledLoom; diff: string[]; previewing: boolean; top: number }) {
+function CompilePreview({ c, diff, previewing }: { c: CompiledLoom; diff: string[]; previewing: boolean }) {
   return (
-    <div className={`compile ${previewing ? "previewing" : ""}`} style={{ top }} data-testid="compile-preview">
-      <div className="compile-cols">
+    <div className={`compile ${previewing ? "previewing" : ""}`} data-testid="compile-preview">
+      <div className="compile-grid">
+        <h3>Skills</h3>
         <div>
-          <h3>Actions</h3>
-          {c.actions.length === 0 && <div className="dim">none</div>}
+          {c.actions.length === 0 && <span className="dim">none</span>}
           {c.actions.map((a) => (
             <div key={a.nodeId} className="c-row">
               <span style={{ color: AFF_COLOR[a.dominant] }}>{AFF_GLYPH[a.dominant]}</span> {a.name} <b>{a.apCost} AP</b>
@@ -439,23 +532,24 @@ function CompilePreview({ c, diff, previewing, top }: { c: CompiledLoom; diff: s
             </div>
           ))}
         </div>
+        <h3>Reactions</h3>
         <div>
-          <h3>Reactions</h3>
-          {c.reactions.length === 0 && <div className="dim">none</div>}
-          {c.reactions.map((r) => (
-            <div key={r.nodeId} className={`c-row ${r.executes ? "" : "dim"}`}>
+          {c.reactions.length === 0 && <span className="dim">none</span>}
+          {c.reactions.map((r, i) => (
+            <span key={r.nodeId} className={r.executes ? "" : "dim"}>
+              {i > 0 && " · "}
               {r.name}
               {!r.executes && " (weaker)"}
-            </div>
+            </span>
           ))}
-          <h3>Keystone</h3>
-          <div className="c-row">{c.keystone ? c.keystone.name : <span className="dim">none</span>}</div>
-          <h3>Capacity</h3>
-          <div className="c-row">
-            <b className={c.usedCapacity > c.capacity ? "bad" : ""}>
-              {c.usedCapacity} / {c.capacity}
-            </b>
-          </div>
+        </div>
+        <h3>Keystone</h3>
+        <div>{c.keystone ? c.keystone.name : <span className="dim">none</span>}</div>
+        <h3>Capacity</h3>
+        <div>
+          <b className={c.usedCapacity > c.capacity ? "bad" : ""}>
+            {c.usedCapacity} / {c.capacity}
+          </b>
         </div>
       </div>
       {diff.length > 0 && (

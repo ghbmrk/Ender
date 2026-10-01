@@ -23,6 +23,8 @@ export type State = {
   panel: Panel;
   crucibleFocus?: string | null;
   crucibleMode?: "craft" | "mirror";
+  /** The Loom opened straight after a fight to weave what dropped (Mark: crafting follows combat). */
+  afterFight?: boolean;
   character: any | null;
   /** Server Loom view: rank, capacity and each hero's placed nodes plus the unplaced pool. */
   loom: any | null;

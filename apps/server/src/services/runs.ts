@@ -282,14 +282,14 @@ export function startRun(ctx: Ctx, charId: string, realmId: string) {
   });
 }
 
-/** Leaving a Shrine: save the Loom snapshot that the next fights use (§80). Also allowed before the first node (the hub). */
+/** Save the Loom snapshot that the next fights use (§80): after a Shrine, after a fight's weaving, or at the hub. */
 export function checkpointRun(ctx: Ctx, charId: string, runId: string) {
   const r = getRun(ctx, charId, runId);
   if (r.status !== "active") throw new HttpError(400, `run is ${r.status}`);
   const plan = JSON.parse(r.plan) as RunPlan;
   const visited = JSON.parse(r.visited) as string[];
   const last = visited.length ? findNode(plan, visited.at(-1)!) : null;
-  if (last && last.kind !== "shrine") throw new HttpError(400, "the Loom can only be re-threaded at a Shrine");
+  // Ender (Mark, 2026-10-01): weaving follows each fight, so the Loom may be re-threaded after any visited node.
   const loom = loomSnapshot(ctx, charId);
   run(ctx.db, "UPDATE runs SET loom_snapshot = ? WHERE id = ?", JSON.stringify(loom), runId);
   run(ctx.db, "INSERT INTO run_events (run_id, type, payload, created_at) VALUES (?, 'loom-snapshot', ?, ?)", runId, JSON.stringify({ at: last?.id ?? "hub" }), now());

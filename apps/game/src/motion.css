@@ -316,3 +316,57 @@
   right: 16px;
   align-items: center;
 }
+
+/* The Loom's lower half is one column: the Forms tray takes whatever room the skills summary leaves. */
+.loom-screen .loom-lower {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: calc(1920px - var(--stage-h) + 178px + var(--safe-b));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.loom-screen .loom-lower .tray,
+.loom-screen .loom-lower .compile {
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+}
+.loom-screen .loom-lower .tray {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.loom-screen .loom-lower .tray-row {
+  flex: 1;
+  align-items: center;
+}
+.loom-screen .loom-lower .compile {
+  flex: none;
+}
+.compile-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 24px;
+  row-gap: 6px;
+  align-items: baseline;
+}
+.compile-grid h3 {
+  margin: 0;
+  border: none;
+  white-space: nowrap;
+}
+.loom-screen .loom-lower .c-diff {
+  position: static;
+  margin-top: 8px;
+}
+/* Cells to place on glow clearly, not just a faint outline. */
+.loom-board .cell.coach-cell {
+  fill: #f4d58c33;
+  stroke: #ffd67a;
+  stroke-width: 10;
+}

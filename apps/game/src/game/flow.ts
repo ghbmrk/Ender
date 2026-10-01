@@ -140,7 +140,16 @@ export async function endBattle(r: BattleResult) {
     await finishExpedition("victory");
     return;
   }
-  setState({ screen: "map", rewards: { ...out.rewards, title: b.kind === "elite" ? "Elite spoils" : "Spoils" }, panel: hasRewards(out.rewards) ? "rewards" : null });
+  const rewards = { ...out.rewards, title: b.kind === "elite" ? "Elite spoils" : "Spoils" };
+  // Something to weave? Crafting follows the fight on one screen, with the spoils shown at its top.
+  const [inv] = await Promise.all([api.inventory().catch(() => null), refreshLoom().catch(() => null)]);
+  const raw = (inv?.artifacts ?? []).some((a: any) => a.status === "held" && !a.inscribedRole && !a.loom);
+  const pool = (getState().loom as any)?.pool?.length > 0;
+  if (raw || pool) {
+    setState({ screen: "loom", loomEditable: true, afterFight: true, rewards, panel: null });
+    return;
+  }
+  setState({ screen: "map", rewards, panel: hasRewards(out.rewards) ? "rewards" : null });
 }
 
 export async function finishExpedition(outcome: "victory" | "death" | "abandon") {

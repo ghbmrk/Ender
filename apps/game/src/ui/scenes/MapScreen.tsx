@@ -55,7 +55,7 @@ export function MapScreen() {
       <header className="map-head">
         <div>
           <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
-          <div className="map-sub">Choose your path. The Loom is locked until a Shrine.</div>
+          <div className="map-sub">Choose your path. After a win, you weave what you found.</div>
         </div>
       </header>
       <svg className="map-svg" viewBox={`0 0 1080 ${h}`} style={{ height: h }}>

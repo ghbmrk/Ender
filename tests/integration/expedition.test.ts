@@ -185,7 +185,7 @@ describe("expedition API", () => {
     }
   });
 
-  it("a lost fight grants nothing; the Loom snapshot can only be retaken at a Shrine", async () => {
+  it("a lost fight grants nothing; the Loom snapshot can be retaken after any node (weaving follows fights)", async () => {
     const x = await harness();
     try {
       const start = await x.call("POST", "/api/runs", { realmId: "ashen-vault" });
@@ -193,7 +193,7 @@ describe("expedition API", () => {
       await x.call("POST", `/api/runs/${p.runId}/checkpoint`, {}); // from the hub: allowed
       const lost = await x.call("POST", `/api/runs/${p.runId}/node`, { nodeId: p.map.layers[0]![0]!.id, outcome: "defeat" });
       expect(lost.rewards).toMatchObject({ crowns: 0, forms: [], mirrorCharges: 0, xp: 0 });
-      expect((await x.raw("POST", `/api/runs/${p.runId}/checkpoint`, {})).status).toBe(400);
+      expect((await x.raw("POST", `/api/runs/${p.runId}/checkpoint`, {})).status).toBe(200);
     } finally {
       await x.close();
     }
