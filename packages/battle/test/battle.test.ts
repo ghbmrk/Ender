@@ -49,11 +49,11 @@ describe("timing (§64, §67–69)", () => {
     expect(t.expire(1400)).toEqual([2]);
     expect(t.result()).toEqual(["perfect", "good", "miss"]);
   });
-  it("Dodge −260..+100, Parry −90..+70, Perfect Parry −45..+35", () => {
+  it("Dodge is wide (−260..+100); Parry is one tight window (−70..+60) and anything else is a hit", () => {
     const d = new DefenseTracker([1000, 2000, 3000, 4000]);
     expect(d.press(1000 - 250, "dodge")).toEqual({ index: 0, result: "dodge" });
-    expect(d.press(2000 + 60, "parry")).toEqual({ index: 1, result: "parry" });
-    expect(d.press(3000 - 40, "parry")).toEqual({ index: 2, result: "perfect-parry" });
+    expect(d.press(2000 + 80, "parry")).toEqual({ index: 1, result: "hit" });
+    expect(d.press(3000 - 60, "parry")).toEqual({ index: 2, result: "perfect-parry" });
     expect(d.press(4000 - 150, "parry")).toEqual({ index: 3, result: "hit" });
   });
   it("a mistimed input is consumed: no second try on that impact", () => {
@@ -409,8 +409,8 @@ describe("duel balance", () => {
     }
     return n;
   };
-  const decent = (k: number): Defense => (k % 3 === 2 ? "hit" : k % 3 ? "dodge" : "parry");
-  const strong = (k: number): Defense => (k % 4 === 3 ? "hit" : "parry");
+  const decent = (k: number): Defense => (k % 3 === 2 ? "hit" : k % 3 ? "dodge" : "perfect-parry");
+  const strong = (k: number): Defense => (k % 4 === 3 ? "hit" : "perfect-parry");
   it("a first-run Boss is a real fight: decent play wins some, strong play wins nearly always", () => {
     const d = wins([["king"]], "boss", "good", decent);
     expect(d).toBeGreaterThanOrEqual(5);

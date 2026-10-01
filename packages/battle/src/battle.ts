@@ -562,9 +562,19 @@ export class Battle {
 
   /**
    * Resolve a foe's attack given one defence per impact. An area attack's single defence covers every target.
-   * Parry: 0 damage, +1 AP, +10 Break to the attacker, Parry Reactions. Dodge: 0 damage. Parrying every impact
-   * earns a counter at 65% Basic potency (§66–70).
+   * Parry (perfect only): 0 damage, +1 AP, +10 Break to the attacker, Parry Reactions, and a counter at 65% Basic
+   * potency (split across a multi-hit attack). Dodge: 0 damage. A missed Parry is a hit.
    */
+  /** A Parry's counter: a strike back at the attacker (or, with a Reach Reaction, the weakest foe). */
+  private counter(t: Unit, foe: Unit, blows: number, events: BattleEvent[]) {
+    if (!t.alive) return;
+    const anyEnemy = t.loom?.reactions.some((r) => r.executes && r.modifiers.some((m) => m.affinity === "reach"));
+    const tgt = foe.alive && !anyEnemy ? foe : anyEnemy ? this.living("foe").sort((a, b) => a.hp - b.hp)[0] : undefined;
+    if (!tgt) return;
+    events.push({ type: "counter", source: t.id, target: tgt.id });
+    this.strike(t, tgt, (t.power * RULES.counterPotency) / Math.max(1, blows), events, { grade: "perfect" });
+  }
+
   resolveFoe(plan: FoePlan, defenses: Defense[]): BattleEvent[] {
     const foe = this.unit(plan.actor);
     const events: BattleEvent[] = [];
@@ -602,6 +612,8 @@ export class Battle {
             this.react(t, foe, "perfect-parry", true, events);
             if (this.keystone(t) === "flex") this.addInit(t, 0.08, true);
           }
+          // Every perfect Parry answers its blow at once (split across a multi-hit attack's blows).
+          this.counter(t, foe, plan.attack.hits.length, events);
         } else if (isDodge(d)) {
           this.react(t, foe, "dodge", d === "perfect-dodge", events);
           if (d === "perfect-dodge") this.react(t, foe, "perfect-dodge", true, events);
@@ -618,15 +630,6 @@ export class Battle {
       if (allParried) {
         events.push({ type: "full-parry", target: t.id });
         this.react(t, foe, "full-parry", false, events);
-      }
-    }
-    const counterer = heroes.find((t) => t.alive);
-    if (counterer && n && defenses.slice(0, n).every(isParry) && defenses.length >= n) {
-      const anyEnemy = counterer.loom?.reactions.some((r) => r.executes && r.modifiers.some((m) => m.affinity === "reach"));
-      const tgt = foe.alive && !anyEnemy ? foe : (anyEnemy ? this.living("foe").sort((a, b) => a.hp - b.hp)[0] : undefined);
-      if (tgt) {
-        events.push({ type: "counter", source: counterer.id, target: tgt.id });
-        this.strike(counterer, tgt, counterer.power * RULES.counterPotency, events, { grade: "perfect" });
       }
     }
     return events;
