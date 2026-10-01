@@ -62,7 +62,7 @@ export const FOES: Record<FoeKind, FoeDef> = {
     ],
   },
   hound: {
-    kind: "hound", figure: "hound", name: "Hound", hp: 160, atk: 15, speed: 120, breakTaken: 1, tier: "normal", blurb: "Fast. Its pounce comes early.",
+    kind: "hound", figure: "hound", name: "Hound", hp: 160, atk: 12, speed: 120, breakTaken: 1, tier: "normal", blurb: "Fast. Its pounce comes early.",
     attacks: [
       { id: "pounce", name: "Pounce", tell: "crouches low", target: "one", hits: h([700, 1.2]), weight: 3 },
       { id: "savage", name: "Savage", tell: "snarls and circles", target: "one", hits: h([850, 1.28]), weight: 2 },
@@ -86,7 +86,7 @@ export const FOES: Record<FoeKind, FoeDef> = {
     ],
   },
   swarm: {
-    kind: "swarm", figure: "swarm", name: "Swarm", hp: 200, atk: 10, speed: 115, breakTaken: 1.2, tier: "normal", blurb: "Many small stings in a steady beat.",
+    kind: "swarm", figure: "swarm", name: "Swarm", hp: 200, atk: 8, speed: 115, breakTaken: 1.2, tier: "normal", blurb: "Many small stings in a steady beat.",
     attacks: [
       { id: "sting", name: "Sting Storm", tell: "the wings rise as one", target: "one", hits: h([900, 1.39, "poison"]), weight: 3 },
       { id: "scatter", name: "Scatter", tell: "the swarm splits apart", target: "all", hits: h([1000, 0.7]), weight: 2 },
