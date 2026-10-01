@@ -864,10 +864,17 @@ export function BattleScreen({
   };
   const onStageDown = (e: React.PointerEvent) => {
     const s = seq.current;
-    // While a lesson holds the blow, a near miss of the buttons (anywhere on the right half, where they sit) still counts,
+    // While a lesson holds the blow, a near miss of a defence button (within a button's width of it) counts as that button,
     // so the player is never stranded; a tap elsewhere only repeats the prompt, so no stray tap earns a Perfect.
+    // (The right half of the screen was too wide: card taps and taps on the foe were earning a "Perfect Dodge".)
     if (s?.k === "defend" && s.frozenAt) {
-      if (toStage(e.clientX, e.clientY).x >= 540) return unfreeze(s, drill ?? (lesson?.step === "parry" ? "parry" : "dodge"));
+      let near: { kind: "parry" | "dodge"; d: number } | null = null;
+      for (const b of (e.currentTarget as Element).querySelectorAll(".def-btn")) {
+        const r = b.getBoundingClientRect();
+        const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+        if (d < r.width && (!near || d < near.d)) near = { kind: b.classList.contains("parry") ? "parry" : "dodge", d };
+      }
+      if (near) return unfreeze(s, near.kind);
       said.current.delete("now");
       return say("now");
     }
