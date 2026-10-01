@@ -1098,6 +1098,16 @@ export function BattleScreen({
           {practice ? "Training Yard" : `Lesson ${LESSON_NO[lesson.step]} of 3`} · {LESSON_NAME[lesson.step]}
         </div>
       )}
+      {lesson && (LESSON_NO[lesson.step] ?? 0) > 1 && (
+        // Lessons hand straight on with no victory screen, and every lesson's foe is a fresh Husk at full health:
+        // a beat that names the win and the new lesson keeps it from reading as the last Husk healing. It plays over
+        // the fight and never holds a tap.
+        <div key={lesson.step} className="lesson-intro" data-testid="lesson-intro" aria-hidden>
+          <small>Lesson {(LESSON_NO[lesson.step] ?? 2) - 1} done</small>
+          <b>Lesson {LESSON_NO[lesson.step]} of 3</b>
+          <span>A fresh {FOE_NAME(setup.waves[0]?.[0] ?? "foe")} steps up</span>
+        </div>
+      )}
       {lesson && onSkip && phase.k === "command" && (
         // One tap skips: a second confirming tap was friction, and the Training Yard on the Crossing replays the
         // Dodge and Parry lesson any time.

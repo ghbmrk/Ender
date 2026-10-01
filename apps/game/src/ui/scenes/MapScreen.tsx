@@ -23,6 +23,17 @@ const KIND: Record<string, { glyph: string; name: string }> = {
   mystery: { glyph: "?", name: "Mystery" },
   boss: { glyph: "♚", name: "Boss" },
 };
+const stopName = (n: MapNode): string => n.label ?? KIND[n.kind]?.name ?? "stop";
+/** "A", "A or B", "A, B or C", with repeats folded. */
+const orList = (xs: string[]): string => {
+  const u = [...new Set(xs)];
+  return u.length < 2 ? (u[0] ?? "") : `${u.slice(0, -1).join(", ")} or ${u[u.length - 1]}`;
+};
+/** "the glowing Mystery or Shrine", or "a glowing Fight" when two stops share a name. */
+const glowing = (ns: MapNode[]): string => {
+  const names = ns.map(stopName);
+  return `${new Set(names).size < names.length ? "a" : "the"} glowing ${orList(names)}`;
+};
 /** Whether a path of links runs from one stop to another further on. */
 function leadsTo(from: MapNode, id: string, seen = new Set<string>()): boolean {
   if (from.links.includes(id)) return true;
@@ -146,8 +157,14 @@ export function MapScreen() {
     if (!next.has(n.id)) {
       if (n.layer > anchor) {
         setNudge((k) => k + 1);
-        // Say it in words too: a flash alone reads as nothing happening.
-        toast("That stop is further on. Tap a glowing one first.");
+        // Say it in words too, naming the stops that glow: a flash alone reads as nothing happening, and
+        // "a glowing one" leaves the player hunting for which.
+        const via = reach.filter((r) => leadsTo(r, n.id));
+        toast(
+          via.length
+            ? `That ${stopName(n)} is further on. Go by ${glowing(via)} first.`
+            : `No path from here reaches that ${stopName(n)}. Tap ${glowing(reach)}.`,
+        );
       }
       return;
     }
@@ -191,7 +208,7 @@ export function MapScreen() {
               ? "The Boss is next."
               : reach.length === 1
                 ? `Tap the glowing ${KIND[reach[0]!.kind]?.name ?? "stop"} to go on.`
-                : "Tap a glowing stop to choose your path."}
+                : `Tap ${glowing(reach)} to choose your path.`}
           </div>
         </div>
         {/* Withdrawing is rare and final, so it sits up top, out of the thumb's way. */}
