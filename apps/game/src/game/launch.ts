@@ -1,14 +1,12 @@
 import { api } from "../api";
-import { lookFromSeed, newSeed, randomName } from "../art/look";
 import { getState, setState, toast } from "../state/store";
 import { continueGame } from "./flow";
-import { HERO_ROOT } from "./hero";
-import { goTo, savedStep, startTutorial, tutorialDone } from "./tutorial";
+import { goTo, savedStep, tutorialDone } from "./tutorial";
 
 /**
  * How the game opens. Signing in (a placeholder for now) is remembered in this browser, so a signed-in
- * player skips the landing screen and lands straight in the game. Hero select and hero creation are
- * never on the way in; they are reached by going back from the game.
+ * player skips the landing screen and lands straight in the game. A first-timer makes their hero, then plays the
+ * prologue; hero select is reached by going back from the game.
  */
 const KEY = "ender:signed-in";
 
@@ -55,7 +53,8 @@ async function openSave() {
       .then((c) => c.xp > 0 || c.crowns !== 250 || c.level > 1)
       .catch(() => false));
   if (!saved) {
-    await startTutorial({ root: HERO_ROOT, name: randomName(), look: lookFromSeed(newSeed()) });
+    // A first-timer makes their hero first (Begin there starts the prologue).
+    setState({ screen: "create", panel: null });
     return;
   }
   await continueGame();

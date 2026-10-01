@@ -22,7 +22,7 @@ for (const kind of ["fresh", "returning"]) {
   const t0 = Date.now();
   await page.tap('[data-testid="sign-in"]');
   const ok = await page
-    .waitForSelector('[data-testid="crossing"], [data-testid="battle"], .battle, [data-testid="loom"], [data-testid="map"]', { timeout: 15000 })
+    .waitForSelector('[data-testid="create-hero"], [data-testid="crossing"], [data-testid="battle"], .battle, [data-testid="loom"], [data-testid="map"]', { timeout: 15000 })
     .then(() => true, () => false);
   out[kind] = ok ? Date.now() - t0 : "stuck";
   if (!ok) await page.screenshot({ path: `art-shots/pages-signin-${kind}.png` });

@@ -36,6 +36,11 @@ await page.goto((process.env.PAGE ?? "file://" + resolve(root, "apps/game/dist-w
 // A new player lands on the title, and its button leads straight into the first fight with a made-up hero.
 await page.waitForSelector(tid("sign-in"), { timeout: 60000 });
 await page.click(tid("sign-in"));
+// A first-timer makes their hero, then the prologue's first fight opens.
+await page.waitForSelector(tid("create-hero"));
+await page.waitForTimeout(600);
+await shot("prologue-00-create");
+await page.click(tid("hero-begin"));
 await page.waitForSelector(tid("battle"));
 
 let fights = 0;
