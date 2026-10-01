@@ -320,7 +320,7 @@ export function LoomScreen() {
   const byCell = new Map(shown.map((n) => [`${n.q},${n.r}`, n]));
   const dormant = new Set(shownC.dormantNodeIds);
 
-  // In the first lesson, a tap anywhere on the board places the new Form on the nearest open
+  // In the first lesson, a tap anywhere on the board, placed Forms included, puts the new Form on the nearest open
   // cell beside the hero, so a player who taps instead of dragging is never stuck.
   const lessonPending = lesson && editable && hero === mine && !lessonPlaced && !!lessonForm && pool.some((n) => n.id === lessonForm.id);
   const boardTap = (e: React.PointerEvent) => {
@@ -333,6 +333,8 @@ export function LoomScreen() {
       .map(({ q, r }) => ({ q, r, dist: Math.hypot(cellXY(q, r)[0] - p.x, cellXY(q, r)[1] - p.y) }))
       .sort((a, b) => a.dist - b.dist)[0];
     if (!near) return;
+    // Caught on the way down, so a tap on a placed Form places the new one rather than picking the old one up.
+    e.stopPropagation();
     setPlacing(null);
     setLanded(lessonForm!.id);
     commit([...nodes, { ...lessonForm!, q: near.q, r: near.r }], pool.filter((x) => x.id !== lessonForm!.id));
@@ -343,7 +345,7 @@ export function LoomScreen() {
   };
 
   return (
-    <div className="loom-screen" onPointerDown={boardTap} onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid="loom">
+    <div className="loom-screen" onPointerDownCapture={boardTap} onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid="loom">
       <div className="loom-bg" />
       <div className="world" style={{ top: worldTop }}>
       <header className="loom-head">

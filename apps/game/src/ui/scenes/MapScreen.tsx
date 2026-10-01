@@ -134,7 +134,15 @@ export function MapScreen() {
   };
   const here = ex.at ? nodeById(ex.at) : null;
   return (
-    <div className="map-screen" data-testid="map">
+    <div
+      className="map-screen"
+      data-testid="map"
+      // With one way on, a tap on the open map between stops takes it too: a miss is never a dead tap.
+      onClick={(e) => {
+        const t = e.target as Element;
+        if (reach.length === 1 && (t === e.currentTarget || t.closest(".backdrop"))) go(reach[0]!);
+      }}
+    >
       <div className="backdrop dimmed">
         <SceneBackdrop id={ex.plan.realmId} Drawn={Back} />
       </div>
