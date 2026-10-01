@@ -90,6 +90,8 @@ export const LESSONS: Record<"strike" | "dodge" | "parry" | "skill", Lesson> = {
       skill: "Your new skill is ready. **Crafted Actions** spend the AP that Basic and Parry build.",
       broken: "**Broken!** It loses its turn and takes +25% damage. Heavy skills and Parries build Break.",
       ap: "Low on AP? **Basic** builds it back up.",
+      // Every lesson holds an unanswered blow at contact, so this one needs its "now" too, or the fight just stops.
+      now: "**Now!** Tap **DODGE** or **PARRY**.",
     },
     setup: { waves: [["keeper"]], foeScale: { hp: 0.4, atk: 0.4 } },
   },

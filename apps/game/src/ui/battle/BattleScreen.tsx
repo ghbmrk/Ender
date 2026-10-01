@@ -808,8 +808,20 @@ export function BattleScreen({
   };
 
   // ───────────── input ─────────────
+  // Time starts again from the frozen moment of a lesson's blow, and the press is judged right there.
+  const unfreeze = (live: DefendSeq, kind: "parry" | "dodge") => {
+    const t = elapsed(live);
+    live.t0 += performance.now() - live.frozenAt!;
+    live.frozenAt = undefined;
+    cues()?.hold(false);
+    setFrozen(false);
+    setCoach(null);
+    pressDefend(live, t, kind);
+  };
   const onStageDown = (e: React.PointerEvent) => {
     const s = seq.current;
+    // While a lesson holds the blow for its defence, a tap anywhere is that defence: a miss of the button never strands the player.
+    if (s?.k === "defend" && s.frozenAt) return unfreeze(s, lesson?.step === "parry" ? "parry" : "dodge");
     if (!s || s.k !== "attack") return;
     const p = toStage(e.clientX, e.clientY);
     pressAttack(s, elapsedAt(s, e), { x: p.x, y: p.y - worldTop });
@@ -1056,16 +1068,7 @@ export function BattleScreen({
         const press = (kind: "parry" | "dodge") => (e: React.PointerEvent) => {
           if (!live) return;
           e.stopPropagation();
-          if (live.frozenAt) {
-            // Time starts again from the frozen moment, and this press is judged right there.
-            const t = elapsed(live);
-            live.t0 += performance.now() - live.frozenAt;
-            live.frozenAt = undefined;
-            cues()?.hold(false);
-            setFrozen(false);
-            setCoach(null);
-            return pressDefend(live, t, kind);
-          }
+          if (live.frozenAt) return unfreeze(live, kind);
           pressDefend(live, elapsedAt(live, e), kind);
         };
         return (
