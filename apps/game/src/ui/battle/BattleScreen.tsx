@@ -929,7 +929,7 @@ export function BattleScreen({
       <div className="bpanel arc" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
         {phase.k === "attack" && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
         {(phase.k === "command" || phase.k === "ally") && (
-          <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "command" ? "basic" : coach?.key === "skill" ? "actions" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />
+          <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />
         )}
         {/* Outside your turn the cards stay in place, dimmed, so the row never empties and the thumb knows where to go. */}
         {phase.k !== "command" && phase.k !== "ally" && battle.living("party")[0] && (
@@ -1185,14 +1185,6 @@ function Commands({
     );
   return (
     <div className="cards" data-testid={idle ? undefined : "commands"}>
-      <button className={`card basic ${pulse === "basic" ? "coach-pulse" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid={idle ? undefined : "cmd-basic"}>
-        <div className="card-top">
-          <span className="card-name">Basic</span>
-          <span className="card-ap gain">+2 AP</span>
-        </div>
-        <div className="card-line">{u.power} damage · timed</div>
-        <div className="card-line dim">Builds AP for crafted Actions</div>
-      </button>
       {actions.map((a) => {
         const cost = b.costOf(actor, a.nodeId);
         const can = cost <= u.ap;
@@ -1234,6 +1226,15 @@ function Commands({
           {basicOnly ? "Skills you weave appear here" : "Weave more skills on the Loom"}
         </div>
       )}
+      {/* Basic sits at the right end of the row, under the right thumb. */}
+      <button className={`card basic ${pulse === "basic" ? "coach-pulse" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onPick(actor, "basic")} data-testid={idle ? undefined : "cmd-basic"}>
+        <div className="card-top">
+          <span className="card-name">Basic</span>
+          <span className="card-ap gain">+2 AP</span>
+        </div>
+        <div className="card-line">{u.power} damage · timed</div>
+        <div className="card-line dim">Builds AP for crafted Actions</div>
+      </button>
       {actions.length === 0 && !basicOnly && <div className="card empty">No Actions woven. Inscribe a Form as an Action and place it on this Loom.</div>}
     </div>
   );
