@@ -111,7 +111,7 @@ export function Crucible() {
   const bestMargin = evaluated.reduce((m, f) => (f.evaluation.margin > (m?.evaluation.margin ?? -1e9) ? f : m), null as any);
 
   return (
-    <Panel title={mode === "mirror" ? "The Mirror" : "The Crucible"} subtitle={`✦ ${c?.focus ?? 0} Focus to spend. Every act costs Focus and earns XP; results that hold up earn Mastery.`} wide testId="crucible">
+    <Panel title={mode === "mirror" ? "The Mirror" : "The Crucible"} subtitle={`✦ ${c?.focus ?? 0} Focus to spend. Each test below costs Focus and tells you more about a Form.`} wide testId="crucible">
       <div className="crucible">
         <div className="form-list">
           {forms.length === 0 && <p className="dim">You hold no Forms. Fight in a Realm to find them.</p>}

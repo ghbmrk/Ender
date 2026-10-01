@@ -1922,3 +1922,9 @@
 .form-detail .bind,.form-detail .bind .dim{font-family:var(--serif-body)}
 .form-detail .bind > .dim.small{font-size:15px;line-height:1.35;color:#d9c9a8}
 .form-detail .inscribe-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}.form-detail .inscribe-grid > button{width:100%;box-sizing:border-box;margin:0}
+
+/* Loop 59: the Grimoire narrows by kind with one tap. */
+.grim-filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.grim-chip{min-height:44px;padding:6px 14px;border-radius:999px;font-family:var(--serif-body);font-size:16px;background:#1d1822;border:1px solid #8f6420;color:#e8dcc2}
+.grim-chip span{opacity:.6;margin-left:4px}
+.grim-chip.on{background:linear-gradient(180deg,#fbe8b0,#c9953a);color:#2a1a08;border-color:#2a1a08}
