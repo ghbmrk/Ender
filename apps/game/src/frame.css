@@ -543,32 +543,48 @@
   min-width: 240px;
 }
 
-/* ── Dodge and Parry: the bottom thumb arc. Dodge fills the bottom-left, Parry the bottom-right,
-   edge to edge and down to the bottom of the screen; the impact pips sit in the gutter between. ── */
+/* ── Dodge and Parry: one-thumb play. Stacked in the right column, Parry in the bottom-right corner
+   where a right thumb rests and Dodge just above it. ── */
 .defense {
   flex: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 60px minmax(0, 1fr);
-  grid-template-areas: "dodge pips parry";
-  gap: 0 14px;
-  align-items: stretch;
-  margin: 18px -20px calc(-22px - var(--safe-b));
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 -20px calc(-22px - var(--safe-b)) 0;
+}
+.defense > .def-btn {
+  flex: 1;
 }
 .stage .def-btn {
   width: auto;
   height: auto;
-  min-height: 260px;
-  padding: 10px 16px calc(14px + var(--safe-b));
+  min-height: 140px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: start;
+  column-gap: 22px;
+  padding: 8px 24px;
   border-width: 8px;
-  border-bottom-width: 0;
-  font-size: 66px;
+  border-right-width: 0;
+  border-radius: 40px 0 0 40px;
+  font-size: 62px;
   letter-spacing: 0.06em;
+  text-align: left;
   text-shadow: 0 4px 0 #000a;
 }
+.stage .def-btn .def-glyph {
+  grid-row: 1 / 3;
+  align-self: center;
+}
+.stage .def-btn.parry {
+  border-bottom-width: 0;
+  border-radius: 40px 0 0 0;
+  padding-bottom: calc(8px + var(--safe-b));
+}
 .stage .def-btn.dodge {
-  grid-area: dodge;
-  border-left-width: 0;
-  border-radius: 0 48px 0 0;
   background:
     radial-gradient(ellipse at 50% 12%, #ffffff33, transparent 45%) padding-box,
     var(--tex-grain) padding-box,
@@ -577,9 +593,6 @@
   box-shadow: 0 0 0 4px var(--ink-deep), inset 0 0 0 3px #b3cbf566, inset 0 -18px 30px #0008;
 }
 .stage .def-btn.parry {
-  grid-area: parry;
-  border-right-width: 0;
-  border-radius: 48px 0 0 0;
   background:
     radial-gradient(ellipse at 50% 12%, #ffffff33, transparent 45%) padding-box,
     var(--tex-grain) padding-box,
@@ -599,8 +612,11 @@
   filter: drop-shadow(0 3px 0 #000);
 }
 .impacts {
-  grid-area: pips;
+  flex: 1;
+  flex-direction: row;
+  flex-wrap: wrap;
   justify-content: center;
+  align-content: center;
   gap: 16px;
 }
 .impacts .pip {
@@ -1835,4 +1851,152 @@ table,
 .stage .station.st-gate,
 .stage .station.st-loom {
   max-width: 460px;
+}
+
+/* ── One-thumb battle panel: status on the left, every frequent tap in the right column, inside the
+   arc a right thumb sweeps from the bottom-left corner to halfway up the right edge. ── */
+.bpanel.thumb {
+  flex-direction: row;
+  gap: 18px;
+}
+.bp-left {
+  flex: 0 0 37%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bp-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.bpanel.thumb .ps-name {
+  font-size: 36px;
+}
+.bpanel.thumb .cards {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -20px 0 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(120px, 1fr);
+  gap: 12px;
+  overflow-y: auto;
+}
+.bpanel.thumb .card {
+  border-right-width: 0;
+  border-radius: 18px 0 0 18px;
+}
+/* Three or more cards in the column: one rules line each. */
+.bpanel.thumb .cards:has(> .card:nth-child(3)) .card-line.dim {
+  display: none;
+}
+.bpanel.thumb .cards:has(> .card:nth-child(3)) .card-top + .card-line {
+  margin-top: 16px;
+}
+.bpanel.thumb .ally-pick,
+.bpanel.thumb .tap-anywhere {
+  margin-top: 30px;
+  text-align: center;
+}
+.bpanel.thumb .defense > .def-btn {
+  align-self: stretch;
+  width: auto;
+  margin: 0;
+}
+.bpanel.thumb .def-btn.dodge {
+  border-radius: 40px 0 0 40px;
+}
+/* The hero's plaque fills the left column, so it never leaves a hole under it. */
+.bpanel.thumb .party-strip {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.bpanel.thumb .ps {
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.bpanel.thumb .ps .head {
+  width: 104px !important;
+  height: 104px !important;
+  align-self: center;
+}
+.bpanel.thumb .ps-name {
+  justify-content: center;
+  text-align: center;
+}
+.bpanel.thumb .ps-hp {
+  width: 100%;
+  text-align: center;
+}
+.bpanel.thumb .ap-pips {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.bpanel.thumb .ap-pips span {
+  width: 24px;
+  height: 24px;
+}
+/* While defending, the incoming blows show along the plaque's foot. */
+.bpanel.thumb .bp-left .impacts {
+  flex: none;
+  min-height: 56px;
+}
+
+/* Crossing: the hero on the left, Loom and Set out under the right thumb. */
+.hub-party.hub-bar {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 18px;
+}
+.hub-bar .hub-hero {
+  margin-right: auto;
+}
+.stage .hub-bar button.big {
+  min-height: 130px;
+  min-width: 0;
+  padding: 0 34px;
+  font-size: 48px;
+}
+.stage .hub-bar button.big.primary {
+  flex: 0 0 40%;
+}
+
+/* On phones every menu panel is a bottom sheet: its content and its main button rise from the bottom
+   edge into the thumb zone, and it is only as tall as it needs to be. */
+@media (max-width: 700px) {
+  .panel-backdrop {
+    place-items: end stretch;
+    align-content: end;
+  }
+  .panel-backdrop > .panel,
+  .panel-backdrop > .panel.wide {
+    width: 100%;
+    height: auto;
+    max-height: 92dvh;
+    border-radius: 18px 18px 0 0;
+    border-width: 3px 0 0;
+  }
+  .panel .row.end {
+    justify-content: stretch;
+  }
+  .panel .row.end > button.primary {
+    flex: 1;
+    min-height: 56px;
+    font-size: 20px;
+  }
+}
+/* Quiet developer switch on the title. */
+.stage .title-actions button.small.ghost {
+  opacity: 0.5;
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
 }

@@ -724,38 +724,46 @@ export function BattleScreen({
         </button>
       )}
 
-      <div className="bpanel" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
-        <PartyStrip b={battle} active={active?.side === "party" ? active.id : null} />
-        {/* Between turns the hero's cards stay in place, dimmed, so the panel never empties and the thumbs know where to go. */}
-        {(phase.k === "wait" || phase.k === "intro") && battle.living("party")[0] && (
-          <div className="cards-idle" aria-hidden>
-            <Commands b={battle} actor={battle.living("party")[0]!.id} ally={false} basicOnly={lesson?.commands === "basic"} onPick={() => {}} onCancel={() => {}} idle />
-          </div>
-        )}
-        {(phase.k === "command" || phase.k === "ally") && <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "command" ? "basic" : coach?.key === "skill" ? "actions" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />}
-        {phase.k === "defend" && s?.k === "defend" && (
-          <div className="defense">
-            <button className={`def-btn dodge ${lesson?.step === "dodge" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "dodge"))} data-testid="dodge">
-              <span className="def-glyph">⤺</span>
-              DODGE
-              <small>forgiving</small>
-            </button>
+      {/* One-thumb panel: everything pressed often sits in the right column, inside a right thumb's reach;
+          the hero's status (and the incoming blows while defending) fill the left. */}
+      <div className="bpanel thumb" style={{ top: PANEL_TOP + stageH - STAGE_H }}>
+        <div className="bp-left">
+          <PartyStrip b={battle} active={active?.side === "party" ? active.id : null} />
+          {phase.k === "defend" && s?.k === "defend" && (
             <div className="impacts">
               {s.impacts.map((_, i) => {
                 const r = s.tracker.resultAt(i);
                 return <span key={i} className={`pip ${r ?? ""}`} />;
               })}
             </div>
-            {lesson?.defense !== "dodge" && (
-            <button className={`def-btn parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "parry"))} data-testid="parry">
-              <span className="def-glyph">⚔</span>
-              PARRY
-              <small>tight · +1 AP · Break</small>
-            </button>
-            )}
-          </div>
-        )}
-        {phase.k === "attack" && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
+          )}
+        </div>
+        <div className="bp-right">
+          {/* Between turns the hero's cards stay in place, dimmed, so the panel never empties and the thumb knows where to go. */}
+          {(phase.k === "wait" || phase.k === "intro") && battle.living("party")[0] && (
+            <div className="cards-idle" aria-hidden>
+              <Commands b={battle} actor={battle.living("party")[0]!.id} ally={false} basicOnly={lesson?.commands === "basic"} onPick={() => {}} onCancel={() => {}} idle />
+            </div>
+          )}
+          {(phase.k === "command" || phase.k === "ally") && <Commands b={battle} actor={phase.actor} ally={phase.k === "ally"} basicOnly={lesson?.commands === "basic"} pulse={coach?.key === "command" ? "basic" : coach?.key === "skill" ? "actions" : null} onPick={chooseCommand} onCancel={() => setPhase({ k: "command", actor: phase.actor })} />}
+          {phase.k === "defend" && s?.k === "defend" && (
+            <div className="defense">
+              <button className={`def-btn dodge ${lesson?.step === "dodge" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "dodge"))} data-testid="dodge">
+                <span className="def-glyph">⤺</span>
+                DODGE
+                <small>forgiving</small>
+              </button>
+              {lesson?.defense !== "dodge" && (
+                <button className={`def-btn parry ${lesson?.step === "parry" && coach?.key === "defend" ? "coach-pulse" : ""}`} onPointerDown={(e) => (e.stopPropagation(), pressDefend(s, elapsed(s), "parry"))} data-testid="parry">
+                  <span className="def-glyph">⚔</span>
+                  PARRY
+                  <small>tight · +1 AP · Break</small>
+                </button>
+              )}
+            </div>
+          )}
+          {phase.k === "attack" && <div className="tap-anywhere">{s?.k === "attack" && s.weakHit === null ? "Tap a weak point!" : "Tap anywhere as the ring meets the mark"}</div>}
+        </div>
       </div>
 
       {phase.k === "end" && (

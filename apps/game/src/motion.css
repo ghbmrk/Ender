@@ -293,3 +293,26 @@
 .battle .world {
   z-index: 0;
 }
+
+/* Painted backdrops cover the whole stage on tall phones (cropping a little off the sides), so no
+   screen shows an empty band above or below its scene. The world's figures stay put. */
+.world > .backdrop {
+  transform: scale(var(--cover, 1));
+  transform-origin: 50% 50%;
+}
+
+/* The Loom is laid out from the stage's top edge, so its bottom bar and summary anchor to the stage's foot. */
+.stage .loom-screen .loom-done {
+  top: calc(var(--stage-h) - 178px - var(--safe-b));
+}
+.loom-screen .compile {
+  bottom: calc(1920px - var(--stage-h) + 178px + var(--safe-b));
+}
+/* Toasts are news, not controls: they appear at the top, clear of the thumb zone. */
+.toasts {
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  bottom: auto;
+  left: 16px;
+  right: 16px;
+  align-items: center;
+}

@@ -22,7 +22,7 @@ import { api } from "../../api";
 import { leaveShrine, refreshLoom } from "../../game/flow";
 import { DEMO_LOOMS } from "../../game/demo";
 import { getState, setState, toast, useStore } from "../../state/store";
-import { useStage, useWorldTop } from "../Stage";
+import { useStage } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH, ROLE_GLYPH, ROLE_NAME } from "../affinity";
 import { Head } from "../battle/Figure";
 import { sfx } from "../battle/sfx";
@@ -31,18 +31,29 @@ import { heroFigure, lookFor, partyRoots, rootLabel } from "../../game/hero";
 import { Coach } from "../Coach";
 import { CardArt } from "../CardArt";
 
-/** Flat-topped hexes on the portrait stage. */
-const HEX = 104;
+/**
+ * Flat-topped hexes on the portrait stage. The Loom lays itself out from the top of the stage down, and a
+ * taller phone gets bigger hexes and a taller tray rather than empty bands (set each render by fitLoom).
+ */
+let HEX = 104;
 const CX = 540;
-const CY = 700;
+let CY = 700;
 const cellXY = (q: number, r: number): [number, number] => [CX + HEX * 1.5 * q, CY + HEX * Math.sqrt(3) * (r + q / 2)];
 const hexPath = (x: number, y: number, s: number) =>
   Array.from({ length: 6 }, (_, i) => {
     const a = (Math.PI / 3) * i;
     return `${i ? "L" : "M"}${(x + s * Math.cos(a)).toFixed(1)} ${(y + s * Math.sin(a)).toFixed(1)}`;
   }).join(" ") + " Z";
-const TRAY_TOP = 1150;
-const TRAY_H = 250;
+let TRAY_TOP = 1150;
+let TRAY_H = 250;
+function fitLoom(stageH: number, tabs: boolean) {
+  const extra = Math.max(0, stageH - 1920);
+  HEX = Math.round(104 + Math.min(22, extra * 0.05));
+  // A radius-2 board reaches 4.33 hexes above and below its centre.
+  CY = Math.round((tabs ? 290 : 170) + 4.33 * HEX);
+  TRAY_TOP = Math.round(CY + 4.33 * HEX + 30);
+  TRAY_H = Math.round(250 + extra * 0.3);
+}
 
 type Layout = Record<RootId, LoomNode[]>;
 type Drag = { node: LoomNode; from: "board" | "pool"; x: number; y: number; over: { q: number; r: number } | "tray" | null; moved: boolean };
@@ -69,8 +80,10 @@ export function LoomScreen() {
   const [diff, setDiff] = useState<string[]>([]);
   const press = useRef<{ id: string; t: number; timer: number; x: number; y: number } | null>(null);
   const lastTap = useRef<{ id: string; t: number } | null>(null);
-  const { toStage: rawToStage } = useStage();
-  const worldTop = useWorldTop();
+  const { toStage: rawToStage, h: stageH } = useStage();
+  // The Loom is laid out from the stage's top edge, not centred like the painted scenes.
+  const worldTop = 0;
+  fitLoom(stageH, roots.length > 1);
   const toStage = (x: number, y: number) => {
     const p = rawToStage(x, y);
     return { x: p.x, y: p.y - worldTop };
@@ -229,14 +242,14 @@ export function LoomScreen() {
           {inRun && editable ? "Leave Shrine" : "Done"}
         </button>}
       </header>
-      <div className="hero-tabs">
+      {roots.length > 1 && <div className="hero-tabs">
         {roots.map((r) => (
           <button key={r} className={`hero-tab ${r === hero ? "on" : ""} ${lesson && r === mine && hero !== mine ? "coach-pulse" : ""}`} onClick={() => (setHero(r), setDiff([]), setSelected(null))} data-testid={`loom-tab-${r}`}>
             <Head figure={heroFigure(r)} size={64} look={lookFor(r)} />
             <span>{rootLabel(r)}</span>
           </button>
         ))}
-      </div>
+      </div>}
 
       <svg className="loom-board" viewBox="0 0 1080 1920">
         {/* cells */}
@@ -300,7 +313,7 @@ export function LoomScreen() {
       </div>
 
       {coach && !drag?.moved && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: 985 }} />}
-      <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} />
+      <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} top={TRAY_TOP + TRAY_H + 20} />
 
       {drag?.moved && (
         <svg className="drag-ghost" viewBox="0 0 1080 1920">
@@ -412,9 +425,9 @@ function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost }: {
   );
 }
 
-function CompilePreview({ c, diff, previewing }: { c: CompiledLoom; diff: string[]; previewing: boolean }) {
+function CompilePreview({ c, diff, previewing, top }: { c: CompiledLoom; diff: string[]; previewing: boolean; top: number }) {
   return (
-    <div className={`compile ${previewing ? "previewing" : ""}`} data-testid="compile-preview">
+    <div className={`compile ${previewing ? "previewing" : ""}`} style={{ top }} data-testid="compile-preview">
       <div className="compile-cols">
         <div>
           <h3>Actions</h3>

@@ -37,7 +37,7 @@ export function Stage({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{ scale, h, toStage }}>
       <div className="stage-frame">
-        <div ref={box} className="stage" style={{ width: STAGE_W, height: h, ["--stage-h" as string]: `${h}px`, transform: `translate(-50%, -50%) scale(${scale})` }}>
+        <div ref={box} className="stage" style={{ width: STAGE_W, height: h, ["--stage-h" as string]: `${h}px`, ["--cover" as string]: h / STAGE_H, transform: `translate(-50%, -50%) scale(${scale})` }}>
           {children}
         </div>
       </div>

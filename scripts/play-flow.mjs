@@ -30,7 +30,7 @@ await page.waitForSelector(tid("loom"));
 await page.waitForTimeout(600);
 await shot("flow-loom");
 await page.click(tid("loom-done"));
-await page.click(tid("station-gate"));
+await page.click(tid("hub-gate"));
 await page.waitForSelector('[data-testid^="enter-"]');
 await shot("flow-gate");
 await page.click('[data-testid^="enter-"]');
