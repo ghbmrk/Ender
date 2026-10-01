@@ -214,10 +214,14 @@ export class Battle {
     ];
   }
 
+  /** A foe just stepped up: the coming round opens with the party, so no foe strikes before the hero has moved. */
+  private opening = true;
+
   private roundOrder() {
+    const lead = (u: Unit) => (this.opening && u.side === "party" ? 1 : 0);
     return this.units
       .filter((u) => u.alive)
-      .sort((a, b) => this.effectiveSpeed(b) - this.effectiveSpeed(a) || (a.side === b.side ? 0 : a.side === "party" ? -1 : 1) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .sort((a, b) => lead(b) - lead(a) || this.effectiveSpeed(b) - this.effectiveSpeed(a) || (a.side === b.side ? 0 : a.side === "party" ? -1 : 1) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
       .map((u) => u.id);
   }
 
@@ -245,6 +249,7 @@ export class Battle {
 
   private spawnWave(i: number) {
     this.waveIndex = i;
+    this.opening = true;
     const spawned = (this.setup.waves[i] ?? []).slice(0, this.setup.fieldCap ?? FIELD_CAP).map((k) => this.makeFoe(k));
     this.units.push(...spawned);
     return spawned.map((u) => u.id);
@@ -262,6 +267,7 @@ export class Battle {
       }
     }
     this.order = this.roundOrder();
+    this.opening = false;
     // Initiative changes apply to the round they were earned for, then clear.
     for (const u of this.units) {
       u.initBonus = 0;

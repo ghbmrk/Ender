@@ -130,7 +130,8 @@ export function Crossing() {
     else if (id === "grimoire") setState({ panel: "grimoire" });
     else if (id === "loom") {
       setState({ screen: "loom", loomEditable: true });
-      refreshLoom().catch((e) => toast(e.message, "loss"));
+      // The Loom opens on the copy already held; the fresh read waits until it's on screen, so the two never share a frame.
+      requestAnimationFrame(() => setTimeout(() => refreshLoom().catch((e) => toast(e.message, "loss")), 0));
     }
   };
   return (

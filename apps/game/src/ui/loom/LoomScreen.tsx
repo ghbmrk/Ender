@@ -67,7 +67,8 @@ type Drag = { node: LoomNode; from: "board" | "pool"; x: number; y: number; over
 
 const DEMO = new URLSearchParams(location.search).get("demo") === "loom";
 
-export function LoomScreen() {
+/** `ghost`: an invisible, inert copy mounted once ahead of time, so the first real visit finds the page's code and text already warm. */
+export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
   const server = useStore((s) => s.loom);
   const editable = useStore((s) => s.loomEditable) || DEMO;
   const inRun = useStore((s) => !!s.expedition);
@@ -96,7 +97,7 @@ export function LoomScreen() {
   };
 
   useEffect(() => {
-    if (!DEMO && !server) refreshLoom().catch((e) => toast(e.message, "loss"));
+    if (!DEMO && !server && !ghost) refreshLoom().catch((e) => toast(e.message, "loss"));
   }, []);
 
   // ───────────── weaving: new Forms become nodes right here ─────────────
@@ -106,7 +107,7 @@ export function LoomScreen() {
   const [weaving, setWeaving] = useState<any | null>(null);
   /** A pool node (by Form id) waiting for the player to tap a cell. */
   const [placing, setPlacing] = useState<string | null>(null);
-  const loadRaw = () => (DEMO || lesson ? Promise.resolve() : api.inventory().then((inv) => setRaw(inv.artifacts.filter(isRaw))).catch(() => null));
+  const loadRaw = () => (DEMO || lesson || ghost ? Promise.resolve() : api.inventory().then((inv) => setRaw(inv.artifacts.filter(isRaw))).catch(() => null));
   useEffect(() => {
     loadRaw();
   }, []);
@@ -350,7 +351,7 @@ export function LoomScreen() {
   };
 
   return (
-    <div className="loom-screen" onPointerDownCapture={boardTap} onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid="loom">
+    <div className="loom-screen" onPointerDownCapture={boardTap} onPointerMove={move} onPointerUp={up} onPointerCancel={up} data-testid={ghost ? undefined : "loom"}>
       <div className="loom-bg" />
       <div className="world" style={{ top: worldTop }}>
       <header className="loom-head">
