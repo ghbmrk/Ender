@@ -1015,3 +1015,30 @@
   25% { filter: brightness(2.2) saturate(0.2); transform: translateY(0) scaleY(1); opacity: 1; }
   100% { filter: brightness(3) saturate(0); transform: translateY(30px) scaleY(0.15); opacity: 0; }
 }
+
+/* Loop 11: each realm card opens on a window of its painted backdrop. */
+.realm-card .realm-head.has-art {
+  min-height: 118px;
+  display: flex;
+  align-items: flex-end;
+  background:
+    linear-gradient(180deg, rgba(20, 14, 22, 0) 25%, rgba(20, 14, 22, 0.88) 100%),
+    var(--realm-art) center 58% / cover no-repeat;
+}
+.realm-card .realm-head.has-art h3,
+.realm-card .realm-head.has-art .diff {
+  text-shadow: 0 2px 0 #000, 0 0 12px #000;
+}
+.realm-card .realm-head.has-art {
+  align-items: last baseline;
+  padding-bottom: 12px;
+}
+
+/* Loop 11: the drawn hero beside painted foes. A soft ink outline and a warm rim of light from the scene
+   pull the flat figure into the painting; painted foes get a matching contact shadow. */
+.battle .unit.party .fig-svg {
+  filter: drop-shadow(0 0 1.5px rgba(10, 6, 4, 0.85)) drop-shadow(-6px -4px 14px rgba(255, 214, 150, 0.22)) saturate(0.92) contrast(1.06);
+}
+.battle .unit.foe .fig-img {
+  filter: drop-shadow(0 0 1.5px rgba(10, 6, 4, 0.7)) drop-shadow(0 12px 18px rgba(0, 0, 0, 0.45));
+}

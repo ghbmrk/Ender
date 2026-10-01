@@ -1,3 +1,4 @@
+import { paintedBackdrop } from "../art/painted";
 import { useEffect, useState } from "react";
 import { startExpedition, refreshWorld } from "../game/flow";
 import { toast, useStore } from "../state/store";
@@ -28,7 +29,7 @@ export function RealmGate() {
       <div className="realm-grid">
         {world.realms.map((r: any) => (
           <div key={r.id} className="realm-card" data-testid={`realm-${r.id}`}>
-            <div className="realm-head">
+            <div className={`realm-head ${paintedBackdrop(r.id) ? "has-art" : ""}`} style={paintedBackdrop(r.id) ? { ["--realm-art" as string]: `url(${paintedBackdrop(r.id)})` } : undefined}>
               <h3>{r.name}</h3>
               <span className="diff">Difficulty {r.difficultyLabel}</span>
             </div>
