@@ -2,6 +2,7 @@ import { useEffect, useState, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import { toast, useStore } from "./state/store";
 import { markFailed, markReady } from "./ready";
+import { warm } from "./art/ondevice/store";
 import { Stage } from "./ui/Stage";
 import { Landing } from "./ui/Landing";
 import { Toasts } from "./ui/Toasts";
@@ -26,6 +27,8 @@ const rest = (async () => {
   (window as any).__ender = { debug, getState: store.getState, setState: store.setState, api };
   App = app.App;
   markReady();
+  // On-device character art: start the painter behind the first screen and keep the hero's paint current.
+  void import("./art/ondevice/useArt").then((m) => m.watchHero());
   if ((window as { __enderNoSave?: boolean }).__enderNoSave) toast("Your save couldn't be read in this browser just now, so this session won't be saved. Reload to try again.", "loss");
 })().catch((e) => {
   markFailed(e);
@@ -37,6 +40,8 @@ function Boot() {
   const [, setLoaded] = useState(false);
   useEffect(() => {
     void rest.then(() => setLoaded(true));
+    // The painter's model is big: it starts downloading once the title is up, so it's in before it's needed.
+    warm();
   }, []);
   if (App) return <App />;
   // Before the rest is in: the title for someone who hasn't signed in, else the loading screen.

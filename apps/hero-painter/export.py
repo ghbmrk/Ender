@@ -7,7 +7,7 @@ Writes model/manifest.json plus weight chunks (<=14 MB each):
   - the time-embedding bias of every ResNet, precomputed for a few timesteps (the phone never runs that path)
   - CLIP embeddings of every trait phrase (the phone never runs the text encoder)
 """
-import json, math, sys, struct, numpy as np, torch
+import hashlib, json, math, sys, struct, numpy as np, torch
 from diffusers import UNet2DConditionModel, AutoencoderTiny
 from transformers import CLIPTokenizer, CLIPTextModel
 
@@ -88,8 +88,10 @@ with torch.no_grad():
 # write chunks
 files = []
 for i in range(0, len(blob), CHUNK):
-  fn = f"w{len(files):02d}.bin"
-  open(f"{OUT}/{fn}", "wb").write(blob[i : i + CHUNK])
+  part = bytes(blob[i : i + CHUNK])
+  # Named by content, so a browser cache never mixes chunks from two exports (only changed chunks get new names).
+  fn = f"w{len(files):02d}-{hashlib.sha256(part).hexdigest()[:8]}.bin"
+  open(f"{OUT}/{fn}", "wb").write(part)
   files.append(fn)
 json.dump(dict(model=REPO, bits=BITS, group=G, files=files, chunk=CHUNK, total=len(blob),
                timesteps=TIMESTEPS, alphas_cumprod={t: float(acp[t]) for t in TIMESTEPS},

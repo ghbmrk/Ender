@@ -9,6 +9,8 @@ import { SceneBackdrop } from "../../art/SceneBackdrop";
 import { finishExpedition, leaveShrine, nodeById, reachable, stepTo } from "../../game/flow";
 import { setState, toast, useStore, type MapNode } from "../../state/store";
 import { Head } from "../battle/Figure";
+import { FoeHead, HeroHead } from "../battle/ArtHeads";
+import { prepaintFoes } from "../../art/ondevice/useArt";
 import { useStage } from "../Stage";
 
 const KIND: Record<string, { glyph: string; name: string }> = {
@@ -92,6 +94,8 @@ export function MapScreen() {
   };
   const reach = reachable();
   const next = new Set(reach.map((n) => n.id));
+  // Paint the foes ahead on this device while the player weighs the map, so each fight opens with its art ready.
+  useEffect(() => prepaintFoes(reach), [reach.map((n) => n.id).join()]);
   // A tap on a stop you can't reach yet says where you can go, and the reachable stops flash.
   const [nudge, setNudge] = useState(0);
   const Back = backdropFor(ex.plan.realmId, false)?.default;
@@ -165,7 +169,7 @@ export function MapScreen() {
             {next.has(n.id) && n.encounter && n.kind !== "mystery" ? (
               <span className="mn-foe">
                 <span className="mn-face">
-                  <Head figure={FOES[n.encounter.waves.flat()[0] as FoeKind]?.figure ?? n.encounter.waves.flat()[0]!} size={124} />
+                  <FoeHead kind={n.encounter.waves.flat()[0]!} nodeId={n.id} size={124} />
                 </span>
                 {n.encounter.waves.flat().length > 1 && <b className="mn-more">×{n.encounter.waves.flat().length}</b>}
               </span>
@@ -182,7 +186,7 @@ export function MapScreen() {
       })}
       {here && (
         <div className="map-marker" style={{ left: pos(here)[0], top: pos(here)[1] }}>
-          <Head figure={heroFigure(getStoreState().hero?.root ?? "iron")} look={getStoreState().hero?.look} size={70} />
+          <HeroHead size={70} />
         </div>
       )}
       {reveal && (
@@ -209,7 +213,7 @@ export function MapScreen() {
             <span className="mc-face">
               {reveal.node.encounter ? (
                 <>
-                  <Head figure={FOES[reveal.node.encounter.waves.flat()[0] as FoeKind]?.figure ?? "husk"} size={220} />
+                  <FoeHead kind={reveal.node.encounter.waves.flat()[0] ?? "husk"} nodeId={reveal.node.id} size={220} />
                   <b>Ambush!</b>
                   <small>{withArticle(FOES[reveal.node.encounter.waves.flat()[0] as FoeKind]?.name ?? "Something")} springs out</small>
                 </>
@@ -289,7 +293,7 @@ export function MapScreen() {
       {omen && omen.encounter && (
         <button className="boss-omen" onClick={() => setOmen(null)} data-testid="boss-omen">
           <span className="bo-face">
-            <Head figure={FOES[omen.encounter.waves.flat()[0] as FoeKind]?.figure ?? "husk"} size={260} />
+            <FoeHead kind={omen.encounter.waves.flat()[0] ?? "husk"} nodeId={omen.id} size={260} />
           </span>
           <b>{FOES[omen.encounter.waves.flat()[0] as FoeKind]?.name ?? "The Boss"}</b>
           <small>waits at the top of the climb</small>
@@ -311,7 +315,7 @@ export function MapScreen() {
           const gain = hp - was;
           return (
             <div key={r} className="mp-hero">
-              <Head figure={heroFigure(r)} size={96} look={lookFor(r)} />
+              {lookFor(r) ? <HeroHead size={96} /> : <Head figure={heroFigure(r)} size={96} />}
               <div className="mp-hp">
                 <span className="mp-name">{rootLabel(r)}</span>
                 <div className="gbar hp hero">

@@ -19,6 +19,7 @@ import { refreshLoom } from "../../game/flow";
 import { setState, toast, useStore } from "../../state/store";
 import { essenceColor, essenceGlyph } from "../../economy/format";
 import { Head } from "../battle/Figure";
+import { HeroHead } from "../battle/ArtHeads";
 import { useWorldTop } from "../Stage";
 import { Coach } from "../Coach";
 import { finishTutorial } from "../../game/tutorial";
@@ -162,7 +163,7 @@ export function Crossing() {
       <div className="hub-party hub-bar">
         {partyRoots().map((r) => (
           <div key={r} className="hub-hero">
-            <Head figure={heroFigure(r)} size={92} look={lookFor(r)} />
+            {lookFor(r) ? <HeroHead size={92} /> : <Head figure={heroFigure(r)} size={92} />}
             <span>{rootLabel(r)}</span>
           </div>
         ))}

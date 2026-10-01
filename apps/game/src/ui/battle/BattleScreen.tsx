@@ -30,6 +30,10 @@ import { debug } from "../../game/debug";
 import type { CoachKey, Lesson } from "../../game/tutorial";
 import { Coach } from "../Coach";
 import { lookFor } from "../../game/hero";
+import { getState } from "../../state/store";
+import { foeSpec } from "../../art/ondevice/specs";
+import { artNow, type Art } from "../../art/ondevice/store";
+import { foeWhere, useHeroArt } from "../../art/ondevice/useArt";
 import { Cues } from "./cues";
 
 export type BattleResult = {
@@ -135,6 +139,18 @@ export function BattleScreen({
   onEnd: (r: BattleResult) => void;
 }) {
   const battle = useMemo(() => new Battle(withDebug(setup)), [setup]);
+  // Characters painted on this device, fixed for the whole fight from the moment each one first shows.
+  const heroArt = useHeroArt();
+  const artSeen = useRef(new Map<string, Art | undefined>());
+  const artOf = (u: Unit): Art | undefined => {
+    const seen = artSeen.current;
+    if (!seen.has(u.id)) {
+      const nodeId = getState().battle?.nodeId;
+      // Prologue fights (no map stop) keep the pre-painted foes.
+      seen.set(u.id, u.side === "party" ? (lookFor(u.kind) ? heroArt : undefined) : nodeId ? artNow(foeSpec(u.kind, foeWhere(nodeId))?.key) : undefined);
+    }
+    return seen.get(u.id);
+  };
   const [, force] = useReducer((n: number) => n + 1, 0);
   const [phase, setPhase] = useState<Phase>({ k: "intro" });
   const [target, setTarget] = useState<string | null>(null);
@@ -813,7 +829,7 @@ export function BattleScreen({
                   </div>
                 )}
                 <div className="bob">
-                  <Fig bake look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
+                  <Fig bake art={artOf(u)} look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${artOf(u) ? "" : u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
                 </div>
                 {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} />}
                 {u.side === "party" && <HeroTag u={u} h={figureBox(u.figure, figScale(u)).h} />}
@@ -859,7 +875,7 @@ export function BattleScreen({
 
       </div>
 
-      <Timeline b={battle} tl={tl} />
+      <Timeline b={battle} tl={tl} artOf={artOf} />
       {bossUnit && bossUnit.alive && <BossBar u={bossUnit} />}
 
       {caption && (
@@ -1100,13 +1116,13 @@ function BossBar({ u }: { u: Unit }) {
   );
 }
 
-function Timeline({ b, tl }: { b: Battle; tl: { round: number; ids: string[] }[] }) {
+function Timeline({ b, tl, artOf }: { b: Battle; tl: { round: number; ids: string[] }[]; artOf: (u: Unit) => Art | undefined }) {
   const [now, next] = tl;
   const cell = (id: string, i: number, soon: boolean) => {
     const u = b.unit(id);
     return (
       <div key={`${soon ? "n" : "c"}${i}-${id}`} className={`tl-cell ${u.side} ${i === 0 && !soon ? "now" : ""} ${u.broken ? "is-broken" : ""}`}>
-        <Head look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} size={i === 0 && !soon ? 96 : 72} />
+        <Head look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} size={i === 0 && !soon ? 96 : 72} art={artOf(u)} />
       </div>
     );
   };

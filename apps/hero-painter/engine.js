@@ -315,7 +315,7 @@ const f16 = (h) => {
 };
 const F16 = new Float32Array(65536).map((_, i) => f16(i));
 
-export async function createPainter({ manifest, fetchChunk, onProgress = () => {}, adapter }) {
+export async function createPainter({ manifest, fetchChunk, onProgress = () => {}, adapter, gate: loadGate = null }) {
   adapter = adapter || (await navigator.gpu?.requestAdapter({ powerPreference: "high-performance" }));
   if (!adapter) throw new Error("WebGPU is not available in this browser.");
   const L = adapter.limits;
@@ -387,7 +387,8 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
   let used = 0;
   const kick = () => { while (nextFetch < files.length && nextFetch < used + 3) { inflight[nextFetch] = fetchChunk(files[nextFetch]); nextFetch++; } };
   kick();
-  const yieldNow = () => new Promise((r) => setTimeout(r, 0));
+  // `loadGate` (optional) can hold loading back, e.g. while a fight is on screen.
+  const yieldNow = loadGate || (() => new Promise((r) => setTimeout(r, 0)));
   for (let fi = 0; fi < files.length; fi++) {
     const chunk = new Uint8Array(await inflight[fi]); inflight[fi] = null; used = fi + 1; kick();
     const merged = new Uint8Array(pending.length + chunk.length);
@@ -533,19 +534,32 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
     for (const [nm, r] of rb) { await r.mapAsync(GPUMapMode.READ); biasHost[nm.replace(/\.bias$/, ".bias")] = new Float32Array(r.getMappedRange().slice(0)); r.destroy(); }
   }
 
-  const unet = (x, ctx, M, t) => {
+  /**
+   * Between blocks, an optional gate can pause painting: the work so far is submitted and finished first, so the
+   * GPU never holds a long queue and the page's own frames (taps, animation) slip in between blocks.
+   */
+  let gate = null;
+  const step = async () => {
+    if (!gate) return;
+    device.queue.submit([enc.finish()]);
+    await device.queue.onSubmittedWorkDone();
+    await gate();
+    enc = device.createCommandEncoder();
+  };
+
+  const unet = async (x, ctx, M, t) => {
     let C = 4, H = 64, Wd = 64;
     let [h] = conv(x, 4, 64, 64, "unet.conv_in"); C = 320;
     const skips = [[h, C, H, Wd]];
     // down 0
-    let r; [r, C] = resnet(h, C, H, Wd, "unet.down_blocks.0.resnets.0", t); skips.push([r, C, H, Wd]);
+    let r; [r, C] = resnet(h, C, H, Wd, "unet.down_blocks.0.resnets.0", t); skips.push([r, C, H, Wd]); await step();
     let d; [d, C, H, Wd] = conv(r, C, H, Wd, "unet.down_blocks.0.downsamplers.0.conv", { s: 2 }); skips.push([d, C, H, Wd]);
     // down 1, 2
     h = d;
     for (const bi of [1, 2]) {
-      [r, C] = resnet(h, C, H, Wd, `unet.down_blocks.${bi}.resnets.0`, t);
+      [r, C] = resnet(h, C, H, Wd, `unet.down_blocks.${bi}.resnets.0`, t); await step();
       const a = transformer(r, C, H, Wd, `unet.down_blocks.${bi}.attentions.0`, ctx, M); free(r);
-      skips.push([a, C, H, Wd]); h = a;
+      skips.push([a, C, H, Wd]); h = a; await step();
       if (bi === 1) { [d, C, H, Wd] = conv(h, C, H, Wd, "unet.down_blocks.1.downsamplers.0.conv", { s: 2 }); skips.push([d, C, H, Wd]); h = d; }
     }
     // up blocks
@@ -558,8 +572,8 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
         enc.copyBufferToBuffer(s.b, 0, cat.b, C * H * Wd * 4, Cs * H * Wd * 4);
         if (!first) free(h); first = false;
         free(s);
-        let rr; [rr, C] = resnet(cat, C + Cs, H, Wd, `unet.up_blocks.${bi}.resnets.${ri}`, t); free(cat);
-        if (bi < 2) { h = transformer(rr, C, H, Wd, `unet.up_blocks.${bi}.attentions.${ri}`, ctx, M); free(rr); } else h = rr;
+        let rr; [rr, C] = resnet(cat, C + Cs, H, Wd, `unet.up_blocks.${bi}.resnets.${ri}`, t); free(cat); await step();
+        if (bi < 2) { h = transformer(rr, C, H, Wd, `unet.up_blocks.${bi}.attentions.${ri}`, ctx, M); free(rr); await step(); } else h = rr;
       }
       if (bi < 2) {
         const u = alloc(C * H * Wd * 4); elem("up2", [C, H, Wd, 0], { 1: h.b, 2: u.b }, C * H * Wd * 4); free(h);
@@ -572,21 +586,22 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
     return eps;
   };
 
-  const decode = (z) => {
+  const decode = async (z) => {
     let C = 4, H = 64, Wd = 64, h;
     [h, C] = conv(z, C, H, Wd, "dec.layers.0", { act: "relu" });
-    const block = (x, i) => {
+    const block = async (x, i) => {
       const [a] = conv(x, C, H, Wd, `dec.layers.${i}.conv.0`, { act: "relu" });
       const [b] = conv(a, C, H, Wd, `dec.layers.${i}.conv.2`, { act: "relu" }); free(a);
       const [c] = conv(b, C, H, Wd, `dec.layers.${i}.conv.4`, { act: "relu", res: x }); free(b, x);
+      await step();
       return c;
     };
-    for (const i of [2, 3, 4]) h = block(h, i);
+    for (const i of [2, 3, 4]) h = await block(h, i);
     for (const [u, c1, blocks] of [[5, 6, [7, 8, 9]], [10, 11, [12, 13, 14]], [15, 16, [17]]]) {
       const up = alloc(C * H * Wd * 4); elem("up2", [C, H, Wd, 0], { 1: h.b, 2: up.b }, C * H * Wd * 4); free(h);
       H *= 2; Wd *= 2;
       [h] = conv(up, C, H, Wd, `dec.layers.${c1}`); free(up);
-      for (const i of blocks) h = block(h, i);
+      for (const i of blocks) h = await block(h, i);
     }
     const [img] = conv(h, C, H, Wd, "dec.layers.18"); free(h);
     return img;
@@ -621,14 +636,15 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
    * Paint one 512x512 image. `traits` are phrase keys from the manifest; `seed` picks the noise (or pass `latent`).
    * Returns ImageData-ready RGBA bytes plus timings.
    */
-  async function paint({ traits, seed = 1, latent = null, debug = false }) {
+  async function paint({ traits, seed = 1, latent = null, debug = false, gate: g = null }) {
+    gate = g;
     const t0 = performance.now();
     const t = 999, a = manifest.alphas_cumprod[t];
     temp = [];
     enc = device.createCommandEncoder();
     const [ctx, M] = context(traits);
     const x = alloc(4 * 64 * 64); device.queue.writeBuffer(x.b, 0, latent || noise(seed));
-    const eps = unet(x, ctx, M, t); free(ctx);
+    const eps = await unet(x, ctx, M, t); free(ctx);
     const z = alloc(4 * 64 * 64);
     elem("step", [4 * 64 * 64, fl(Math.sqrt(a)), fl(Math.sqrt(1 - a)), 0], { 1: x.b, 2: eps.b, 3: z.b }, 4 * 64 * 64);
     device.queue.submit([enc.finish()]);
@@ -638,7 +654,7 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
     const t1 = performance.now();
     free(x, eps);
     enc = device.createCommandEncoder();
-    const img = decode(z); free(z);
+    const img = await decode(z); free(z);
     const px = alloc(512 * 512);
     elem("rgba", [512 * 512, 0, 0, 0], { 1: img.b, 2: px.b }, 512 * 512);
     device.queue.submit([enc.finish()]);
@@ -725,5 +741,5 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
   }
 
   const info = adapter.info || {};
-  return { paint, matte, device, phrases: manifest.phrases, gpuName: [info.vendor, info.architecture, info.description].filter(Boolean).join(" ") };
+  return { paint, matte, device, lost: device.lost, phrases: manifest.phrases, gpuName: [info.vendor, info.architecture, info.description].filter(Boolean).join(" ") };
 }
