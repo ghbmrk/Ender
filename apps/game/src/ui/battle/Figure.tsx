@@ -54,7 +54,7 @@ export const Head = memo(function Head({ figure, size, look }: { figure: string;
   if (painted)
     return (
       <div className="head" style={{ width: size, height: size }}>
-        <img src={painted} className="head-img" alt="" draggable={false} />
+        <img src={painted} className="head-img" data-fig={figure} alt="" draggable={false} />
       </div>
     );
   return (

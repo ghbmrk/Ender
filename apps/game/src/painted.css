@@ -26,3 +26,23 @@
 .head {
   position: relative;
 }
+
+/* Paintings whose head is not at the top centre get their own crop: the head's centre as shares of the
+   painting's width and height, and how much of the painting's height the portrait shows. */
+.head .head-img[data-fig="swarm"],
+.head .head-img[data-fig="wyrm"] {
+  left: 50%;
+  top: 50%;
+  height: calc(100% / var(--hs));
+  transform: translate(calc(var(--hx) * -100%), calc(var(--hy) * -100%));
+}
+.head .head-img[data-fig="swarm"] {
+  --hx: 0.5;
+  --hy: 0.3;
+  --hs: 0.36;
+}
+.head .head-img[data-fig="wyrm"] {
+  --hx: 0.2;
+  --hy: 0.15;
+  --hs: 0.3;
+}

@@ -965,8 +965,17 @@ function Timeline({ b, tl }: { b: Battle; tl: { round: number; ids: string[] }[]
     <div className="timeline" data-testid="timeline">
       <div className="tl-round">R{now!.round}</div>
       {now!.ids.slice(0, 8).map((id, i) => cell(id, i, false))}
-      <div className="tl-sep">R{next!.round}</div>
-      {next!.ids.slice(0, Math.max(0, 9 - now!.ids.length)).map((id, i) => cell(id, i, true))}
+      {/* Later rounds repeat the next round's order (as they will, unless a speed changes), so a duel's few
+          turns fill the bar instead of leaving most of it empty. */}
+      {Array.from({ length: 4 }, (_, k) => k).map((k) => {
+        const used = now!.ids.length + k * next!.ids.length;
+        const room = 9 - used;
+        if (room <= 0 || !next!.ids.length || (k > 0 && room < next!.ids.length)) return null;
+        return [
+          <div key={`sep${k}`} className="tl-sep">R{next!.round + k}</div>,
+          ...next!.ids.slice(0, room).map((id, i) => cell(id, i + k * 100, true)),
+        ];
+      })}
     </div>
   );
 }
