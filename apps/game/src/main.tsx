@@ -5,12 +5,14 @@ import { markFailed, markReady } from "./ready";
 import { Stage } from "./ui/Stage";
 import { Landing } from "./ui/Landing";
 import { Toasts } from "./ui/Toasts";
+// Screen stylesheets first, then the shared ones that refine them (the order they had before the split start).
+// They load with the first part: the single-file build dropped them when only lazy screens imported them.
+import "./coach.css";
+import "./create.css";
 import "./styles.css";
 import "./frame.css";
 import "./painted.css";
 import "./motion.css";
-// Coach styles load with the first part: the single-file build dropped them when only the lazy Coach imported them.
-import "./coach.css";
 import "./blind.css";
 
 /**
