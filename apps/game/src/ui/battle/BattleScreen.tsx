@@ -209,6 +209,8 @@ export function BattleScreen({
   /** Coach the player once per moment (lessons only). */
   // Taps on nothing during your turn, counted so the hint can answer each one; cleared as the turn moves on.
   const [stray, setStray] = useState(0);
+  // Whether the player has chosen a first move: until then a new lesson's banner stays up, so a glance can't miss it.
+  const [acted, setActed] = useState(false);
   useEffect(() => setStray(0), [phase]);
   const say = (key: CoachKey) => {
     const text = (drillRef.current === "parry" && lesson?.parryCoach?.[key]) || lesson?.coach[key];
@@ -912,6 +914,7 @@ export function BattleScreen({
     }
   };
   const chooseCommand = (actor: string, command: string) => {
+    setActed(true);
     // A tip about choosing has been acted on: clear it so it doesn't sit over the fight.
     setCoach((c) => (c && (c.key === "command" || c.key === "skill" || c.key === "ap") ? null : c));
     if (command !== "basic") {
@@ -1117,9 +1120,9 @@ export function BattleScreen({
       )}
       {lesson && (LESSON_NO[lesson.step] ?? 0) > 1 && (
         // Lessons hand straight on with no victory screen, and every lesson's foe is a fresh Husk at full health:
-        // a beat that names the win and the new lesson keeps it from reading as the last Husk healing. It plays over
-        // the fight and never holds a tap.
-        <div key={lesson.step} className="lesson-intro" data-testid="lesson-intro" aria-hidden>
+        // a banner that names the win and the new lesson keeps it from reading as the last Husk healing. It stays up
+        // until the first move and never holds a tap.
+        <div key={lesson.step} className={`lesson-intro ${acted ? "gone" : ""}`} data-testid="lesson-intro" aria-hidden>
           <small>Lesson {(LESSON_NO[lesson.step] ?? 2) - 1} done</small>
           <b>Lesson {LESSON_NO[lesson.step]} of 2</b>
           <span>A fresh {FOE_NAME(setup.waves[0]?.[0] ?? "foe")} steps up</span>
@@ -1194,7 +1197,7 @@ export function BattleScreen({
                   actor={who}
                   ally={phase.k === "ally"}
                   basicOnly={lesson?.commands === "basic"}
-                  pulse={!mine ? null : coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : null}
+                  pulse={!mine ? null : coach?.key === "skill" ? "actions" : coach?.key === "command" || lesson?.commands === "basic" ? "basic" : stray ? (battle.actionsOf(who).some((a) => battle.costOf(who, a.nodeId) <= battle.unit(who).ap) ? "actions" : "basic") : null}
                   onAim={mine ? setAim : undefined}
                   onPick={mine ? (a, c) => { setAim(0); chooseCommand(a, c); } : () => {}}
                   onCancel={mine ? () => setPhase({ k: "command", actor: phase.actor }) : () => {}}
