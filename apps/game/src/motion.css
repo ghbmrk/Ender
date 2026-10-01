@@ -1205,3 +1205,18 @@
 .fc-rules .eval .ev-verdict.bad {
   background: #9a2a3918;
 }
+
+/* Loop 15: on a phone the chosen Form opens at the top of the Crucible, and isn't repeated in the list. */
+@media (max-width: 720px) {
+  .crucible.crucible {
+    display: flex;
+    flex-direction: column;
+  }
+  .crucible.crucible .form-detail {
+    order: -1;
+    scroll-margin-top: 12px;
+  }
+  .crucible.crucible .form-list .form-card.selected {
+    display: none;
+  }
+}

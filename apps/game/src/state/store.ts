@@ -98,8 +98,26 @@ export function useStore<T>(sel: (s: State) => T): T {
 }
 
 let toastId = 0;
-export function toast(text: string, tone: Toast["tone"] = "info") {
+/** Notices show one at a time: a new one waits until the one on screen has had its moment. */
+const toastQueue: { text: string; tone: Toast["tone"] }[] = [];
+let toastShowing = false;
+function showNextToast() {
+  const next = toastQueue.shift();
+  if (!next) {
+    toastShowing = false;
+    return;
+  }
+  toastShowing = true;
   const id = ++toastId;
-  setState((s) => ({ toasts: [...s.toasts.slice(-3), { id, text, tone }] }));
-  setTimeout(() => setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3800);
+  setState((s) => ({ toasts: [{ id, ...next }] }));
+  // Shorter holds while others wait, so a burst of notices doesn't hang around.
+  setTimeout(() => {
+    setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+    setTimeout(showNextToast, 180);
+  }, toastQueue.length ? 2200 : 3800);
+}
+export function toast(text: string, tone: Toast["tone"] = "info") {
+  if (toastQueue.length >= 3) toastQueue.shift();
+  toastQueue.push({ text, tone });
+  if (!toastShowing) showNextToast();
 }

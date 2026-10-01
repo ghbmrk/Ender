@@ -111,12 +111,22 @@ export function Crucible() {
   const bestMargin = evaluated.reduce((m, f) => (f.evaluation.margin > (m?.evaluation.margin ?? -1e9) ? f : m), null as any);
 
   return (
-    <Panel title={mode === "mirror" ? "The Mirror" : "The Crucible"} subtitle={`✦ ${c?.focus ?? 0} Focus · each act of the Familiar costs Focus and teaches you (XP); only true results earn Mastery.`} wide testId="crucible">
+    <Panel title={mode === "mirror" ? "The Mirror" : "The Crucible"} subtitle={`✦ ${c?.focus ?? 0} Focus to spend. Every act costs Focus and earns XP; results that hold up earn Mastery.`} wide testId="crucible">
       <div className="crucible">
         <div className="form-list">
           {forms.length === 0 && <p className="dim">You hold no Forms. Fight in a Realm to find them.</p>}
           {forms.map((f) => (
-            <FormCard key={f.id} a={f} compact selected={f.id === sel} onClick={() => setSel(f.id)} />
+            <FormCard
+              key={f.id}
+              a={f}
+              compact
+              selected={f.id === sel}
+              onClick={() => {
+                setSel(f.id);
+                // On a phone the chosen Form opens above the list, so bring it into view.
+                document.querySelector(".form-detail")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
           ))}
         </div>
         <div className="form-detail">
