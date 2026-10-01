@@ -124,7 +124,7 @@ export function BattleScreen({
   onSkip?: () => void;
   onEnd: (r: BattleResult) => void;
 }) {
-  const battle = useMemo(() => new Battle(setup), [setup]);
+  const battle = useMemo(() => new Battle(withDebug(setup)), [setup]);
   const [, force] = useReducer((n: number) => n + 1, 0);
   const [phase, setPhase] = useState<Phase>({ k: "intro" });
   const [target, setTarget] = useState<string | null>(null);
@@ -1221,4 +1221,11 @@ export const FOE_NAME = (k: string) => FOES[k as FoeKind]?.name ?? k;
 function lastFoe(b: Battle) {
   const f = b.living("foe").sort((a, c) => (a.tier === "boss" ? -1 : c.tier === "boss" ? 1 : 0))[0];
   return f ? { name: f.name, left: f.hp / f.maxHp, boss: f.tier === "boss" } : undefined;
+}
+
+/** Test hooks (?god=1, ?dmg=N): foes barely scratch you, or have a fraction of their health. Never set in normal play. */
+function withDebug(setup: BattleSetup): BattleSetup {
+  if (!debug.godMode && debug.damageScale === 1) return setup;
+  const f = setup.foeScale ?? {};
+  return { ...setup, foeScale: { hp: (f.hp ?? 1) / debug.damageScale, atk: debug.godMode ? 0.01 : f.atk } };
 }

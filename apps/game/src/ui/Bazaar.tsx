@@ -7,6 +7,9 @@ import { FormCard, Sparkline } from "./FormCard";
 import { announceProgress } from "./craftActions";
 import { crowns, essenceColor, essenceName, fmt, qualityName, signed } from "../economy/format";
 
+/** What a price means for you, in a few words: the market's status, read as advice. */
+const VERDICT: Record<string, string> = { cheap: "Cheap: a good buy", steady: "Fair price", rising: "Pricey", dear: "Dear: a good sell" };
+
 type Tab = "market" | "forms" | "contracts" | "prophecy";
 
 export function Bazaar() {
@@ -115,31 +118,27 @@ export function Bazaar() {
                   <span className="glyph" style={{ color: e.color }}>
                     {e.glyph}
                   </span>{" "}
-                  <b>{e.name}</b> <span className={`status ${e.status}`}>{e.status}</span>
+                  <b>{e.name}</b>
                   <div className="dim small">{e.trend}</div>
-                  {e.band && (
-                    <div className="dim small">
-                      A year's band: {fmt(e.band.low, 1)} – {fmt(e.band.high, 1)}
-                    </div>
-                  )}
                 </td>
                 <td>
                   <Sparkline values={e.history} color={e.color} />
                 </td>
                 <td>
-                  <b>{fmt(e.price, 2)}</b>
-                  <div className="dim small">×{e.priceRatio} usual</div>
+                  <b className="mk-price">{fmt(e.price, 2)}</b> <span className={`status ${e.status}`}>{VERDICT[e.status] ?? e.status}</span>
+                  <div className="dim small">{e.priceRatio === 1 ? "its usual price" : `${e.priceRatio < 1 ? "below" : "above"} its usual ${fmt(e.price / e.priceRatio, 1)}`}</div>
                 </td>
                 <td className="small">
                   {fmt(e.buyPrice, 2)} / {fmt(e.sellPrice, 2)}
                 </td>
                 <td>{e.held}</td>
                 <td className="row">
+                  {/* Each button says what the trade costs or pays, so there's no sum to do. */}
                   <button className="small" disabled={busy} onClick={() => act(() => api.buyEssence(e.id, 5), (o) => `Bought 5 ${e.name} for ${fmt(o.total, 1)}`)} data-testid={`buy-${e.id}`}>
-                    Buy 5
+                    Buy 5 <small>for {fmt(e.buyPrice * 5, 0)}</small>
                   </button>
                   <button className="small" disabled={busy || e.held < 5} onClick={() => act(() => api.sellEssence(e.id, 5), (o) => `Sold 5 ${e.name} for ${fmt(o.total, 1)}`)} data-testid={`sell-${e.id}`}>
-                    Sell 5
+                    Sell 5 <small>for {fmt(e.sellPrice * 5, 0)}</small>
                   </button>
                 </td>
               </tr>

@@ -1617,3 +1617,36 @@
   opacity: 0;
   transition: opacity 200ms;
 }
+
+/* Loop 34: each Essence card leads with the price and what it means (a good buy, a fair price, a good
+   sell), and the trade buttons carry their totals, so the Buy / Sell column is gone. */
+@media (max-width: 720px) {
+  table.market.market {
+    font-family: var(--serif-body);
+  }
+  table.market.market tr {
+    grid-template-areas:
+      "name name spark"
+      "price price held"
+      "act act act";
+  }
+  table.market.market td:nth-child(4) {
+    display: none;
+  }
+  table.market.market .mk-price {
+    font-size: 30px;
+    margin-right: 6px;
+  }
+  table.market.market .status {
+    white-space: nowrap;
+  }
+  table.market.market td:nth-child(6) button small {
+    font: 400 15px var(--serif-body);
+    text-transform: none;
+    opacity: 0.8;
+    margin-left: 4px;
+  }
+}
+.events .event.event {
+  font-family: var(--serif-body);
+}
