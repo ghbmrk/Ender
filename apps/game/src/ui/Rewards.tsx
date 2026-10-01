@@ -9,21 +9,38 @@ export function Rewards() {
   const close = () => setState({ panel: null, rewards: null });
   return (
     <Panel title={r.title ?? "Spoils"} onClose={close} testId="rewards">
-      <div className="rewards">
-        {r.crowns > 0 && <div className="reward-line">+{r.crowns} Crowns</div>}
+      {/* Loot lands as tiles, one after another, so a haul feels like a haul. */}
+      <div className="loot">
+        {r.crowns > 0 && (
+          <div className="loot-tile crowns">
+            <span className="lt-glyph">◈</span>
+            <b>+{r.crowns}</b>
+            <span className="lt-name">Crowns</span>
+          </div>
+        )}
         {Object.entries(r.essences ?? {}).map(([e, q]) => (
-          <div key={e} className="reward-line" style={{ color: essenceColor(e) }}>
-            {essenceGlyph(e)} +{q as number} {essenceName(e)}
+          <div key={e} className="loot-tile" style={{ ["--c" as string]: essenceColor(e) }}>
+            <span className="lt-glyph">{essenceGlyph(e)}</span>
+            <b>+{q as number}</b>
+            <span className="lt-name">{essenceName(e)}</span>
           </div>
         ))}
         {(r.forms ?? []).map((f: any) => (
-          <div key={f.id} className="reward-line form">
-            ◇ {f.fantasyName ?? f.name ?? "A Veiled Form"} <span className="dim">· veiled</span>
+          <div key={f.id} className="loot-tile form">
+            <span className="lt-glyph">?</span>
+            <b>New Form</b>
+            <span className="lt-name">{f.fantasyName ?? f.name ?? "veiled"}</span>
           </div>
         ))}
-        {r.mirrorCharges > 0 && <div className="reward-line">✧ Mirror charge ×{r.mirrorCharges}</div>}
-        {r.note && <p className="dim">{r.note}</p>}
+        {r.mirrorCharges > 0 && (
+          <div className="loot-tile mirror">
+            <span className="lt-glyph">✧</span>
+            <b>×{r.mirrorCharges}</b>
+            <span className="lt-name">Mirror charge</span>
+          </div>
+        )}
       </div>
+      {r.note && <p className="dim">{r.note}</p>}
       <div className="row end">
         <button className="primary" onClick={close} data-testid="rewards-ok">
           Onward

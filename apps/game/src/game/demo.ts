@@ -19,12 +19,17 @@ export const DEMO_LOOMS: Record<string, LoomNode[]> = {
   quick: [n("storm-lattice", "action", 1, 0, ["flex", "reach"], 74), n("veiled-edge", "action", 0, 1, ["veil", "flex"], 61), n("quickglass", "modifier", 1, 1, ["flex", "veil"], 55)],
 };
 
+import { DUEL_FIELD_CAP, DUEL_HP } from "./hero";
+
 export function demoSetup(boss = false): BattleSetup {
   return {
     seed: `demo|${Date.now()}`,
-    party: (["iron", "bond", "quick"] as const).map((root) => ({ root, loom: compileLoom(DEMO_LOOMS[root]!, 9) })),
-    waves: boss ? [["king"]] : [["husk", "wisp", "hound"], ["keeper"]],
+    // Demos match the game: one hero, foes stepping up one at a time.
+    party: (["quick"] as const).map((root) => ({ root, loom: compileLoom(DEMO_LOOMS[root]!, 9) })),
+    waves: boss ? [["king"]] : [["husk"], ["wisp"], ["hound"], ["keeper"]],
     difficulty: 1,
+    fieldCap: DUEL_FIELD_CAP,
+    foeScale: { hp: DUEL_HP[boss ? "boss" : "normal"] },
   };
 }
 export { AFFINITIES };

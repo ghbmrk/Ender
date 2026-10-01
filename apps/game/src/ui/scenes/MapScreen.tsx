@@ -59,7 +59,7 @@ export function MapScreen() {
       <header className="map-head">
         <div>
           <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
-          <div className="map-sub">Choose your path. Weave what you find after each win.</div>
+          <div className="map-sub">Choose your path.</div>
         </div>
         {/* Withdrawing is rare and final, so it sits up top, out of the thumb's way. */}
       <button

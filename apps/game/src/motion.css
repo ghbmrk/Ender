@@ -813,3 +813,66 @@
   top: 70px;
   bottom: 6px;
 }
+
+/* Spoils: loot tiles pop in one after another. */
+.loot {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 10px 0 24px;
+}
+.loot-tile {
+  --c: #f4d58c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 18px 8px 14px;
+  border-radius: 20px;
+  border: 4px solid var(--c);
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--c) 30%, transparent), #120d12cc 70%);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--c) 35%, transparent), 0 10px 20px #000a;
+  color: var(--c);
+  animation: loot-in 380ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.loot-tile:nth-child(2) { animation-delay: 90ms; }
+.loot-tile:nth-child(3) { animation-delay: 180ms; }
+.loot-tile:nth-child(4) { animation-delay: 270ms; }
+.loot-tile:nth-child(5) { animation-delay: 360ms; }
+.loot-tile:nth-child(6) { animation-delay: 450ms; }
+.loot-tile .lt-glyph {
+  font-size: 64px;
+  line-height: 1;
+}
+.loot-tile b {
+  font-family: var(--display);
+  font-size: 46px;
+  color: #fbe8b0;
+}
+.loot-tile .lt-name {
+  font-family: var(--serif-body);
+  font-size: 28px;
+  text-align: center;
+  color: #d9c7a2;
+}
+.loot-tile.crowns {
+  --c: #ecc56a;
+}
+.loot-tile.form {
+  --c: #b47cff;
+  grid-column: span 3;
+}
+.loot-tile.mirror {
+  --c: #9fd8ff;
+}
+@keyframes loot-in {
+  from {
+    transform: translateY(30px) scale(0.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loot-tile {
+    animation: none;
+  }
+}
