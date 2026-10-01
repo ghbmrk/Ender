@@ -129,7 +129,7 @@ export function useStore<T>(sel: (s: State) => T): T {
 }
 
 let toastId = 0;
-/** Notices show one at a time: a new one waits until the one on screen has had its moment. */
+/** Notices show one at a time: a new one waits only while the one on screen is younger than half a second. */
 const toastQueue: { text: string; tone: Toast["tone"]; hub?: boolean }[] = [];
 let toastShowing = false;
 function showNextToast() {
@@ -176,6 +176,16 @@ export function hurryToast(ms = 1200) {
 }
 /** `hub`: the notice is about the hub screen, so it is skipped if a panel covers the hub before it shows. */
 export function toast(text: string, tone: Toast["tone"] = "info", hub = false) {
+  // The answer to a tap never waits behind an older notice: one that has had its half second gives way at once,
+  // and anything queued behind it is stale by now.
+  if (current && Date.now() - current.since >= 500) {
+    clearTimeout(current.timer);
+    current = null;
+    toastQueue.length = 0;
+    toastQueue.push({ text, tone, hub });
+    showNextToast();
+    return;
+  }
   if (toastQueue.length >= 3) toastQueue.shift();
   toastQueue.push({ text, tone, hub });
   if (!toastShowing) showNextToast();
