@@ -1,6 +1,6 @@
 import { createPainter, type Manifest, type Painter } from "../../../../hero-painter/engine.js";
 import { getState } from "../../state/store";
-import { noteLast, onQueue, painterBase, publish, queue, type Art, type Job } from "./store";
+import { artStatus, noteLast, onQueue, painterBase, publish, queue, type Art, type Job } from "./store";
 
 /**
  * The painter's runtime: loads the model (cached by the browser after the first visit), then paints queued
@@ -146,6 +146,8 @@ async function runJob({ spec, cacheOnly }: Job) {
   await gate();
   const cut = cutOut(rgba, await painter.matte(rgba));
   stats.paints.push({ key: spec.key, ms: Math.round(performance.now() - t0) });
+  artStatus.painted++;
+  artStatus.lastS = Math.round((performance.now() - t0) / 100) / 10;
   await putStored({ key: spec.key, ...cut, at: Date.now() });
   publish(spec.key, await toArt(cut));
   if (spec.group) noteLast(spec.group, spec.key);
@@ -164,7 +166,10 @@ async function drain() {
         break;
       }
       await gate();
-      await runJob(job).catch((e) => console.warn("painter job failed", job.spec.key, e));
+      await runJob(job).catch((e) => {
+        artStatus.error = `paint failed: ${(e as Error).message}`;
+        console.warn("painter job failed", job.spec.key, e);
+      });
     }
   } finally {
     running = false;
@@ -174,6 +179,7 @@ async function drain() {
 let starting: Promise<void> | null = null;
 export function start() {
   starting ??= (async () => {
+    artStatus.phase = "loading the model";
     onQueue(() => void drain());
     void drain();
     const t0 = performance.now();
@@ -181,15 +187,19 @@ export function start() {
     const manifest = (await (await fetch(new URL("manifest.json", base), { cache: "no-cache" })).json()) as Manifest;
     const urls = [...manifest.files, manifest.matte?.json, manifest.matte?.bin].filter(Boolean).map((f) => new URL(f!, base).href);
     void pruneCache(new Set(urls));
-    painter = await createPainter({ manifest, fetchChunk: (f) => cachedFetch(new URL(f, base).href), gate });
+    painter = await createPainter({ manifest, fetchChunk: (f) => cachedFetch(new URL(f, base).href), gate, onProgress: (p) => (artStatus.progress = p) });
+    artStatus.phase = "ready, painting when the game is quiet (not in fights)";
+    artStatus.gpu = painter.gpuName;
     stats.loadS = Math.round((performance.now() - t0) / 100) / 10;
     void painter.lost.then(() => {
       painter = null;
-      stats.error = "GPU device lost";
+      stats.error = artStatus.error = "GPU device lost";
+      artStatus.phase = "stopped";
     });
     void drain();
   })().catch((e) => {
-    stats.error = (e as Error).message;
+    stats.error = artStatus.error = (e as Error).message;
+    artStatus.phase = "failed to start";
     console.warn("painter unavailable:", e);
   });
   return starting;

@@ -73,6 +73,80 @@ fn main(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) l: v
 }`;
 };
 
+// conv2d for wide layers (cout >= 32): each workgroup computes 64 output channels x an 8x8 pixel tile, each of its
+// 256 threads a 4x4 block (4 channels x 4 pixels), so every value read from workgroup memory feeds 4 multiply-adds
+// instead of about one. Same sums as convWGSL, in the same order per output.
+const convIC = (k, s, d) => {
+  const T = 7 * s + (k - 1) * d + 1;
+  let ic = 16;
+  while (ic > 1 && (64 * ic * k * k + ic * T * T) * 4 > 14000) ic >>= 1;
+  return [T, ic];
+};
+const convGWSL = (w, k, s, act, res, d = 1) => {
+  const [T, IC] = convIC(k, s, d);
+  return `
+${W_DECL[w]}
+struct P { cin: u32, h: u32, w: u32, cout: u32, ho: u32, wo: u32, pad: u32, _p: u32 }
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(3) var<storage, read> x: array<f32>;
+@group(0) @binding(4) var<storage, read> b: array<f32>;
+@group(0) @binding(5) var<storage, read_write> y: array<f32>;
+${res ? "@group(0) @binding(6) var<storage, read> r: array<f32>;" : ""}
+const K: u32 = ${k}u; const S: u32 = ${s}u; const D: u32 = ${d}u; const T: u32 = ${T}u; const IC: u32 = ${IC}u; const KK: u32 = ${k * k}u;
+var<workgroup> tile: array<f32, ${IC * T * T}>;
+var<workgroup> ws: array<f32, ${64 * IC * k * k}>;
+@compute @workgroup_size(16, 16, 1)
+fn main(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) l: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let py = l.x / 2u; let px0 = (l.x % 2u) * 4u; let o0 = l.y * 4u; let oc0 = wg.z * 64u;
+  let ix0 = i32(wg.x * 8u * S) - i32(p.pad); let iy0 = i32(wg.y * 8u * S) - i32(p.pad);
+  var acc: array<f32, 16>;
+  for (var c0 = 0u; c0 < p.cin; c0 += IC) {
+    for (var t = li; t < IC * T * T; t += 256u) {
+      let c = t / (T * T); let rem = t % (T * T); let ty = rem / T; let tx = rem % T;
+      let iy = iy0 + i32(ty); let ix = ix0 + i32(tx);
+      var v = 0.0;
+      if (c0 + c < p.cin && iy >= 0 && ix >= 0 && iy < i32(p.h) && ix < i32(p.w)) { v = x[((c0 + c) * p.h + u32(iy)) * p.w + u32(ix)]; }
+      tile[t] = v;
+    }
+    for (var t = li; t < 64u * IC * KK; t += 256u) {
+      let o = t / (IC * KK); let rem = t % (IC * KK); let c = rem / KK; let kk = rem % KK;
+      var v = 0.0;
+      if (oc0 + o < p.cout && c0 + c < p.cin) { v = W(((oc0 + o) * p.cin + c0 + c) * KK + kk); }
+      ws[t] = v;
+    }
+    workgroupBarrier();
+    for (var c = 0u; c < IC; c++) {
+      for (var ky = 0u; ky < K; ky++) {
+        let row = (c * T + py * S + ky * D) * T;
+        for (var kx = 0u; kx < K; kx++) {
+          var tv: array<f32, 4>; var wv: array<f32, 4>;
+          for (var i = 0u; i < 4u; i++) { tv[i] = tile[row + (px0 + i) * S + kx * D]; }
+          let wi = (c * K + ky) * K + kx;
+          for (var o = 0u; o < 4u; o++) { wv[o] = ws[(o0 + o) * IC * KK + wi]; }
+          for (var o = 0u; o < 4u; o++) { for (var i = 0u; i < 4u; i++) { acc[o * 4u + i] += wv[o] * tv[i]; } }
+        }
+      }
+    }
+    workgroupBarrier();
+  }
+  let oy = wg.y * 8u + py;
+  if (oy >= p.ho) { return; }
+  for (var o = 0u; o < 4u; o++) {
+    let oc = oc0 + o0 + o;
+    if (oc >= p.cout) { break; }
+    for (var i = 0u; i < 4u; i++) {
+      let ox = wg.x * 8u + px0 + i;
+      if (ox >= p.wo) { break; }
+      let idx = (oc * p.ho + oy) * p.wo + ox;
+      var v = acc[o * 4u + i] + b[oc];
+      ${res ? "v += r[idx];" : ""}
+      ${act === "relu" ? "v = max(v, 0.0);" : ""}
+      y[idx] = v;
+    }
+  }
+}`;
+};
+
 // Y[N][M] = X[N][K] . W[M][K]^T + b (+ R). 32x32 output tile per workgroup, 4x4 per thread.
 const linWGSL = (w, res, hasBias) => `
 ${W_DECL[w]}
@@ -116,6 +190,85 @@ fn main(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) l: v
       y[n * p.m + m] = v;
     }
   }
+}`;
+
+// Batched GEMM, Y[z][n][m] = scale * sum_k A[z][n][k] * B[z][m][k] (+ bias[m]) (+ R). 64x64 output tile per
+// workgroup, 4x4 per thread with rows/columns interleaved by 16 so workgroup-memory reads never collide.
+// B is the layer's weights ("q" 5-bit codes or "f" floats, [M][K]) or a buffer laid out [m][k] ("mk") or [k][m] ("km").
+// Used for every linear layer and for attention (scores = Q.K^T, out = softmax(scores).V, all heads at once).
+const gemmWGSL = (src, layout, res, hasBias) => `
+${src === "buf" ? "@group(0) @binding(1) var<storage, read> bb: array<f32>;" : W_DECL[src]}
+struct P { n: u32, k: u32, m: u32, lda: u32, ldb: u32, ldy: u32, ab: u32, bb: u32, yb: u32, scale: f32, _a: u32, _b: u32 }
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(3) var<storage, read> a: array<f32>;
+${hasBias ? "@group(0) @binding(4) var<storage, read> bias: array<f32>;" : ""}
+@group(0) @binding(5) var<storage, read_write> y: array<f32>;
+${res ? "@group(0) @binding(6) var<storage, read> r: array<f32>;" : ""}
+var<workgroup> As: array<f32, 1024>;
+var<workgroup> Bs: array<f32, 1024>;
+fn Bv(bo: u32, m: u32, k: u32) -> f32 {
+  ${src !== "buf" ? "return W(m * p.k + k);" : layout === "mk" ? "return bb[bo + m * p.ldb + k];" : "return bb[bo + k * p.ldb + m];"}
+}
+@compute @workgroup_size(16, 16, 1)
+fn main(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) l: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let n0 = wg.y * 64u; let m0 = wg.x * 64u;
+  let ao = wg.z * p.ab; let bo = wg.z * p.bb; let yo = wg.z * p.yb;
+  var acc: array<f32, 16>;
+  for (var k0 = 0u; k0 < p.k; k0 += 16u) {
+    for (var t = li; t < 1024u; t += 256u) {
+      let r = t / 16u; let c = t % 16u;
+      var av = 0.0;
+      if (n0 + r < p.n && k0 + c < p.k) { av = a[ao + (n0 + r) * p.lda + k0 + c]; }
+      As[c * 64u + r] = av;
+      ${layout === "km" ? "let rb = t % 64u; let cb = t / 64u;" : "let rb = r; let cb = c;"}
+      var bv = 0.0;
+      if (m0 + rb < p.m && k0 + cb < p.k) { bv = Bv(bo, m0 + rb, k0 + cb); }
+      Bs[cb * 64u + rb] = bv;
+    }
+    workgroupBarrier();
+    for (var c = 0u; c < 16u; c++) {
+      var av: array<f32, 4>; var bv: array<f32, 4>;
+      for (var i = 0u; i < 4u; i++) { av[i] = As[c * 64u + l.y + 16u * i]; bv[i] = Bs[c * 64u + l.x + 16u * i]; }
+      for (var i = 0u; i < 4u; i++) { for (var j = 0u; j < 4u; j++) { acc[i * 4u + j] += av[i] * bv[j]; } }
+    }
+    workgroupBarrier();
+  }
+  for (var i = 0u; i < 4u; i++) {
+    let n = n0 + l.y + 16u * i;
+    if (n >= p.n) { break; }
+    for (var j = 0u; j < 4u; j++) {
+      let m = m0 + l.x + 16u * j;
+      if (m >= p.m) { continue; }
+      let at = yo + n * p.ldy + m;
+      var v = acc[i * 4u + j] * p.scale;
+      ${hasBias ? "v += bias[m];" : ""}
+      ${res ? "v += r[at];" : ""}
+      y[at] = v;
+    }
+  }
+}`;
+
+// Softmax over each row of [rows][m], in place.
+const softmaxWGSL = `
+struct P { m: u32, rows: u32, _a: u32, _b: u32 }
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(1) var<storage, read_write> s: array<f32>;
+var<workgroup> red: array<f32, 256>;
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let row = wg.x + wg.y * 65535u; if (row >= p.rows) { return; }
+  let base = row * p.m;
+  var mx = -1e30;
+  for (var j = li; j < p.m; j += 256u) { mx = max(mx, s[base + j]); }
+  red[li] = mx; workgroupBarrier();
+  for (var k = 128u; k > 0u; k >>= 1u) { if (li < k) { red[li] = max(red[li], red[li + k]); } workgroupBarrier(); }
+  mx = red[0]; workgroupBarrier();
+  var sum = 0.0;
+  for (var j = li; j < p.m; j += 256u) { let e = exp(s[base + j] - mx); s[base + j] = e; sum += e; }
+  red[li] = sum; workgroupBarrier();
+  for (var k = 128u; k > 0u; k >>= 1u) { if (li < k) { red[li] += red[li + k]; } workgroupBarrier(); }
+  let inv = 1.0 / red[0];
+  for (var j = li; j < p.m; j += 256u) { s[base + j] *= inv; }
 }`;
 
 // GroupNorm over NCHW with 32 groups, one workgroup per group, optional SiLU.
@@ -315,7 +468,7 @@ const f16 = (h) => {
 };
 const F16 = new Float32Array(65536).map((_, i) => f16(i));
 
-export async function createPainter({ manifest, fetchChunk, onProgress = () => {}, adapter, gate: loadGate = null }) {
+export async function createPainter({ manifest, fetchChunk, onProgress = () => {}, adapter, gate: loadGate = null, tiled = true }) {
   adapter = adapter || (await navigator.gpu?.requestAdapter({ powerPreference: "high-performance" }));
   if (!adapter) throw new Error("WebGPU is not available in this browser.");
   const L = adapter.limits;
@@ -449,9 +602,12 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
     const cout = sh[0], k = sh[2];
     const pad = k === 3 ? d : 0, Ho = Math.floor((H + 2 * pad - d * (k - 1) - 1) / s) + 1, Wo = Math.floor((Wd + 2 * pad - d * (k - 1) - 1) / s) + 1;
     const y = alloc(cout * Ho * Wo);
-    const pl = pipe(`conv${w.q ? "q" : "f"}${k}${s}${d}${act}${res ? "r" : ""}`, convWGSL(w.q ? "q" : "f", k, s, act, !!res, d));
+    const wide = tiled && cout >= 32;
+    const pl = wide
+      ? pipe(`convG${w.q ? "q" : "f"}${k}${s}${d}${act}${res ? "r" : ""}`, convGWSL(w.q ? "q" : "f", k, s, act, !!res, d))
+      : pipe(`conv${w.q ? "q" : "f"}${k}${s}${d}${act}${res ? "r" : ""}`, convWGSL(w.q ? "q" : "f", k, s, act, !!res, d));
     const b = bias || gpu[name + ".bias"]?.f || zeros(cout);
-    run(pl, { 0: uni([sh[1], H, Wd, cout, Ho, Wo, pad, 0]), ...wbind(w), 3: x.b, 4: b, 5: y.b, ...(res ? { 6: res.b } : {}) }, Math.ceil(Wo / 8), Math.ceil(Ho / 8), Math.ceil(cout / 8));
+    run(pl, { 0: uni([sh[1], H, Wd, cout, Ho, Wo, pad, 0]), ...wbind(w), 3: x.b, 4: b, 5: y.b, ...(res ? { 6: res.b } : {}) }, Math.ceil(Wo / 8), Math.ceil(Ho / 8), Math.ceil(cout / (wide ? 64 : 8)));
     return [y, cout, Ho, Wo];
   };
   const zc = new Map();
@@ -469,12 +625,28 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
   const lin = (x, N, name, res = null) => {
     const w = gpu[name + ".weight"], sh = T[name + ".weight"].shape, M = sh[0], K = sh[1];
     const y = alloc(N * M), hb = !!gpu[name + ".bias"];
-    const pl = pipe(`lin${w.q ? "q" : "f"}${res ? "r" : ""}${hb}`, linWGSL(w.q ? "q" : "f", !!res, hb));
-    run(pl, { 0: uni([N, K, M, 0]), ...wbind(w), 3: x.b, ...(hb ? { 4: gpu[name + ".bias"].f } : {}), 5: y.b, ...(res ? { 6: res.b } : {}) }, Math.ceil(M / 32), Math.ceil(N / 32));
+    if (!tiled) {
+      const pl = pipe(`lin${w.q ? "q" : "f"}${res ? "r" : ""}${hb}`, linWGSL(w.q ? "q" : "f", !!res, hb));
+      run(pl, { 0: uni([N, K, M, 0]), ...wbind(w), 3: x.b, ...(hb ? { 4: gpu[name + ".bias"].f } : {}), 5: y.b, ...(res ? { 6: res.b } : {}) }, Math.ceil(M / 32), Math.ceil(N / 32));
+      return [y, M];
+    }
+    const src = w.q ? "q" : "f";
+    const pl = pipe(`gemm${src}${res ? "r" : ""}${hb}`, gemmWGSL(src, "mk", !!res, hb));
+    run(pl, { 0: uni([N, K, M, K, K, M, 0, 0, 0, fl(1), 0, 0]), ...wbind(w), 3: x.b, ...(hb ? { 4: gpu[name + ".bias"].f } : {}), 5: y.b, ...(res ? { 6: res.b } : {}) }, Math.ceil(M / 64), Math.ceil(N / 64));
     return [y, M];
   };
   const elem = (key, u, bufs, n) => { const [gx, gy] = grid(n); run(pipe(key, ELEM[key]), { 0: uni(u), ...bufs }, gx, gy); };
   const attn = (q, k, v, N, M, C) => {
+    if (tiled) {
+      // All 8 heads at once as two GEMMs around a row softmax: K and V are read once per 64 queries, not per query.
+      const Hh = 8, d = C / Hh, S = alloc(Hh * N * M), o = alloc(N * C);
+      run(pipe("gemmSmk", gemmWGSL("buf", "mk", false, false)), { 0: uni([N, d, M, C, C, M, d, d, N * M, fl(1 / Math.sqrt(d)), 0, 0]), 1: k.b, 3: q.b, 5: S.b }, Math.ceil(M / 64), Math.ceil(N / 64), Hh);
+      const rows = Hh * N;
+      run(pipe("softmax", softmaxWGSL), { 0: uni([M, rows, 0, 0]), 1: S.b }, Math.min(rows, 65535), Math.ceil(rows / 65535));
+      run(pipe("gemmSkm", gemmWGSL("buf", "km", false, false)), { 0: uni([N, M, d, M, C, C, N * M, d, d, fl(1), 0, 0]), 1: v.b, 3: S.b, 5: o.b }, Math.ceil(d / 64), Math.ceil(N / 64), Hh);
+      free(S);
+      return o;
+    }
     const o = alloc(N * C), maxM = M <= 256 ? 256 : 1024;
     if (M > 1024) throw new Error("too many keys");
     run(pipe("attn" + maxM, attnWGSL(maxM)), { 0: uni([N, M, C, 8]), 1: q.b, 2: k.b, 3: v.b, 4: o.b }, N, 8);
