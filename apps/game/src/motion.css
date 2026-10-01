@@ -1928,3 +1928,12 @@
 .grim-chip{min-height:44px;padding:6px 14px;border-radius:999px;font-family:var(--serif-body);font-size:16px;background:#1d1822;border:1px solid #8f6420;color:#e8dcc2}
 .grim-chip span{opacity:.6;margin-left:4px}
 .grim-chip.on{background:linear-gradient(180deg,#fbe8b0,#c9953a);color:#2a1a08;border-color:#2a1a08}
+
+/* Loop 62: while a panel is open, notices sit in the dimmed strip above it, not over its header. */
+:root:has(.panel-backdrop) .toasts {
+  top: calc(10px + env(safe-area-inset-top, 0px));
+}
+:root:has(.panel-backdrop) .toasts .toast {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
