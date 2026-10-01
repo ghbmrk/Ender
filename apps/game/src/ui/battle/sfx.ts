@@ -15,15 +15,28 @@ export function setMuted(m: boolean) {
     /* private mode */
   }
 }
-function ctx() {
-  if (muted) return null;
+function make() {
   if (!ac) {
     const C = window.AudioContext ?? (window as any).webkitAudioContext;
     if (!C) return null;
     ac = new C();
   }
-  if (ac.state === "suspended") void ac.resume();
   return ac;
+}
+function ctx() {
+  if (muted) return null;
+  const a = make();
+  if (a?.state === "suspended") void a.resume();
+  return a;
+}
+// Making the audio context is slow (tens of ms on a phone): make it, silent and suspended, in an idle moment, so
+// the first tap (Sign in) only resumes it.
+try {
+  const early = () => void (muted ? null : make());
+  if ("requestIdleCallback" in window) requestIdleCallback(early, { timeout: 2000 });
+  else setTimeout(early, 500);
+} catch {
+  /* no audio */
 }
 
 function tone(freq: number, dur: number, type: OscillatorType, gain: number, slide?: number, delay = 0) {

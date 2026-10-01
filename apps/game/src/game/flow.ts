@@ -33,9 +33,9 @@ export async function newBinder(opts: { preset?: string; quiet?: boolean } = {})
 }
 
 export async function continueGame() {
-  await Promise.all([refreshCharacter(), refreshWorld(), refreshLoom()]);
+  // All four reads at once: the Expedition check used to wait for the other three, and Sign in waited on it.
+  const [, , , active] = await Promise.all([refreshCharacter(), refreshWorld(), refreshLoom(), api.activeRun().catch(() => null)]);
   // Pick up an Expedition left mid-way.
-  const active = await api.activeRun().catch(() => null);
   if (active?.plan && active.status === "active") {
     const visited = (active.visited ?? []) as string[];
     setState({ expedition: { plan: active.plan, visited, at: visited.at(-1) ?? null, partyHp: {}, loom: active.loom ?? null } });

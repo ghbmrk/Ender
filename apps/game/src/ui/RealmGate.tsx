@@ -1,7 +1,7 @@
 import { paintedBackdrop } from "../art/painted";
 import { useEffect, useState } from "react";
 import { startExpedition, refreshWorld } from "../game/flow";
-import { setState, toast, useStore } from "../state/store";
+import { getState, setState, toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
 import { bests } from "../game/records";
 import { finishTutorial } from "../game/tutorial";
@@ -14,7 +14,8 @@ export function RealmGate() {
   const [busy, setBusy] = useState(false);
   const [contracts, setContracts] = useState(false);
   useEffect(() => {
-    refreshWorld().catch((e) => toast(e.message, "loss"));
+    // Signing in has just read the world; a second read on open only delayed the Realm choice. Read it when missing.
+    if (!getState().world) refreshWorld().catch((e) => toast(e.message, "loss"));
   }, []);
   const best = bests();
   // The first Realm you haven't cleared is where to go next; a new player sees "Start here" on the easiest.
