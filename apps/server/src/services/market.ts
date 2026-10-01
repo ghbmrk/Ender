@@ -205,14 +205,18 @@ export function contractsView(ctx: Ctx, charId: string) {
   return activeContracts(ctx).map((c) => {
     const s = currentSnapshot(ctx);
     const exp = get<{ expires_index: number }>(ctx.db, "SELECT expires_index FROM contracts WHERE id = ?", c.id)!.expires_index;
-    const eligible = held
+    // Trialed Forms are checked; the nearest miss is named with what it lacks, so you know what to make.
+    const checked = held
       .filter((a) => tierRank(a.evidence_tier) >= 2)
-      .filter((a) => {
+      .map((a) => {
         const ev = trueEvaluation(ctx, a);
-        return meetsContract(c, { qualities: ev.qualities, recipe: ev.recipe, tier: a.evidence_tier, power: ev.power, cost: ev.productionCost, efficiency: ev.efficiencyScore }).ok;
-      })
-      .map((a) => a.id);
-    return { ...c, turningsLeft: exp - s.index + 1, eligibleArtifactIds: eligible };
+        return { a, check: meetsContract(c, { qualities: ev.qualities, recipe: ev.recipe, tier: a.evidence_tier, power: ev.power, cost: ev.productionCost, efficiency: ev.efficiencyScore }) };
+      });
+    const eligible = checked.filter((x) => x.check.ok).map((x) => x.a.id);
+    const near = checked.filter((x) => !x.check.ok).sort((p, q) => p.check.gaps.length - q.check.gaps.length)[0];
+    const closest = near ? { id: near.a.id, name: near.a.fantasy_name, gaps: near.check.gaps } : null;
+    const untrialed = held.filter((a) => tierRank(a.evidence_tier) < 2).length;
+    return { ...c, turningsLeft: exp - s.index + 1, eligibleArtifactIds: eligible, closest, untrialed };
   });
 }
 

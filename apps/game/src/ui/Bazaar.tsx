@@ -208,12 +208,26 @@ export function Bazaar() {
                 <b>{ct.title}</b>
                 <span className="reward">{crowns(ct.reward)}</span>
               </div>
-              <div>{ct.description}</div>
+              <ul className="ct-wants" data-testid="ct-wants">
+                {wants(ct.requirement).map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
               <div className="dim small">
                 {ct.reason} · {ct.turningsLeft} turning{ct.turningsLeft === 1 ? "" : "s"} left
               </div>
               {ct.eligibleArtifactIds.length === 0 ? (
-                <div className="dim small">None of your Forms qualify yet. A Form counts once you Trial it in the Crucible.</div>
+                <div className="ct-near small" data-testid="ct-near">
+                  {ct.closest ? (
+                    <>
+                      Closest: <b>{inv.artifacts.find((x: any) => x.id === ct.closest.id)?.name ?? ct.closest.name ?? "a Form"}</b>, {ct.closest.gaps.map(gapText).join(", ")}.
+                    </>
+                  ) : ct.untrialed > 0 ? (
+                    `None of your Forms are Trialed yet. Trial one in the Crucible to see if it fits.`
+                  ) : (
+                    "None of your Forms fit yet. Forms drop on Expeditions."
+                  )}
+                </div>
               ) : (
                 <div className="row">
                   {ct.eligibleArtifactIds.map((id: string) => {
@@ -241,6 +255,39 @@ export function Bazaar() {
     </Panel>
   );
 }
+
+/** A Contract's needs in plain words, one per line. */
+function wants(r: any): string[] {
+  const out: string[] = [];
+  // Every Contract wants a Trialed Form; only the stricter Mirror proof is worth its own line.
+  if (r.minTier === "witnessed") out.push("Proven in the Mirror");
+  if (r.minPower !== undefined) out.push(`Power ${r.minPower} or more`);
+  for (const x of r.maxEssence ?? []) out.push(x.qty === 0 ? `No ${essenceName(x.essence)} in it` : `At most ${x.qty} ${essenceName(x.essence)}`);
+  for (const b of r.qualityBounds ?? []) {
+    if (b.min !== undefined) out.push(`${qualityName(b.quality)} ${b.min} or more`);
+    if (b.max !== undefined) out.push(`${qualityName(b.quality)} ${b.max} or less`);
+  }
+  if (r.maxCost !== undefined) out.push(`Costs at most ${crowns(r.maxCost)} to make`);
+  if (r.minEfficiency !== undefined) out.push(`Good value: score ${r.minEfficiency} or more for its cost`);
+  return out;
+}
+
+/** How far a Form falls short, in a few words. */
+const gapText = (g: any): string => gapWords(g, (n: number) => Math.max(1, Math.ceil(n)));
+const gapWords = (g: any, up: (n: number) => number): string =>
+  g.kind === "tier"
+    ? "needs a Mirror reading"
+    : g.kind === "power"
+      ? `${up(g.need - g.have)} Power short`
+      : g.kind === "essence"
+        ? `${up(g.have - g.need)} ${essenceName(g.essence)} too many`
+        : g.kind === "quality"
+          ? g.dir === "min"
+            ? `${up(g.need - g.have)} ${qualityName(g.quality)} short`
+            : `${up(g.have - g.need)} ${qualityName(g.quality)} over`
+          : g.kind === "cost"
+            ? `${crowns(up(g.have - g.need))} too costly`
+            : `value ${up(g.need - g.have)} short`;
 
 const PROBS = [0.1, 0.3, 0.5, 0.7, 0.9];
 

@@ -82,24 +82,34 @@ export function evaluateForm(
 export function meetsContract(
   c: Contract,
   f: { qualities: FormQualities; recipe: ProductionRecipe; tier: EvidenceTier; power: number; cost: number; efficiency: number },
-): { ok: boolean; failures: string[] } {
+): { ok: boolean; failures: string[]; gaps: ContractGap[] } {
   const r = c.requirement;
-  const failures: string[] = [];
-  if (r.minTier && tierRank(f.tier) < tierRank(r.minTier)) failures.push(`must be ${r.minTier}`);
-  if (r.minPower !== undefined && f.power < r.minPower) failures.push(`power ${f.power} < ${r.minPower}`);
+  const gaps: ContractGap[] = [];
+  if (r.minTier && tierRank(f.tier) < tierRank(r.minTier)) gaps.push({ kind: "tier", have: f.tier, need: r.minTier });
+  if (r.minPower !== undefined && f.power < r.minPower) gaps.push({ kind: "power", have: f.power, need: r.minPower });
   for (const x of r.maxEssence ?? []) {
     const q = essenceQty(f.recipe, x.essence);
-    if (q > x.qty) failures.push(`${x.essence} ${q} > ${x.qty}`);
+    if (q > x.qty) gaps.push({ kind: "essence", essence: x.essence, have: q, need: x.qty });
   }
   for (const b of r.qualityBounds ?? []) {
     const v = f.qualities[b.quality];
-    if (b.min !== undefined && v < b.min) failures.push(`${b.quality} ${v} < ${b.min}`);
-    if (b.max !== undefined && v > b.max) failures.push(`${b.quality} ${v} > ${b.max}`);
+    if (b.min !== undefined && v < b.min) gaps.push({ kind: "quality", quality: b.quality, have: v, need: b.min, dir: "min" });
+    if (b.max !== undefined && v > b.max) gaps.push({ kind: "quality", quality: b.quality, have: v, need: b.max, dir: "max" });
   }
-  if (r.minEfficiency !== undefined && f.efficiency < r.minEfficiency) failures.push(`efficiency ${f.efficiency} < ${r.minEfficiency}`);
-  if (r.maxCost !== undefined && f.cost > r.maxCost) failures.push(`cost ${f.cost} > ${r.maxCost}`);
-  return { ok: failures.length === 0, failures };
+  if (r.minEfficiency !== undefined && f.efficiency < r.minEfficiency) gaps.push({ kind: "efficiency", have: f.efficiency, need: r.minEfficiency });
+  if (r.maxCost !== undefined && f.cost > r.maxCost) gaps.push({ kind: "cost", have: f.cost, need: r.maxCost });
+  const failures = gaps.map((g) =>
+    g.kind === "tier" ? `must be ${g.need}` : g.kind === "essence" ? `${g.essence} ${g.have} > ${g.need}` : g.kind === "quality" ? `${g.quality} ${g.have} ${g.dir === "min" ? "<" : ">"} ${g.need}` : g.kind === "cost" ? `cost ${g.have} > ${g.need}` : `${g.kind} ${g.have} < ${g.need}`,
+  );
+  return { ok: gaps.length === 0, failures, gaps };
 }
+
+/** One way a Form falls short of a Contract, with what it has and what is needed. */
+export type ContractGap =
+  | { kind: "tier"; have: EvidenceTier; need: EvidenceTier }
+  | { kind: "power" | "efficiency" | "cost"; have: number; need: number }
+  | { kind: "essence"; essence: string; have: number; need: number }
+  | { kind: "quality"; quality: string; have: number; need: number; dir: "min" | "max" };
 
 /** What Salvagers pay for a Form without it being produced. */
 export const salvageValue = (score: number) => round(10 + 0.35 * score);
