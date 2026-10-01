@@ -20,6 +20,7 @@ import {
 } from "@ender/battle";
 import { backdropFor, backdropId } from "../../art/registry";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
+import { paintedCard } from "../../art/painted";
 import { STAGE_H, useStage, useWorldTop } from "../Stage";
 import { AFF_COLOR, AFF_DEEP, AFF_GLYPH } from "../affinity";
 import { FIG_SCALE, Fig, Head, figureBox } from "./Figure";
@@ -1004,8 +1005,8 @@ function Commands({
         return (
           <button
             key={a.nodeId}
-            className={`card ${can ? "" : "poor"} ${pulse === "actions" && can ? "coach-pulse" : ""}`}
-            style={{ ["--aff" as string]: AFF_COLOR[a.dominant], ["--aff-deep" as string]: AFF_DEEP[a.dominant] }}
+            className={`card ${can ? "" : "poor"} ${pulse === "actions" && can ? "coach-pulse" : ""} ${paintedCard(a.dominant) ? "has-art" : ""}`}
+            style={{ ["--aff" as string]: AFF_COLOR[a.dominant], ["--aff-deep" as string]: AFF_DEEP[a.dominant], ["--card-art" as string]: paintedCard(a.dominant) ? `url(${paintedCard(a.dominant)})` : undefined }}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => can && onPick(actor, a.nodeId)}
             data-testid={idle ? undefined : `cmd-${a.template}`}

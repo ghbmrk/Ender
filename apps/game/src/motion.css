@@ -1079,3 +1079,88 @@
   color: #f4e3b8;
   text-align: center;
 }
+
+/* Loop 13: an Action card's rules plate carries its Affinity's painting, fading in from the right
+   behind the rules so the numbers stay on clean parchment. */
+.stage .card.has-art:not(.empty)::after {
+  background:
+    var(--tex-grain),
+    linear-gradient(90deg, #f1e3c0 34%, rgba(241, 227, 192, 0.82) 50%, rgba(241, 227, 192, 0) 82%),
+    var(--card-art) right 40% / 60% auto no-repeat,
+    radial-gradient(ellipse at 45% 35%, #fbf2da, #ecdcb4 55%, #d6bf8e);
+}
+
+/* Loop 13: the Bazaar's essence table becomes one card per Essence at phone width: name and trend
+   beside the sparkline, the numbers on one line, and Buy and Sell as two full-width buttons. */
+@media (max-width: 720px) {
+  table.market.market,
+  table.market.market tbody {
+    display: block;
+    width: 100%;
+  }
+  table.market.market thead {
+    display: none;
+  }
+  table.market.market tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.7fr;
+    grid-template-areas:
+      "name name spark"
+      "price trade held"
+      "act act act";
+    gap: 6px 10px;
+    align-items: center;
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #ffffff0a;
+    box-shadow: inset 0 0 0 1px #ffffff1a;
+  }
+  table.market.market td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+  table.market.market td:nth-child(1) { grid-area: name; }
+  table.market.market td:nth-child(2) { grid-area: spark; justify-self: end; max-width: 100%; overflow: hidden; }
+  table.market.market td:nth-child(3) { grid-area: price; }
+  table.market.market td:nth-child(4) { grid-area: trade; }
+  table.market.market td:nth-child(5) { grid-area: held; text-align: right; }
+  table.market.market td:nth-child(4)::before { content: "Buy / Sell"; display: block; font-size: 12px; opacity: 0.6; }
+  table.market.market td:nth-child(5)::before { content: "Held"; display: block; font-size: 12px; opacity: 0.6; }
+  table.market.market td:nth-child(6) {
+    grid-area: act;
+    display: flex;
+    gap: 10px;
+  }
+  table.market.market td:nth-child(6) button {
+    flex: 1;
+    min-height: 44px;
+  }
+  table.market.market td:nth-child(2) svg {
+    width: 120px;
+    height: auto;
+  }
+}
+@media (max-width: 720px) {
+  .tabs.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .tabs.tabs > .tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 4px;
+    font-size: 15px;
+    line-height: 1.15;
+  }
+  .tabs.tabs > .hud-spacer {
+    flex-basis: 100%;
+    height: 0;
+  }
+  .tabs.tabs > .ghost {
+    margin-left: auto;
+  }
+}
