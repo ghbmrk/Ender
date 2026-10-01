@@ -275,6 +275,7 @@ export function BattleScreen({
   /** Turn engine events into numbers, words and paint. */
   const play = (events: BattleEvent[]) => {
     let d = 0;
+    let waveShown = false;
     for (const e of events) {
       switch (e.type) {
         case "damage": {
@@ -368,11 +369,15 @@ export function BattleScreen({
         case "summon":
           later(d, () => showBanner("Reinforcements", "the seals give way"));
           break;
-        case "wave":
-          later(d, () => showBanner(`Wave ${e.index + 1}`));
+        case "wave": {
+          // A new foe stepping in is named, and holds the screen over the round banner, so a swap never reads as the old foe changing.
+          const next = battle.living("foe")[0];
+          waveShown = true;
+          later(d, () => showBanner(next ? `${next.name} steps in` : `Wave ${e.index + 1}`, `foe ${e.index + 1} of this fight`, 1400));
           break;
+        }
         case "round":
-          later(d, () => showBanner(`Round ${e.round}`, undefined, 650));
+          if (!waveShown) later(d, () => showBanner(`Round ${e.round}`, undefined, 650));
           break;
         case "skip":
           float(battle.unit(e.unit), "Staggered", "fl-status", d);
