@@ -394,7 +394,7 @@ export function LoomScreen() {
 
       <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} />
       </div>
-      {coach && !drag?.moved && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: TRAY_TOP - 175 }} />}
+      {coach && !drag?.moved && !weaving && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: TRAY_TOP - 175 }} />}
 
       {drag?.moved && (
         <svg className="drag-ghost" viewBox="0 0 1080 1920">

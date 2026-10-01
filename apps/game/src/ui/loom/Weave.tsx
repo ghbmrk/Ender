@@ -68,6 +68,7 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
   const c = useStore((s) => s.character);
   const [a, setA] = useState(form);
   const [busy, setBusy] = useState(false);
+  const [justRevealed, setJustRevealed] = useState(false);
   const focus = c?.focus ?? 0;
   const have = (c?.essences ?? {}) as Record<string, number>;
   const cost = Object.entries((a.inscribeCost ?? {}) as Record<string, number>).filter(([, q]) => q > 0);
@@ -81,6 +82,7 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
       announceProgress(out);
       sfx.perfect();
       setA(out.artifact);
+      setJustRevealed(true);
       await refreshCharacter();
     } catch (e) {
       toast((e as Error).message, "loss");
@@ -104,7 +106,8 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
 
   return (
     <div className="weave-backdrop" onPointerDown={(e) => (e.stopPropagation(), e.target === e.currentTarget && onClose())}>
-      <div className="weave-sheet" data-testid="weave-sheet">
+      <div className={`weave-sheet ${justRevealed ? "just-revealed" : ""}`} data-testid="weave-sheet">
+        {justRevealed && <div className="ws-burst" aria-hidden />}
         <div className="ws-head">
           <div>
             <h2>{a.tier === "veiled" ? "A veiled Form" : a.name}</h2>

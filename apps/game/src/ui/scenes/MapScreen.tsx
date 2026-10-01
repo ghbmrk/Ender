@@ -1,5 +1,5 @@
 import { PARTY, ROOTS, type RootId } from "@ender/battle";
-import { heroFigure, lookFor, partyRoots } from "../../game/hero";
+import { rootLabel, heroFigure, lookFor, partyRoots } from "../../game/hero";
 import { getState as getStoreState } from "../../state/store";
 import { backdropFor } from "../../art/registry";
 import { SceneBackdrop } from "../../art/SceneBackdrop";
@@ -25,9 +25,9 @@ const REALM_NAME: Record<string, string> = { "ashen-vault": "The Ashen Vault", "
 export function MapScreen() {
   const ex = useStore((s) => s.expedition);
   const { h } = useStage();
-  // Route between the header (status, top) and the thumb-zone dock (actions and party, bottom).
+  // Route between the header (top) and the thumb-zone dock (health and Loom, bottom).
   const TOP = 290;
-  const BOTTOM = h - 540;
+  const BOTTOM = h - 370;
   useStore((s) => s.panel);
   if (!ex) return null;
   const layers = ex.plan.map.layers;
@@ -55,8 +55,17 @@ export function MapScreen() {
       <header className="map-head">
         <div>
           <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
-          <div className="map-sub">Choose your path. After a win, you weave what you found.</div>
+          <div className="map-sub">Choose your path. Weave what you find after each win.</div>
         </div>
+        {/* Withdrawing is rare and final, so it sits up top, out of the thumb's way. */}
+      <button
+        className="map-withdraw"
+        onClick={() => {
+          if (confirm("Withdraw from this Expedition? You keep what you found.")) finishExpedition("abandon").catch((e) => toast(e.message, "loss"));
+        }}
+      >
+        Withdraw
+      </button>
       </header>
       <svg className="map-svg" viewBox={`0 0 1080 ${h}`} style={{ height: h }}>
         {layers.flat().flatMap((n) =>
@@ -94,28 +103,15 @@ export function MapScreen() {
           <Head figure={heroFigure(getStoreState().hero?.root ?? "iron")} look={getStoreState().hero?.look} size={70} />
         </div>
       )}
-      {/* Thumb-zone dock: the actions, then the party's health. */}
-      <div className="map-dock">
-        <div className="map-actions">
-          <button onClick={() => setState({ screen: "loom" })} data-testid="map-loom">
-            Loom
-          </button>
-          <button onClick={() => setState({ panel: "inventory" })}>Forms</button>
-          <button
-            className="ghost"
-            onClick={() => {
-              if (confirm("Withdraw from this Expedition? You keep what you found.")) finishExpedition("abandon").catch((e) => toast(e.message, "loss"));
-            }}
-          >
-            Withdraw
-          </button>
-        </div>
-        <div className="map-party">
-          {partyRoots().map((r: RootId) => {
-            const hp = ex.partyHp[r] ?? ROOTS[r].hp;
-            return (
-              <div key={r} className="mp-hero">
-                <Head figure={heroFigure(r)} size={72} look={lookFor(r)} />
+      {/* Thumb-zone dock: your health on the left, the Loom on the right. */}
+      <div className="map-dock map-party">
+        {partyRoots().map((r: RootId) => {
+          const hp = ex.partyHp[r] ?? ROOTS[r].hp;
+          return (
+            <div key={r} className="mp-hero">
+              <Head figure={heroFigure(r)} size={96} look={lookFor(r)} />
+              <div className="mp-hp">
+                <span className="mp-name">{rootLabel(r)}</span>
                 <div className="gbar hp hero">
                   <div style={{ width: `${(hp / ROOTS[r].hp) * 100}%` }} />
                 </div>
@@ -123,9 +119,12 @@ export function MapScreen() {
                   {hp}/{ROOTS[r].hp}
                 </span>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
+        <button className="big" onClick={() => setState({ screen: "loom" })} data-testid="map-loom">
+          Loom
+        </button>
       </div>
     </div>
   );

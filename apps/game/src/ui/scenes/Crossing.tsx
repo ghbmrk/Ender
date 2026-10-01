@@ -8,6 +8,34 @@ import { Head } from "../battle/Figure";
 import { useWorldTop } from "../Stage";
 import { Coach } from "../Coach";
 import { finishTutorial } from "../../game/tutorial";
+import { weaves } from "../loom/Weave";
+
+/**
+ * The hub opens up as you play: at first only the Gate and the Loom; the other stations appear as you weave,
+ * each marked New until you visit it.
+ */
+function unlocked(id: string, mirrorCharges: number, n = weaves()) {
+  if (id === "grimoire") return n >= 1;
+  if (id === "bazaar") return n >= 2;
+  if (id === "crucible") return n >= 3;
+  if (id === "mirror") return mirrorCharges > 0 || n >= 5;
+  return true;
+}
+const SEEN = "ender:stations-seen";
+function seen(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(SEEN) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+function markSeen(id: string) {
+  try {
+    localStorage.setItem(SEEN, JSON.stringify([...new Set([...seen(), id])]));
+  } catch {
+    /* private mode */
+  }
+}
 
 const LABEL: Record<string, { name: string; sub: string }> = {
   gate: { name: "The Gate", sub: "begin an Expedition" },
@@ -27,8 +55,11 @@ export function Crossing() {
   const mod = crossingBackdrop();
   const Back = mod?.default;
   const stations = (mod?.STATIONS ?? []) as readonly { id: string; x: number; y: number }[];
+  const visited = seen();
+  const shown = stations.filter((st) => unlocked(st.id, c?.mirrorCharges ?? 0));
   const open = (id: string) => {
     if (lesson) finishTutorial();
+    markSeen(id);
     if (id === "gate") setState({ panel: "gate" });
     else if (id === "bazaar") setState({ panel: "bazaar" });
     else if (id === "crucible") setState({ panel: "crucible", crucibleMode: "craft" });
@@ -43,8 +74,11 @@ export function Crossing() {
     <div className="crossing" data-testid="crossing">
       <div className="world" style={{ top: worldTop }}>
         <div className="backdrop">{Back && <Back className="backdrop-svg" />}</div>
-        {stations.map((s) => (
-          <button key={s.id} className={`station st-${s.id} ${lesson ? (s.id === "gate" ? "coach-pulse" : "muted") : ""}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
+        {shown.map((s) => (
+          <button
+            key={s.id}
+            className={`station st-${s.id} ${lesson ? (s.id === "gate" ? "coach-pulse" : "muted") : ""} ${!lesson && s.id !== "gate" && s.id !== "loom" && !visited.includes(s.id) ? "fresh" : ""}`} style={{ left: s.x, top: s.y }} onClick={() => open(s.id)} data-testid={`station-${s.id}`}>
+            {!lesson && s.id !== "gate" && s.id !== "loom" && !visited.includes(s.id) && <span className="st-new">New</span>}
             <span className="st-name">{LABEL[s.id]?.name ?? s.id}</span>
             <span className="st-sub">{LABEL[s.id]?.sub}</span>
           </button>

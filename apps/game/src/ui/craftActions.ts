@@ -8,7 +8,7 @@ const DOMAIN_NAMES: Record<string, string> = { discovery: "Discovery", craft: "C
 /** Shared feedback for any action that may grant XP or Mastery. */
 export function announceProgress(out: any) {
   if (out?.inference) {
-    if (out.inference.xp > 0) toast(`+${out.inference.xp} Attunement XP (${out.inference.workUnits} WU)`, "gain");
+    if (out.inference.xp > 0) toast(`+${out.inference.xp} Attunement XP`, "gain");
     else if (out.inference.repeated) toast("No new insight: the Familiar has done this work before", "info");
     if (out.inference.levelsGained > 0) toast(`Level up! +${out.inference.levelsGained} passive point`, "mastery");
   }

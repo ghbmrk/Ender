@@ -97,6 +97,7 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
     if (await visible(tid("battle-continue"))) {
       fights++;
       await shot(`flow-battle-end-${fights}`);
+      console.log("end", fights, JSON.stringify(await page.evaluate(() => ({ sx: scrollX, sy: scrollY, w: document.documentElement.scrollWidth, els: [...document.querySelectorAll("*")].filter((e) => e.scrollLeft > 0).map((e) => e.className + ":" + e.scrollLeft) }))));
       await page.click(tid("battle-continue"));
       await page.waitForTimeout(500);
       continue;

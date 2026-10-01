@@ -782,12 +782,17 @@ export function BattleScreen({
         <div className={`battle-end ${phase.outcome}`} data-testid="battle-end">
           <h1>{phase.outcome === "victory" ? "Victory" : lesson ? "Not this time" : "The party falls"}</h1>
           <div className="end-stats">
-            <span>Break dealt {Math.round(battle.stats.breakDealt)}</span>
-            <span>Parries {battle.stats.parries}</span>
-            <span>Perfects {battle.stats.perfects}</span>
-            <span>AP shared {battle.stats.apTransferred + battle.stats.apRefunded}</span>
+            <span>
+              <b>{Math.round(battle.stats.breakDealt)}</b>Break
+            </span>
+            <span>
+              <b>{battle.stats.parries}</b>Parries
+            </span>
+            <span>
+              <b>{battle.stats.perfects}</b>Perfects
+            </span>
           </div>
-          <button className="big" onPointerDown={(e) => e.stopPropagation()} onClick={() => onEnd({ outcome: phase.outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats })} data-testid="battle-continue">
+          <button className={`big ${phase.outcome === "victory" ? "primary" : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => onEnd({ outcome: phase.outcome, kills: battle.kills, partyHp: battle.partyHpAfter(), stats: battle.stats })} data-testid="battle-continue">
             {lesson && phase.outcome === "defeat" ? "Try again" : "Continue"}
           </button>
         </div>
