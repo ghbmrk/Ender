@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { setState, useStore } from "../state/store";
 import { sfx } from "./battle/sfx";
 import { Panel } from "./Panel";
@@ -10,6 +10,7 @@ export function Rewards() {
   useEffect(() => {
     if (r) sfx.loot((r.crowns > 0 ? 1 : 0) + Object.keys(r.essences ?? {}).length + (r.forms?.length ?? 0));
   }, [r]);
+  const c = useStore((s) => s.character);
   if (!r) return null;
   const close = () => setState({ panel: null, rewards: null });
   return (
@@ -19,15 +20,21 @@ export function Rewards() {
         {r.crowns > 0 && (
           <div className="loot-tile crowns">
             <span className="lt-glyph">◈</span>
-            <b>+{r.crowns}</b>
+            <b>
+              +<Tally to={r.crowns} delay={0} />
+            </b>
             <span className="lt-name">Crowns</span>
+            {c && <span className="lt-have">{c.crowns} in all</span>}
           </div>
         )}
-        {Object.entries(r.essences ?? {}).map(([e, q]) => (
+        {Object.entries(r.essences ?? {}).map(([e, q], i) => (
           <div key={e} className="loot-tile" style={{ ["--c" as string]: essenceColor(e) }}>
             <span className="lt-glyph">{essenceGlyph(e)}</span>
-            <b>+{q as number}</b>
+            <b>
+              +<Tally to={q as number} delay={(i + (r.crowns > 0 ? 1 : 0)) * 90} />
+            </b>
             <span className="lt-name">{essenceName(e)}</span>
+            {c?.essences?.[e] !== undefined && <span className="lt-have">{c.essences[e]} in all</span>}
           </div>
         ))}
         {(r.forms ?? []).map((f: any) => (
@@ -53,4 +60,22 @@ export function Rewards() {
       </div>
     </Panel>
   );
+}
+
+/** A number that counts up as its tile lands, so each gain registers. */
+function Tally({ to, delay }: { to: number; delay: number }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return setN(to);
+    let raf = 0;
+    const start = performance.now() + delay + 120;
+    const step = (t: number) => {
+      const k = Math.min(1, Math.max(0, (t - start) / 420));
+      setN(Math.round(to * (1 - (1 - k) ** 3)));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [to, delay]);
+  return <>{n}</>;
 }

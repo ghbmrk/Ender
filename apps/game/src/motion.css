@@ -1859,3 +1859,6 @@
 .ct-wants{margin:.4em 0 .3em;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.35em}
 .ct-wants li{padding:.15em .7em;border-radius:999px;background:rgba(255,220,150,.1);border:1px solid rgba(255,220,150,.28);font-size:.95em;line-height:1.35}
 .ct-near{margin-top:.4em;padding:.4em .7em;border-left:3px solid #d9b25a;background:rgba(0,0,0,.25);border-radius:6px;color:#e8dcc2}
+
+/* Spoils: what you now hold in all, under each gain. */
+.loot-tile .lt-have{font-family:var(--serif-body);font-size:22px;color:rgba(240,225,190,.62);margin-top:-2px}
