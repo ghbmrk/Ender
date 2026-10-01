@@ -9,11 +9,13 @@ const root = resolve(import.meta.dirname, "..");
 const shots = resolve(root, "art-shots");
 const want = Number(process.argv[2] ?? 2);
 const minutes = Number(process.argv[3] ?? 60);
-const browser = await chromium.launch({
+// A kept profile (PROFILE dir) keeps the hero and finished paints between runs, as a phone would.
+const browser = await chromium.launchPersistentContext(process.env.PROFILE ?? resolve(root, "art-shots/.ondevice-profile"), {
   executablePath: process.env.CHROMIUM_PATH,
   args: ["--enable-unsafe-webgpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--use-webgpu-adapter=swiftshader"],
+  viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true,
 });
-const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+const page = browser.pages()[0] ?? (await browser.newPage());
 await page.addInitScript(() => localStorage.setItem("ender:tutorial", "done"));
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
@@ -25,11 +27,13 @@ const stats = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__ender
 await page.goto(process.env.PAGE + "?autoplay=1");
 await page.waitForSelector(tid("sign-in"), { timeout: 60000 });
 await page.click(tid("sign-in"));
-await page.waitForSelector(tid("crossing"));
-await page.click(tid("hub-gate"));
-await page.waitForSelector('[data-testid^="enter-"]');
-await page.click('[data-testid^="enter-"]');
-await page.waitForSelector(tid("map"));
+await page.waitForSelector(`${tid("crossing")}, ${tid("map")}`);
+if (!(await page.$(tid("map")))) {
+  await page.click(tid("hub-gate"));
+  await page.waitForSelector('[data-testid^="enter-"]');
+  await page.click('[data-testid^="enter-"]');
+  await page.waitForSelector(tid("map"));
+}
 await page.waitForTimeout(600);
 await shot("map-before");
 
@@ -40,7 +44,9 @@ for (;;) {
   if (s?.error || (s?.paints?.length ?? 0) >= want || Date.now() - t0 > minutes * 60000) break;
   await page.waitForTimeout(30000);
 }
-await page.waitForTimeout(1200);
+// Hold further painting so the page can draw (each software-GPU block can stall it for seconds).
+await page.evaluate(() => (window.__enderArt.ctl.hold = true));
+await page.waitForTimeout(90000);
 await shot("map-after");
 // Open the first reachable fight.
 const node = await page.$('.map-node.next:has(.mn-foe)');

@@ -13,13 +13,15 @@ const CACHE = "ender-painter-v1";
 let painter: Painter | null = null;
 let running = false;
 export const stats: { loadS?: number; paints: { key: string; ms: number }[]; error?: string } = { paints: [] };
-(window as unknown as { __enderArt: unknown }).__enderArt = { stats, queue };
+/** Test hook: `hold` pauses painting between blocks (a software GPU can stall the page for seconds per block). */
+const ctl = { hold: false };
+(window as unknown as { __enderArt: unknown }).__enderArt = { stats, queue, ctl };
 
 // ---------- when to work ----------
 let lastInput = 0;
 addEventListener("pointerdown", () => (lastInput = performance.now()), { capture: true, passive: true });
 addEventListener("keydown", () => (lastInput = performance.now()), { capture: true, passive: true });
-const busy = () => getState().screen === "battle" || document.hidden || performance.now() - lastInput < 700;
+const busy = () => ctl.hold || getState().screen === "battle" || document.hidden || performance.now() - lastInput < 700;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const idle = () => new Promise<void>((r) => ("requestIdleCallback" in window ? requestIdleCallback(() => r(), { timeout: 250 }) : setTimeout(r, 16)));
 /** Holds the painter between blocks until the page is quiet, then lets it run one more block. */

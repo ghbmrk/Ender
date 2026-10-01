@@ -922,7 +922,7 @@ export function BattleScreen({
           and Parry sit on the thumb arc, inside a right thumb's reach; the skill cards fill the bottom row. */}
       {(() => {
         const hero = (active?.side === "party" ? active : null) ?? battle.living("party")[0] ?? battle.party()[0];
-        return hero ? <HeroBadge u={hero} others={battle.party().filter((p) => p.id !== hero.id)} impacts={phase.k === "defend" && s?.k === "defend" ? s : null} /> : null;
+        return hero ? <HeroBadge u={hero} art={artOf(hero)} others={battle.party().filter((p) => p.id !== hero.id)} impacts={phase.k === "defend" && s?.k === "defend" ? s : null} /> : null;
       })()}
       <svg className="thumb-arc" viewBox={`0 0 1080 ${stageH}`} style={{ height: stageH }} aria-hidden>
         <defs>
@@ -1146,7 +1146,7 @@ function Timeline({ b, tl, artOf }: { b: Battle; tl: { round: number; ids: strin
 }
 
 /** The hero's corner badge: portrait, health along the curved edge, AP as gems. */
-function HeroBadge({ u, others, impacts }: { u: Unit; others: Unit[]; impacts: DefendSeq | null }) {
+function HeroBadge({ u, others, impacts, art }: { u: Unit; others: Unit[]; impacts: DefendSeq | null; art?: Art }) {
   const pct = Math.max(0, Math.min(100, (100 * u.hp) / u.maxHp));
   const arc = "M372 24 Q 372 420 14 432";
   return (
@@ -1158,7 +1158,7 @@ function HeroBadge({ u, others, impacts }: { u: Unit; others: Unit[]; impacts: D
         <path d="M398 0 Q 398 446 0 458" fill="none" stroke="#ecc56a" strokeWidth="4" opacity="0.8" />
       </svg>
       <div className="hb-portrait">
-        <Head look={lookFor(u.kind)} figure={u.figure} size={210} />
+        <Head look={lookFor(u.kind)} figure={u.figure} size={210} art={art} />
       </div>
       <div className="hb-hp">
         <b>{Math.round(u.hp)}</b>

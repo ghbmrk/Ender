@@ -95,8 +95,8 @@ export const artNow = (key: string | undefined) => (key ? done.get(key) : undefi
 
 /**
  * The art for a spec once painted, else the newest earlier paint of its group (a hero keeps their last look while
- * the next Loom stage paints), else undefined (keep the drawn art). `frozen` keeps the first answer for the life of
- * the component, so a fight never swaps art mid-way.
+ * the next Loom stage paints), else undefined (keep the drawn art). Fights fix their art when they open
+ * (BattleScreen), so nothing swaps mid-fight.
  */
 export function usePainted(spec: ArtSpec | null, pri = 1): Art | undefined {
   useSyncExternalStore(subscribe, () => version);
