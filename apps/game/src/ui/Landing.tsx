@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { paintedBackdrop } from "../art/painted";
-import { gameReady } from "../ready";
+import { gameReady, reloadOnce } from "../ready";
+import { toast } from "../state/store";
 import { sfx } from "./battle/sfx";
 import { OpenAIMark } from "./OpenAIMark";
 
 /**
- * The first screen anyone sees, laid out like a fantasy rulebook cover: a tooled-leather cover with the title on
- * top, the painting (a lone hero before a towering monster) in a gilt window, and the sign-in seal below. The
- * painting is alive: firelight flickers and embers rise. Sign-in is a placeholder; the button simply begins.
+ * The first screen anyone sees: a lone hero facing a wyrm that rises out of the storm, painted in the game's own
+ * style and filling the screen, with the title in the sky and Sign in under the thumb. Sign-in is a placeholder;
+ * the button simply begins.
  */
 export function Landing() {
   const [busy, setBusy] = useState(false);
@@ -27,56 +28,53 @@ export function Landing() {
     going.current = true;
     sfx.unlock();
     setBusy(true);
-    // The rest of the game loads behind the title; sign-in waits for it only if it isn't in yet.
-    const [{ enterGame, signIn }] = await Promise.all([import("../game/launch"), gameReady()]);
-    signIn();
-    await enterGame();
+    try {
+      // The rest of the game loads behind the title; sign-in waits for it only if it isn't in yet.
+      const [{ enterGame, signIn }] = await Promise.all([import("../game/launch"), gameReady()]);
+      signIn();
+      await enterGame();
+    } catch (e) {
+      // A part that won't load usually means a newer build went up while this page was open: load the new one.
+      if (reloadOnce()) return;
+      toast(`Couldn't start: ${(e as Error).message}. Tap to try again.`, "loss");
+    }
     setBusy(false);
     going.current = false;
   };
-  // One composition, like a book cover: the title on its own band, the painting in a gilt window, the sign-in
-  // seal on the band below. Nothing sits over the painting.
+  // One composition, like the game's own key art: the painting fills the screen, the title sits in the storm at
+  // the top, and Sign in sits on the same gilt plate as the Crossing's buttons, in the thumb zone.
   return (
-    <div className="landing cover-book" data-testid="landing" onClick={begin}>
-      <div className="cb-frame">
-        <header className="cb-head">
-          <h1 className="cb-title">ENDER</h1>
-          <p className="cb-tagline">You never earn a skill. You make one.</p>
-        </header>
-        <div className="cb-art">
-          <CoverPainting />
-        </div>
-        <footer className="cb-foot">
-          {/* The mark is the button, set like a seal; "Sign in" sits in its heart. It names ChatGPT for screen readers. */}
-          <button className="cb-seal" disabled={busy} onClick={begin} aria-label="Sign in with ChatGPT" data-testid="sign-in">
-            <OpenAIMark size={250} className="cb-mark" />
-            <span className="cb-signin">{busy ? "Entering" : "Sign in"}</span>
-          </button>
-        </footer>
-        <i className="cb-corner tl" />
-        <i className="cb-corner tr" />
-        <i className="cb-corner bl" />
-        <i className="cb-corner br" />
-      </div>
+    <div className="landing keyart" data-testid="landing" onClick={begin}>
+      <CoverPainting />
+      <header className="ka-head">
+        <h1 className="ka-title">Ender</h1>
+        <p className="ka-tagline">You never earn a skill. You make one.</p>
+      </header>
+      <footer className="ka-foot">
+        <button className={`primary ka-signin ${busy ? "going" : ""}`} disabled={busy} onClick={begin} aria-label="Sign in with ChatGPT" data-testid="sign-in">
+          <OpenAIMark size={64} className="ka-mark" />
+          <span>{busy ? "Entering…" : "Sign in"}</span>
+        </button>
+      </footer>
     </div>
   );
 }
 
-/** The painting: the dedicated cover piece, with flickering braziers and rising embers over it. */
+/** The painting: a lone hero on a cliff, a wyrm rising out of the storm, with lightning and drifting sparks. */
 export function CoverPainting() {
-  const cover = paintedBackdrop("cover");
-  const embers = Array.from({ length: 14 }, (_, i) => i);
+  const art = paintedBackdrop("landing");
+  const sparks = Array.from({ length: 12 }, (_, i) => i);
   return (
-    <div className="cv-paint">
-      {/* The cover holds its own lone knight before the demon, so nothing is drawn over it. */}
-      {cover && <img className="cv-bg" src={cover} alt="" draggable={false} fetchPriority="high" />}
-      <div className="cv-torch" />
-      <div className="cv-embers">
-        {embers.map((i) => (
-          <span key={i} style={{ left: `${8 + ((i * 61) % 84)}%`, animationDelay: `${(i * 0.7) % 6}s`, animationDuration: `${5 + (i % 4)}s` }} />
+    <div className="ka-paint">
+      {art && <img className="ka-bg" src={art} alt="" draggable={false} fetchPriority="high" />}
+      <div className="ka-flash" />
+      <div className="ka-sparks">
+        {sparks.map((i) => (
+          <span key={i} style={{ left: `${6 + ((i * 61) % 88)}%`, animationDelay: `${(i * 0.7) % 6}s`, animationDuration: `${6 + (i % 4)}s` }} />
         ))}
       </div>
-      <div className="cv-vignette" />
+      <div className="ka-fade top" />
+      <div className="ka-fade bottom" />
     </div>
   );
 }

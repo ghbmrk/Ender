@@ -13,9 +13,16 @@ pages="${PAGES_DIR:-${TMPDIR:-/tmp}/ender-hero-painter}"
 grep -q '\./model/' "$root/apps/game/dist-pages/assets/"index-*.js || { echo "publish-pages: build has no painter path (VITE_PAINTER_BASE); not publishing" >&2; exit 1; }
 if [ -d "$pages/.git" ]; then git -C "$pages" fetch -q origin main && git -C "$pages" reset -q --hard origin/main
 else git clone -q --depth 1 https://github.com/ghbmrk/ender-hero-painter.git "$pages"; fi
-# Replace everything but the model, the readme and the Pages marker with the fresh build.
-find "$pages" -mindepth 1 -maxdepth 1 ! -name .git ! -name model ! -name README.md ! -name .nojekyll -exec rm -rf {} +
+# Replace everything but the model, the readme, the Pages marker and assets with the fresh build. The previous
+# build's assets stay one more publish: a page opened before this push still asks for them (Sign in loads a part).
+prev="$(cat "$pages/assets/.build-files" 2>/dev/null || ls "$pages/assets" 2>/dev/null || true)"
+find "$pages" -mindepth 1 -maxdepth 1 ! -name .git ! -name model ! -name README.md ! -name .nojekyll ! -name assets -exec rm -rf {} +
+now="$(ls "$root/apps/game/dist-pages/assets")"
+if [ -d "$pages/assets" ]; then
+  for f in "$pages"/assets/*; do b="$(basename "$f")"; grep -qxF "$b" <<<"$now"$'\n'"$prev" || rm -f "$f"; done
+fi
 cp -r "$root/apps/game/dist-pages/." "$pages/"
+printf '%s\n' "$now" > "$pages/assets/.build-files"
 mkdir -p "$pages/play"
 cat > "$pages/play/index.html" <<'HTML'
 <!doctype html><meta charset="utf-8"><title>Ender</title><meta http-equiv="refresh" content="0; url=../">
