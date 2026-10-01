@@ -54,7 +54,7 @@ function BattleHost() {
 function RunBattleHost() {
   const b = useStore((s) => s.battle);
   const ex = useStore((s) => s.expedition);
-  const setup = useMemo(() => (DEMO ? demoSetup(DEMO === "boss") : b && ex ? battleSetup() : null), [b?.nodeId]);
+  const setup = useMemo(() => (DEMO ? demoSetup(DEMO === "boss", DEMO) : b && ex ? battleSetup() : null), [b?.nodeId]);
   if (DEMO && setup) return <BattleScreen setup={setup} realmId="glass-fen" boss={DEMO === "boss"} onEnd={() => location.reload()} />;
   if (!b || !ex || !setup) return null;
   return (

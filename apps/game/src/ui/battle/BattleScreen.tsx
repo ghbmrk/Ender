@@ -187,8 +187,8 @@ export function BattleScreen({
     return { left: -w / 2, top: -b.h * 0.9, width: w, height: b.h * 0.9 };
   };
   const figScale = (u: Unit) => {
-    const base = u.kind === "ironbound" ? 1.55 : u.kind === "cinder" ? 1.45 : (FIG_SCALE[u.figure] ?? 1.2);
-    if (!duel) return u.kind === "ironbound" || u.kind === "cinder" ? base : undefined;
+    const base = u.kind === "ironbound" ? 1.55 : u.kind === "cinder" ? 1.45 : u.kind === "matron" ? 1.5 : (FIG_SCALE[u.figure] ?? 1.2);
+    if (!duel) return u.kind === "ironbound" || u.kind === "cinder" || u.kind === "matron" ? base : undefined;
     // The hero stands half the arena tall; the foe matches that zoom unless it would crowd the turn bar.
     const hero = battle.party()[0]!;
     const heroBase = FIG_SCALE[hero.figure] ?? 1.2;
@@ -261,6 +261,11 @@ export function BattleScreen({
           break;
         }
         case "heal":
+          // A foe mending itself (the Lantern Matron relighting) gets its own call, so the surge reads as a mechanic.
+          if (e.source === e.target && battle.unit(e.target).side === "foe") {
+            float(battle.unit(e.target), "RELIT", "enrage", d);
+            d += 200;
+          }
           float(battle.unit(e.target), `+${e.amount}`, "heal", d);
           d += 80;
           break;
@@ -713,7 +718,7 @@ export function BattleScreen({
                   </div>
                 )}
                 <div className="bob">
-                  <Fig look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : ""}`} />
+                  <Fig look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
                 </div>
                 {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} />}
                 {u.side === "party" && <HeroTag u={u} />}

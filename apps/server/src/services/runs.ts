@@ -82,7 +82,7 @@ function encounterFor(r: Rng, realm: RealmTemplate, kind: NodeKind, layer: numbe
     if (layer >= 2 && r.chance(0.3)) waves.push(normalWave(r, realm, 2));
     return { waves, difficulty, seed };
   }
-  if (kind === "elite") return { waves: [[r.pick(["ironbound", "cinder"] as const), ...normalWave(r, realm, 2).slice(0, 2)]], difficulty, seed };
+  if (kind === "elite") return { waves: [[r.pick(["ironbound", "cinder", "matron"] as const), ...normalWave(r, realm, 2).slice(0, 2)]], difficulty, seed };
   if (kind === "boss") return { waves: [[realm.boss]], difficulty, seed };
   return undefined;
 }

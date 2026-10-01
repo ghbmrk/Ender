@@ -187,6 +187,19 @@ describe("combat rules (§61–72)", () => {
     expect(angry.some((a) => a.rage)).toBe(true);
     for (const def of Object.values(FOES)) if (def.tier !== "boss") expect(def.attacks.some((a) => a.rage)).toBe(true);
   });
+  it("the Lantern Matron mends once as she enrages", () => {
+    const b = new Battle({ seed: "mt", party: party(), waves: [["matron"]], difficulty: 1 });
+    const m = b.unit("matron-1");
+    m.hp = Math.floor(m.maxHp * 0.2);
+    const before = m.hp;
+    const ev = b.settle();
+    expect(m.enraged).toBe(true);
+    expect(m.hp).toBe(before + Math.round(m.maxHp * 0.3));
+    expect(ev.some((e) => e.type === "heal")).toBe(true);
+    m.hp = Math.floor(m.maxHp * 0.2);
+    b.settle();
+    expect(m.hp).toBe(Math.floor(m.maxHp * 0.2));
+  });
   it("a calm battle (the prologue) never enrages its foes", () => {
     for (const calm of [false, true]) {
       const b = new Battle({ seed: "cm", party: party(), waves: [["keeper"]], difficulty: 1, calm });

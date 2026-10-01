@@ -19,7 +19,7 @@ export type FoeAttack = {
   /** Heals the most wounded ally by this fraction of its max HP instead of attacking. */
   healAlly?: number;
 };
-export type FoeKind = "husk" | "wisp" | "hound" | "keeper" | "seer" | "swarm" | "ironbound" | "cinder" | "king" | "wyrm";
+export type FoeKind = "husk" | "wisp" | "hound" | "keeper" | "seer" | "swarm" | "ironbound" | "cinder" | "matron" | "king" | "wyrm";
 export type FoeDef = {
   kind: FoeKind;
   /** Which painted figure to draw. */
@@ -32,6 +32,8 @@ export type FoeDef = {
   breakTaken: number;
   tier: "normal" | "elite" | "boss";
   attacks: FoeAttack[];
+  /** Heals this fraction of its max HP the moment it enrages, once (the Lantern Matron). */
+  mendOnRage?: number;
   /** Plays when it dies (volatile elites). */
   deathBurst?: FoeAttack;
   /** Boss phases: at these HP fractions, summon these. */
@@ -106,6 +108,15 @@ export const FOES: Record<FoeKind, FoeDef> = {
       { id: "inferno", name: "Inferno", tell: "flames roar up its back", target: "one", hits: h([800, 0.7, "burn"], [1650, 1.0, "burn"]), weight: 4, rage: true },
     ],
     deathBurst: { id: "burst", name: "Cinder Burst", tell: "its body splits with fire", target: "all", hits: h([1000, 1.0, "burn"]), weight: 0 },
+  },
+  matron: {
+    kind: "matron", figure: "seer", name: "Lantern Matron", hp: 360, atk: 16, speed: 95, breakTaken: 0.9, tier: "elite", blurb: "Elite. When she falters, she relights her lantern and mends. Break her before then.",
+    mendOnRage: 0.3,
+    attacks: [
+      { id: "hex", name: "Lantern Hex", tell: "lifts the lantern", target: "one", hits: h([800, 0.6], [1150, 0.6], [1800, 0.7, "burn"]), weight: 3 },
+      { id: "brand", name: "Brand", tell: "the flame gutters low…", target: "one", hits: h([1900, 1.4, "burn"]), weight: 2 },
+      { id: "pyre", name: "Pyre", tell: "the lantern blazes white", target: "one", hits: h([700, 0.6, "burn"], [1300, 0.6], [1450, 0.6], [2100, 0.9, "burn"]), weight: 4, rage: true },
+    ],
   },
   king: {
     kind: "king", figure: "king", name: "The Bound King", hp: 1900, atk: 20, speed: 95, breakTaken: 0.5, tier: "boss", blurb: "Boss. Summons help as his seals fall.",

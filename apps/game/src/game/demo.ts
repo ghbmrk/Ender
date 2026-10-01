@@ -1,4 +1,4 @@
-import { AFFINITIES, compileLoom, type Affinity, type BattleSetup, type LoomNode, type Role } from "@ender/battle";
+import { AFFINITIES, FOES, compileLoom, type Affinity, type BattleSetup, type FoeKind, type LoomNode, type Role } from "@ender/battle";
 
 /** A fixed practice party for ?demo=battle (developer preview and screenshots; never used by normal play). */
 const n = (id: string, role: Role, q: number, r: number, a: [Affinity, Affinity], score = 70, evidence: LoomNode["evidence"] = "trialed"): LoomNode => ({
@@ -21,15 +21,18 @@ export const DEMO_LOOMS: Record<string, LoomNode[]> = {
 
 import { DUEL_FIELD_CAP, DUEL_HP } from "./hero";
 
-export function demoSetup(boss = false): BattleSetup {
+/** ?demo=boss, ?demo=battle, or ?demo=<foe kind> to meet one foe alone (e.g. ?demo=matron). */
+export function demoSetup(boss = false, kind?: string): BattleSetup {
+  const one = kind && kind in FOES ? (kind as FoeKind) : null;
+  if (one) boss = FOES[one].tier === "boss";
   return {
     seed: `demo|${Date.now()}`,
     // Demos match the game: one hero, foes stepping up one at a time.
     party: (["quick"] as const).map((root) => ({ root, loom: compileLoom(DEMO_LOOMS[root]!, 9) })),
-    waves: boss ? [["king"]] : [["husk"], ["wisp"], ["hound"], ["keeper"]],
+    waves: one ? [[one]] : boss ? [["king"]] : [["husk"], ["wisp"], ["hound"], ["keeper"]],
     difficulty: 1,
     fieldCap: DUEL_FIELD_CAP,
-    foeScale: { hp: DUEL_HP[boss ? "boss" : "normal"] },
+    foeScale: { hp: DUEL_HP[boss ? "boss" : one && FOES[one].tier === "elite" ? "elite" : "normal"] },
   };
 }
 export { AFFINITIES };

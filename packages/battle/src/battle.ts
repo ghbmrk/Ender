@@ -719,6 +719,12 @@ export class Battle {
       f.enraged = true;
       f.power *= ENRAGE_POWER;
       events.push({ type: "enrage", target: f.id });
+      const mend = FOES[f.kind as FoeKind]?.mendOnRage;
+      if (mend) {
+        const amount = Math.round(Math.min(f.maxHp - f.hp, f.maxHp * mend));
+        f.hp += amount;
+        events.push({ type: "heal", source: f.id, target: f.id, amount });
+      }
     }
     if (!this.living("party").length) {
       this.outcome = "defeat";

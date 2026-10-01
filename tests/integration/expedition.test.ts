@@ -91,7 +91,7 @@ describe("expedition map (§76–77)", () => {
           }
           if (n.kind === "elite") {
             const [lead, ...rest] = n.encounter.waves[0]!;
-            expect(["ironbound", "cinder"]).toContain(lead);
+            expect(["ironbound", "cinder", "matron"]).toContain(lead);
             expect(rest.length).toBeGreaterThanOrEqual(1);
             expect(rest.length).toBeLessThanOrEqual(2);
           }
