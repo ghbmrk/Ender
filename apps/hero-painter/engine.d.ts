@@ -15,4 +15,6 @@ export function createPainter(o: {
   onProgress?: (p: number) => void;
   adapter?: unknown;
   gate?: Gate | null;
+  /** Use the register-tiled conv kernel for wide layers (default true). */
+  tiled?: boolean;
 }): Promise<Painter>;

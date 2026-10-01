@@ -73,6 +73,80 @@ fn main(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) l: v
 }`;
 };
 
+// conv2d for wide layers (cout >= 32): each workgroup computes 64 output channels x an 8x8 pixel tile, each of its
+// 256 threads a 4x4 block (4 channels x 4 pixels), so every value read from workgroup memory feeds 4 multiply-adds
+// instead of about one. Same sums as convWGSL, in the same order per output.
+const convIC = (k, s, d) => {
+  const T = 7 * s + (k - 1) * d + 1;
+  let ic = 16;
+  while (ic > 1 && (64 * ic * k * k + ic * T * T) * 4 > 14000) ic >>= 1;
+  return [T, ic];
+};
+const convGWSL = (w, k, s, act, res, d = 1) => {
+  const [T, IC] = convIC(k, s, d);
+  return `
+${W_DECL[w]}
+struct P { cin: u32, h: u32, w: u32, cout: u32, ho: u32, wo: u32, pad: u32, _p: u32 }
+@group(0) @binding(0) var<uniform> p: P;
+@group(0) @binding(3) var<storage, read> x: array<f32>;
+@group(0) @binding(4) var<storage, read> b: array<f32>;
+@group(0) @binding(5) var<storage, read_write> y: array<f32>;
+${res ? "@group(0) @binding(6) var<storage, read> r: array<f32>;" : ""}
+const K: u32 = ${k}u; const S: u32 = ${s}u; const D: u32 = ${d}u; const T: u32 = ${T}u; const IC: u32 = ${IC}u; const KK: u32 = ${k * k}u;
+var<workgroup> tile: array<f32, ${IC * T * T}>;
+var<workgroup> ws: array<f32, ${64 * IC * k * k}>;
+@compute @workgroup_size(16, 16, 1)
+fn main(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) l: vec3<u32>, @builtin(local_invocation_index) li: u32) {
+  let py = l.x / 2u; let px0 = (l.x % 2u) * 4u; let o0 = l.y * 4u; let oc0 = wg.z * 64u;
+  let ix0 = i32(wg.x * 8u * S) - i32(p.pad); let iy0 = i32(wg.y * 8u * S) - i32(p.pad);
+  var acc: array<f32, 16>;
+  for (var c0 = 0u; c0 < p.cin; c0 += IC) {
+    for (var t = li; t < IC * T * T; t += 256u) {
+      let c = t / (T * T); let rem = t % (T * T); let ty = rem / T; let tx = rem % T;
+      let iy = iy0 + i32(ty); let ix = ix0 + i32(tx);
+      var v = 0.0;
+      if (c0 + c < p.cin && iy >= 0 && ix >= 0 && iy < i32(p.h) && ix < i32(p.w)) { v = x[((c0 + c) * p.h + u32(iy)) * p.w + u32(ix)]; }
+      tile[t] = v;
+    }
+    for (var t = li; t < 64u * IC * KK; t += 256u) {
+      let o = t / (IC * KK); let rem = t % (IC * KK); let c = rem / KK; let kk = rem % KK;
+      var v = 0.0;
+      if (oc0 + o < p.cout && c0 + c < p.cin) { v = W(((oc0 + o) * p.cin + c0 + c) * KK + kk); }
+      ws[t] = v;
+    }
+    workgroupBarrier();
+    for (var c = 0u; c < IC; c++) {
+      for (var ky = 0u; ky < K; ky++) {
+        let row = (c * T + py * S + ky * D) * T;
+        for (var kx = 0u; kx < K; kx++) {
+          var tv: array<f32, 4>; var wv: array<f32, 4>;
+          for (var i = 0u; i < 4u; i++) { tv[i] = tile[row + (px0 + i) * S + kx * D]; }
+          let wi = (c * K + ky) * K + kx;
+          for (var o = 0u; o < 4u; o++) { wv[o] = ws[(o0 + o) * IC * KK + wi]; }
+          for (var o = 0u; o < 4u; o++) { for (var i = 0u; i < 4u; i++) { acc[o * 4u + i] += wv[o] * tv[i]; } }
+        }
+      }
+    }
+    workgroupBarrier();
+  }
+  let oy = wg.y * 8u + py;
+  if (oy >= p.ho) { return; }
+  for (var o = 0u; o < 4u; o++) {
+    let oc = oc0 + o0 + o;
+    if (oc >= p.cout) { break; }
+    for (var i = 0u; i < 4u; i++) {
+      let ox = wg.x * 8u + px0 + i;
+      if (ox >= p.wo) { break; }
+      let idx = (oc * p.ho + oy) * p.wo + ox;
+      var v = acc[o * 4u + i] + b[oc];
+      ${res ? "v += r[idx];" : ""}
+      ${act === "relu" ? "v = max(v, 0.0);" : ""}
+      y[idx] = v;
+    }
+  }
+}`;
+};
+
 // Y[N][M] = X[N][K] . W[M][K]^T + b (+ R). 32x32 output tile per workgroup, 4x4 per thread.
 const linWGSL = (w, res, hasBias) => `
 ${W_DECL[w]}
@@ -315,7 +389,7 @@ const f16 = (h) => {
 };
 const F16 = new Float32Array(65536).map((_, i) => f16(i));
 
-export async function createPainter({ manifest, fetchChunk, onProgress = () => {}, adapter, gate: loadGate = null }) {
+export async function createPainter({ manifest, fetchChunk, onProgress = () => {}, adapter, gate: loadGate = null, tiled = true }) {
   adapter = adapter || (await navigator.gpu?.requestAdapter({ powerPreference: "high-performance" }));
   if (!adapter) throw new Error("WebGPU is not available in this browser.");
   const L = adapter.limits;
@@ -449,9 +523,12 @@ fn byteAt(k: u32) -> u32 { return (pk[k >> 2u] >> ((k & 3u) * 8u)) & 255u; }
     const cout = sh[0], k = sh[2];
     const pad = k === 3 ? d : 0, Ho = Math.floor((H + 2 * pad - d * (k - 1) - 1) / s) + 1, Wo = Math.floor((Wd + 2 * pad - d * (k - 1) - 1) / s) + 1;
     const y = alloc(cout * Ho * Wo);
-    const pl = pipe(`conv${w.q ? "q" : "f"}${k}${s}${d}${act}${res ? "r" : ""}`, convWGSL(w.q ? "q" : "f", k, s, act, !!res, d));
+    const wide = tiled && cout >= 32;
+    const pl = wide
+      ? pipe(`convG${w.q ? "q" : "f"}${k}${s}${d}${act}${res ? "r" : ""}`, convGWSL(w.q ? "q" : "f", k, s, act, !!res, d))
+      : pipe(`conv${w.q ? "q" : "f"}${k}${s}${d}${act}${res ? "r" : ""}`, convWGSL(w.q ? "q" : "f", k, s, act, !!res, d));
     const b = bias || gpu[name + ".bias"]?.f || zeros(cout);
-    run(pl, { 0: uni([sh[1], H, Wd, cout, Ho, Wo, pad, 0]), ...wbind(w), 3: x.b, 4: b, 5: y.b, ...(res ? { 6: res.b } : {}) }, Math.ceil(Wo / 8), Math.ceil(Ho / 8), Math.ceil(cout / 8));
+    run(pl, { 0: uni([sh[1], H, Wd, cout, Ho, Wo, pad, 0]), ...wbind(w), 3: x.b, 4: b, 5: y.b, ...(res ? { 6: res.b } : {}) }, Math.ceil(Wo / 8), Math.ceil(Ho / 8), Math.ceil(cout / (wide ? 64 : 8)));
     return [y, cout, Ho, Wo];
   };
   const zc = new Map();
