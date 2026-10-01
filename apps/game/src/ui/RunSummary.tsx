@@ -10,6 +10,18 @@ export function RunSummary() {
   return (
     <Panel title={title} onClose={returnToCrossing} testId="run-summary">
       <div className="summary">
+        {s.outcome !== "victory" && s.reached?.step > 0 && (
+          <div className="sum-reach">
+            <span>
+              You reached step <b>{s.reached.step}</b> of {s.reached.of}
+            </span>
+            <div className="sum-track">
+              {Array.from({ length: s.reached.of }, (_, i) => (
+                <i key={i} className={i < s.reached.step ? "on" : i === s.reached.of - 1 ? "boss" : ""} />
+              ))}
+            </div>
+          </div>
+        )}
         {s.outcome === "death" && <p className="dim">You keep everything you found. Rest at the Crossing and try again.</p>}
         {s.totals && (
           <div className="loot">

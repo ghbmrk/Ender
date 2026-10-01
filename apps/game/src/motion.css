@@ -1341,3 +1341,47 @@
 .realm-actions button.realm-more {
   margin-left: 0 !important;
 }
+
+/* The run summary: how far you climbed, as a row of steps up to the Boss, in the game's serif. */
+.summary,
+.summary .event {
+  font-family: var(--serif-body);
+}
+.summary > p.dim {
+  font-size: 17px;
+}
+.sum-reach {
+  display: grid;
+  gap: 8px;
+  font-family: var(--serif-body);
+  font-size: 19px;
+  color: #e9dcc0;
+}
+.sum-reach b {
+  color: #f4d58c;
+}
+.sum-track {
+  display: flex;
+  gap: 6px;
+}
+.sum-track i {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: #ffffff1f;
+}
+.sum-track i.on {
+  background: linear-gradient(90deg, #d9a441, #f4d58c);
+  box-shadow: 0 0 8px #f4d58c66;
+}
+.sum-track i.boss {
+  background: #7a1f2a;
+  box-shadow: inset 0 0 0 2px #e0b450;
+}
+/* Crowns needs the most room of any loot name, so its tile takes a wider share of the row. */
+.loot .loot-tile.loot-tile.crowns {
+  flex-grow: 1.4;
+}
+.loot .loot-tile .lt-name.lt-name {
+  font-size: 24px;
+}

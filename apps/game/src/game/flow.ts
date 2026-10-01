@@ -179,7 +179,8 @@ export async function finishExpedition(outcome: "victory" | "death" | "abandon")
     if (d > 0) essences[e] = d;
   }
   const totals = out.totals ?? (runStart ? { crowns: Math.max(0, (c?.crowns ?? 0) - runStart.crowns), essences, forms: runForms } : undefined);
-  setState({ runSummary: { ...out, totals, outcome, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
+  const reached = { step: ex.visited.length, of: ex.plan.map.layers.length };
+  setState({ runSummary: { ...out, totals, outcome, reached, realmId: ex.plan.realmId, rewards: getState().rewards }, panel: "summary", expedition: null, battle: null, screen: "crossing", loomEditable: true });
 }
 
 export function returnToCrossing() {
