@@ -1042,3 +1042,40 @@
 .battle .unit.foe .fig-img {
   filter: drop-shadow(0 0 1.5px rgba(10, 6, 4, 0.7)) drop-shadow(0 12px 18px rgba(0, 0, 0, 0.45));
 }
+
+/* Loop 12: reachable map nodes show what they hold. A fight shows the foe's face in the medallion,
+   with a count when more than one will step up; other stops say what you'd do there. */
+.stage .map-node .mn-foe {
+  position: relative;
+  width: 124px;
+  height: 124px;
+}
+.stage .map-node .mn-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.stage .map-node .mn-more {
+  position: absolute;
+  right: -14px;
+  top: -10px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #b8402f;
+  color: #fff3dc;
+  font-family: var(--display);
+  font-size: 28px;
+  line-height: 40px;
+  box-shadow: 0 2px 6px #000a;
+}
+.stage .map-node .mn-name .mn-peek {
+  display: block;
+  margin-top: -4px;
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 26px;
+  color: #f4e3b8;
+  text-align: center;
+}

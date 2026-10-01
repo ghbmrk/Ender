@@ -1,4 +1,4 @@
-import { PARTY, ROOTS, type RootId } from "@ender/battle";
+import { FOES, PARTY, ROOTS, type FoeKind, type RootId } from "@ender/battle";
 import { rootLabel, heroFigure, lookFor, partyRoots } from "../../game/hero";
 import { getState as getStoreState } from "../../state/store";
 import { backdropFor } from "../../art/registry";
@@ -17,6 +17,14 @@ const KIND: Record<string, { glyph: string; name: string }> = {
   contract: { glyph: "✉", name: "Contract" },
   mystery: { glyph: "?", name: "Mystery" },
   boss: { glyph: "♚", name: "Boss" },
+};
+/** What a reachable node holds, in a few words, for the nodes that aren't fights. */
+const PEEK: Record<string, string> = {
+  shrine: "rework your Loom",
+  attunement: "weave your Forms",
+  bazaar: "buy and sell",
+  contract: "take a paid job",
+  mystery: "anything at all",
 };
 const REALM_NAME: Record<string, string> = { "ashen-vault": "The Ashen Vault", "glass-fen": "The Glass Fen", "hollow-keep": "The Hollow Keep" };
 
@@ -97,8 +105,22 @@ export function MapScreen() {
             data-testid={`map-node-${n.id}`}
             data-kind={n.kind}
           >
-            <span className="mn-glyph">{k.glyph}</span>
-            <span className="mn-name">{n.label ?? k.name}</span>
+            {/* The choices in front of you show what they hold: the foe you'd face, or what you'd find. */}
+            {next.has(n.id) && n.encounter ? (
+              <span className="mn-foe">
+                <span className="mn-face">
+                  <Head figure={FOES[n.encounter.waves.flat()[0] as FoeKind]?.figure ?? n.encounter.waves.flat()[0]!} size={124} />
+                </span>
+                {n.encounter.waves.flat().length > 1 && <b className="mn-more">×{n.encounter.waves.flat().length}</b>}
+              </span>
+            ) : (
+              <span className="mn-glyph">{k.glyph}</span>
+            )}
+            <span className="mn-name">
+              {n.label ?? k.name}
+              {next.has(n.id) && !n.encounter && PEEK[n.kind] && <small className="mn-peek">{PEEK[n.kind]}</small>}
+              {next.has(n.id) && n.encounter && <small className="mn-peek">{FOES[n.encounter.waves.flat()[0] as FoeKind]?.name ?? "foes"}</small>}
+            </span>
           </button>
         );
       })}
