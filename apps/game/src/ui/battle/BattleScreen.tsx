@@ -737,7 +737,7 @@ export function BattleScreen({
                   <Fig look={u.side === "party" ? lookFor(u.kind) : undefined} figure={u.figure} pose={u.id === strikeHero || u.id === lungingFoe ? "strike" : "idle"} scale={figScale(u)} className={`fig ${u.kind === "cinder" ? "tint-cinder" : u.kind === "ironbound" ? "tint-iron" : u.kind === "matron" ? "tint-matron" : ""}`} />
                 </div>
                 {u.side === "foe" && u.tier !== "boss" && u.alive && <FoeTag u={u} h={figureBox(u.figure, figScale(u)).h} x={x} />}
-                {u.side === "party" && <HeroTag u={u} />}
+                {u.side === "party" && <HeroTag u={u} h={figureBox(u.figure, figScale(u)).h} />}
               </div>
             );
           })}
@@ -888,7 +888,7 @@ function Bar({ v, max, cls }: { v: number; max: number; cls: string }) {
   );
 }
 
-function Statuses({ u }: { u: Unit }) {
+function Statuses({ u, named }: { u: Unit; named?: boolean }) {
   const on = (Object.keys(u.status) as (keyof Unit["status"])[]).filter((k) => {
     const v = u.status[k];
     return typeof v === "number" ? v > 0 : !!v;
@@ -901,7 +901,8 @@ function Statuses({ u }: { u: Unit }) {
         const v = u.status[k];
         return (
           <span key={k} className={`st s-${k}`} title={STATUS_NAMES[k]}>
-            {STATUS_GLYPH[k]}
+            <i className="st-g">{STATUS_GLYPH[k]}</i>
+            {named && <span className="st-n">{STATUS_NAMES[k]}</span>}
             {typeof v === "number" ? v : v?.rounds}
           </span>
         );
@@ -929,10 +930,11 @@ function FoeTag({ u, h, x }: { u: Unit; h: number; x: number }) {
   );
 }
 
-function HeroTag({ u }: { u: Unit }) {
+/** What is on the hero, named in full above the head, where the eye already is. */
+function HeroTag({ u, h }: { u: Unit; h: number }) {
   return (
-    <div className="hero-tag">
-      <Statuses u={u} />
+    <div className="hero-tag" style={{ top: -h + 10 }}>
+      <Statuses u={u} named />
     </div>
   );
 }

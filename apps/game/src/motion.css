@@ -1865,3 +1865,10 @@
 
 /* Loop 47: card art is a faint wash behind the rules so every word stays readable; boosts sit by the name. */
 .stage .card .card-boost{margin-left:.3em;font-size:.75em;color:#ffe9a0;text-shadow:0 0 2px #4a2205,0 0 2px #4a2205,0 0 10px rgba(255,214,120,.9);vertical-align:.12em;letter-spacing:.05em}
+
+/* Loop 48: the hero's statuses sit above the head, named and large enough to read at a glance. */
+.hero-tag{left:-200px;width:400px;pointer-events:none}
+.hero-tag .statuses{font-size:34px;gap:10px}
+.hero-tag .st{display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:999px;background:#140f16e6;border-color:currentColor;font-family:var(--serif-body);font-weight:700}
+.st .st-g{font-style:normal;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif}
+.hero-tag .st .st-n{color:#f3e6c8;font-weight:600}
