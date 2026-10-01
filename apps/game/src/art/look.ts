@@ -27,7 +27,7 @@ export type HeroLook = {
 
 export type Hero = { root: RootId; name: string; look: HeroLook };
 
-export const SKINS = ["#f6dcc4", "#e2b391", "#c08766", "#8c5a40", "#5a3526", "#a8b8a0"] as const;
+export const SKINS = ["#f6dcc4", "#e2b391", "#c08766", "#8c5a40", "#5a3526", "#3d241a"] as const;
 export const HAIRS = ["#1e1712", "#4a2a15", "#8c2c0c", "#c9953a", "#d6dee8", "#43296f"] as const;
 /** Cloth palettes: [primary, secondary, accent]. */
 export const PALETTES: readonly (readonly [string, string, string])[] = [
