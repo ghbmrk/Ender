@@ -248,8 +248,7 @@ export function LoomScreen() {
         : !lessonSkill
           ? { text: "It's **dormant**: a node must touch the Root, or share an Affinity with a neighbour. Drag it beside the Root." }
           : {
-              text: `**${lessonSkill.name}** is now ${heroName}'s skill. Your Loom is your skill tree: move a Form and the skills change.`,
-              action: { label: "Fight", onClick: () => goTo("skill"), testId: "lesson-fight" },
+              text: `**${lessonSkill.name}** is now ${heroName}'s skill. Your Loom is your skill tree: move a Form and the skills change. Tap **Fight** to try it.`,
             };
 
   const cells = boardCells(2);
@@ -299,6 +298,12 @@ export function LoomScreen() {
               </span>
             ))}
           </div>
+        )}
+        {/* The lesson ends on the same big bottom button as every other Loom visit, where thumbs already look for it. */}
+        {lesson && lessonSkill && (
+          <button className="loom-done coach-pulse" onClick={() => goTo("skill")} data-testid="lesson-fight">
+            Fight
+          </button>
         )}
         {!lesson && <button className={`loom-done ${afterFight && !raw.length && !pool.length ? "coach-pulse" : ""}`} onClick={close} data-testid="loom-done">
           {afterFight || (inRun && editable) ? "Continue" : "Done"}
@@ -404,7 +409,7 @@ export function LoomScreen() {
 
       <CompilePreview c={shownC} diff={preview?.diff ?? diff} previewing={!!preview} power={ROOTS[hero].basic} />
       </div>
-      {coach && !drag?.moved && !weaving && <Coach text={coach.text} action={coach.action} key={coach.text} style={coach.action ? { bottom: "calc(24px - (var(--stage-h) - 1920px) / 2)" } : { top: TRAY_TOP - 175 }} />}
+      {coach && !drag?.moved && !weaving && <Coach text={coach.text} key={coach.text} style={{ top: TRAY_TOP - 175 }} />}
 
       {drag?.moved && (
         <svg className="drag-ghost" viewBox="0 0 1080 1920">
