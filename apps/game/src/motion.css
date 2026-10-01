@@ -2414,3 +2414,27 @@
 .landing .cv-party.on-cover > div {
   filter: brightness(0.42) sepia(0.7) saturate(1.3) drop-shadow(0 -4px 10px #ff9a3a99);
 }
+
+/* ═════════════ Launch: "boot" holds a dark screen while a signed-in save loads; the hub's back control ═════════════ */
+.stage .boot {
+  position: absolute;
+  inset: 0;
+  background: #0b0910;
+}
+.stage .hub-top button.hub-back {
+  flex: none;
+  min-width: 88px;
+  width: 88px;
+  height: 88px;
+  padding: 0;
+  margin-right: -4px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  font-size: 72px;
+  line-height: 1;
+  color: #c9b48a;
+}
+.stage .hub-top .hub-name {
+  margin-right: auto;
+}

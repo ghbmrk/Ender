@@ -4,7 +4,8 @@ import { ArtDefs } from "../art/defs";
 import { battleSetup, endBattle } from "../game/flow";
 import { demoSetup } from "../game/demo";
 import { LESSONS, lessonEnded, lessonSetup, skipTutorial } from "../game/tutorial";
-import { setState, toast, useStore } from "../state/store";
+import { getState, setState, toast, useStore } from "../state/store";
+import { enterGame } from "../game/launch";
 import { Stage } from "./Stage";
 import { Title } from "./Title";
 import { Landing } from "./Landing";
@@ -78,6 +79,7 @@ export function App() {
   }, [panel]);
   useEffect(() => {
     if (DEMO) setState({ screen: DEMO === "loom" ? "loom" : "battle" });
+    else if (getState().screen === "boot") void enterGame();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setState((s) => (s.panel === "summary" ? {} : { panel: null }));
     };
@@ -98,6 +100,7 @@ export function App() {
     <div className="app">
       <ArtDefs />
       <Stage>
+        {screen === "boot" && <div className="boot" data-testid="boot" />}
         {screen === "landing" && <Landing />}
         {screen === "title" && <Title />}
         {screen === "create" && <CreateHero />}

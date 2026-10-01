@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { continueGame } from "../game/flow";
-import { goTo, savedStep, tutorialDone } from "../game/tutorial";
+import { enterGame } from "../game/launch";
+import { savedStep, tutorialDone } from "../game/tutorial";
 import { heroFigure } from "../game/hero";
 import { setState, toast, useStore } from "../state/store";
 import { crossingBackdrop } from "../art/registry";
@@ -33,11 +33,10 @@ export function Title() {
       setBusy(false);
     }
   };
-  /** Continue the save, picking the prologue back up where it was left. */
+  /** Continue the save, picking the prologue back up where it was left (it never hangs: see enterGame). */
   const resume = async () => {
-    await continueGame();
-    const step = savedStep();
-    if (step) goTo(step);
+    await enterGame();
+    setBusy(false);
   };
   const toggleDev = () => {
     const v = !dev;
@@ -88,7 +87,7 @@ export function Title() {
             Continue
           </button>
         )}
-        <button className={`big ${hasSave || me ? "" : "primary"}`} disabled={busy} onClick={() => go(async () => setState({ screen: "create" }))} data-testid="new-hero">
+        <button className={`big ${hasSave || me ? "" : "primary"}`} onClick={() => go(async () => setState({ screen: "create" }))} data-testid="new-hero">
           New hero
         </button>
         {/* Developer provenance is for building the game; it only shows with ?dev in the address. */}

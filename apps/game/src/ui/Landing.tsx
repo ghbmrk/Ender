@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
-import { api } from "../api";
-import { savedStep, tutorialDone } from "../game/tutorial";
+import { useState } from "react";
+import { enterGame, signIn } from "../game/launch";
 import { paintedBackdrop, paintedFigure } from "../art/painted";
-import { setState } from "../state/store";
 import { Fig } from "./battle/Figure";
 import { sfx } from "./battle/sfx";
 
@@ -12,23 +10,14 @@ import { sfx } from "./battle/sfx";
  * button legible. Sign-in is a placeholder; the button simply begins.
  */
 export function Landing() {
-  const [hasSave, setHasSave] = useState(false);
-  useEffect(() => {
-    api
-      .character()
-      .then((c) => setHasSave(c.xp > 0 || c.crowns !== 250 || c.level > 1 || !!savedStep() || tutorialDone()))
-      .catch(() => setHasSave(false));
-  }, []);
-  const begin = () => {
+  const [busy, setBusy] = useState(false);
+  // Sign-in is a placeholder: it is remembered, and it leads straight into the game.
+  const begin = async () => {
     sfx.unlock();
-    let returning = hasSave;
-    try {
-      returning ||= !!localStorage.getItem("ender:hero");
-    } catch {
-      /* private mode */
-    }
-    // A returning player picks their hero; a new one goes straight into making one.
-    setState({ screen: returning ? "title" : "create" });
+    setBusy(true);
+    signIn();
+    await enterGame();
+    setBusy(false);
   };
   return (
     <div className="landing painted" data-testid="landing">
@@ -43,7 +32,7 @@ export function Landing() {
         <p className="tagline">You never earn a skill. You make one.</p>
       </div>
       <div className="title-actions landing-actions">
-        <button className="big primary landing-signin" onClick={begin} data-testid="sign-in">
+        <button className="big primary landing-signin" disabled={busy} onClick={begin} data-testid="sign-in">
           Sign in with ChatGPT
         </button>
       </div>

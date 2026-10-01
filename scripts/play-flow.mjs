@@ -23,12 +23,8 @@ const visible = async (sel) => (await page.$(sel)) !== null;
 await page.goto("file://" + resolve(root, "apps/game/dist-web/ender.html") + "?autoplay=1");
 await page.waitForSelector(tid("sign-in"), { timeout: 60000 });
 await shot("flow-landing");
+// Signing in leads straight into the game: with the prologue done, that is the Crossing.
 await page.click(tid("sign-in"));
-await page.waitForSelector(tid("new-hero"));
-await shot("flow-title");
-await page.click(tid("new-hero"));
-await page.waitForSelector(tid("hero-begin"));
-await page.click(tid("hero-begin"));
 await page.waitForSelector(tid("crossing"));
 await page.waitForTimeout(500);
 await shot("flow-crossing");

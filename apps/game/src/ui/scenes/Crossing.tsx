@@ -130,6 +130,10 @@ export function Crossing() {
         ))}
       </div>
       <header className="hub-top">
+        {/* Back out of the game to hero select, where a new hero is made. Never on the way in. */}
+        <button className="hub-back" onClick={() => setState({ screen: "title", panel: null })} aria-label="Heroes" data-testid="to-heroes">
+          ‹
+        </button>
         <div className="hub-name">
           <div className="hub-title">The Crossing</div>
           <div className="hub-sub">
