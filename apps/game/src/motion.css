@@ -2626,3 +2626,31 @@
 }
 .battle .judge.small { font-size: 44px; opacity: 0.9; }
 .battle .judge.def.hit { color: #ff8c8c; font-size: 48px; }
+
+/* Map: stops further up the route read as "later", and a tap on one flashes the stops you can reach now. */
+.stage .map-node.ahead {
+  opacity: 0.4;
+  filter: saturate(0.5);
+}
+.stage .map-node.nudge-0 .mn-name,
+.stage .map-node.nudge-1 .mn-name {
+  color: #ffe9a8;
+}
+.stage .map-node.nudge-0 {
+  animation: node-nudge-0 520ms ease-out;
+}
+.stage .map-node.nudge-1 {
+  animation: node-nudge-1 520ms ease-out;
+}
+@keyframes node-nudge-0 {
+  30% {
+    transform: translate(-50%, -50%) scale(1.3);
+    box-shadow: inset 0 0 0 6px #ffe9a8, 0 0 60px #ffd67a;
+  }
+}
+@keyframes node-nudge-1 {
+  30% {
+    transform: translate(-50%, -50%) scale(1.3);
+    box-shadow: inset 0 0 0 6px #ffe9a8, 0 0 60px #ffd67a;
+  }
+}
