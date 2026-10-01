@@ -2528,3 +2528,23 @@
   color: #e6d6c8;
   text-shadow: 0 2px 10px #000, 0 0 20px #ff3a1a88;
 }
+
+/* The title begins on any tap; this line says so, at the bottom left beside the sign-in mark. */
+.stage .landing .landing-tap {
+  position: absolute;
+  left: 70px;
+  bottom: calc(250px + var(--safe-b, 0px));
+  z-index: 5;
+  margin: 0;
+  font-size: 44px;
+  letter-spacing: 0.06em;
+  color: #f3e6c8;
+  text-shadow: 0 2px 0 #000, 0 0 18px #000;
+  animation: landing-tap 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes landing-tap {
+  50% {
+    opacity: 0.45;
+  }
+}
