@@ -144,11 +144,17 @@ export function MapScreen() {
   // A tap on a stop you can't reach yet says where you can go, and the reachable stops flash.
   const [nudge, setNudge] = useState(0);
   const shownAt = useRef(performance.now());
+  // Only a touch that starts on the map, once it has been up a moment, can pick a stop. A thumb still tapping the last
+  // fight's timing ring carried straight into the next fight, and the fresh foe read as the old one healing (blind round 31).
+  const armed = useRef(false);
+  const arm = () => {
+    if (performance.now() - shownAt.current >= 350) armed.current = true;
+  };
   const Back = backdropFor(ex.plan.realmId, false)?.default;
   const go = (n: MapNode): void => {
     if (reveal) return;
-    // A tap that skipped the fight's Victory lands its click here a moment later: the map's choice is never made by it.
-    if (performance.now() - shownAt.current < 200) return;
+    // A tap that skipped the fight's Victory, or was meant for its ring, never makes the map's choice.
+    if (!armed.current) return;
     // A tap on a stop further on goes by the way there; when that way is a fight, say so, so a Shrine never seems to turn into a foe.
     const by = (v: MapNode): void => {
       if (n.layer > anchor && v.encounter && v.kind !== "mystery")
@@ -186,6 +192,7 @@ export function MapScreen() {
     <div
       className="map-screen"
       data-testid="map"
+      onPointerDownCapture={arm}
       // With one way on, a tap on the open map between stops takes it too: a miss is never a dead tap.
       // With a choice, a tap just beside a stop counts as a tap on the nearest one (which takes it, goes by the way
       // there, or says why not): thumbs land a little off the coin.
@@ -202,7 +209,7 @@ export function MapScreen() {
         }
         if (best) return go(best.n);
         // Open ground far from any stop: still answer, so no tap on the map is dead.
-        if (performance.now() - shownAt.current < 200 || reveal) return;
+        if (!armed.current || reveal) return;
         setNudge((k) => k + 1);
         toast(`Tap ${glowing(reach)} to choose your path.`);
       }}
