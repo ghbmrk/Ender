@@ -1730,3 +1730,19 @@
   0%, 22% { opacity: 0; transform: translateY(14px); }
   32% { opacity: 1; transform: none; }
 }
+
+/* Loop 39: the Crossing's header shows a count only once something uses it. Crowns always (gold, at the
+   right); Essences once the Bazaar opens; Focus once the Crucible does. */
+.hub-ess .hub-crowns {
+  grid-column: 1 / -1;
+  justify-self: end;
+  color: #f4d58c;
+}
+.hub-ess.solo {
+  display: flex;
+  align-items: center;
+}
+.hub-ess.solo .hub-crowns {
+  font: 700 56px/1 var(--display);
+  text-shadow: 0 2px 8px #000a;
+}

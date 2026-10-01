@@ -72,6 +72,7 @@ export function Crossing() {
   const stations = (mod?.STATIONS ?? []) as readonly { id: string; x: number; y: number }[];
   const visited = seen();
   const shown = stations.filter((st) => unlocked(st.id, c?.mirrorCharges ?? 0));
+  const has = (id: string) => shown.some((st) => st.id === id);
   const [risen] = useState(() => (lesson ? [] : announce(shown.map((st) => st.id).filter((id) => id !== "gate" && id !== "loom"))));
   useEffect(() => {
     if (risen.length) {
@@ -115,16 +116,22 @@ export function Crossing() {
         <div className="hub-name">
           <div className="hub-title">The Crossing</div>
           <div className="hub-sub">
-            Loom Rank <b>{c?.rank ?? c?.level ?? 1}</b> · {c?.crowns ?? 0} Crowns · Focus {c?.focus ?? 0}
+            Loom Rank <b>{c?.rank ?? c?.level ?? 1}</b>
+            {has("crucible") && <> · Focus {c?.focus ?? 0}</>}
           </div>
         </div>
-        <div className="hub-ess">
-          {Object.entries(c?.essences ?? {}).map(([e, q]) => (
-            <span key={e} style={{ color: essenceColor(e) }}>
-              {essenceGlyph(e)}
-              {q as number}
-            </span>
-          ))}
+        {/* Counts appear with the places that use them: Essences with the Bazaar, Focus with the Crucible. */}
+        <div className={`hub-ess ${has("bazaar") ? "" : "solo"}`}>
+          <span className="hub-crowns" title="Crowns">
+            ◈{c?.crowns ?? 0}
+          </span>
+          {has("bazaar") &&
+            Object.entries(c?.essences ?? {}).map(([e, q]) => (
+              <span key={e} style={{ color: essenceColor(e) }}>
+                {essenceGlyph(e)}
+                {q as number}
+              </span>
+            ))}
         </div>
       </header>
       {lesson && <Coach text="You're ready. Tap **Set out** to begin an Expedition. You can rework your Loom here, or at Shrines along the way." style={{ bottom: 250 }} />}
