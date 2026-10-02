@@ -315,3 +315,121 @@
   color: #f1fbf4;
   background: linear-gradient(180deg, #2e8a53, #1c6a3a);
 }
+
+/* A guided first use (ui/Guide.tsx): the same parchment card as the Gate's walkthrough, anywhere in the game. */
+button.guide {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  min-height: 0;
+  margin: 0 0 10px;
+  padding: 10px 14px 8px;
+  background: #f1e4c4;
+  color: #2a1f12;
+  border: 2px solid #c9a24a;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px #000a;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.38;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  animation: guide-in 220ms cubic-bezier(0.2, 1.3, 0.4, 1) backwards;
+}
+button.guide:active {
+  transform: scale(0.98);
+}
+.guide b {
+  color: #6b2a10;
+}
+.guide .gl-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.guide .gl-pips {
+  display: flex;
+  gap: 6px;
+}
+.guide .gl-pips i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid #8a5a12;
+}
+.guide .gl-pips i.on {
+  background: #8a5a12;
+}
+.guide .gl-next {
+  font-family: var(--display, Georgia), serif;
+  font-weight: 700;
+  color: #6b2a10;
+  font-size: 16px;
+}
+@keyframes guide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.guide { animation: none; }
+}
+/* What a guide step is about glows. */
+.guide-focus {
+  border-radius: 10px;
+  box-shadow: 0 0 0 3px #ecc56a, 0 0 18px #ecc56aaa !important;
+}
+/* A first Bazaar visit only sells; the toggle's place says so. */
+.mk .mk-only {
+  font-family: var(--display, Georgia), serif;
+  font-size: 18px;
+  color: #f4d58c;
+}
+/* The map's first-road guide takes the header's title and line, in the header's own colours, so the header keeps
+   its height and never reaches the Boss below it. */
+.map-head button.guide.in-head {
+  margin: 0;
+  /* in-head sizes below */
+  padding: 0;
+  gap: 8px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: #efe3c8;
+  font-family: var(--serif-body, Georgia), serif;
+  font-size: 36px;
+  line-height: 1.25;
+  animation: none;
+}
+.map-head button.guide.in-head b {
+  color: #f4d58c;
+}
+.map-head button.guide.in-head .gl-next {
+  font-size: 32px;
+  color: #f4d58c;
+}
+.map-head button.guide.in-head .gl-pips {
+  gap: 12px;
+}
+.map-head button.guide.in-head .gl-pips i {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ecc56a;
+}
+.map-head button.guide.in-head .gl-pips i.on {
+  background: #ecc56a;
+}
+
+.ws-role .ws-new {
+  margin: 0 6px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #ecc56a;
+  color: #2a1f12;
+  font-size: 0.6em;
+  font-style: normal;
+  font-weight: 700;
+  vertical-align: middle;
+}

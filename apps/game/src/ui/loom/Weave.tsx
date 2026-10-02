@@ -76,6 +76,8 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
   const cost = a.inscribedRole ? Object.entries((a.inscribeCost ?? {}) as Record<string, number>).filter(([, q]) => q > 0) : [];
   const afford = cost.every(([e, q]) => (have[e] ?? 0) >= q);
   const roles = offeredRoles(free, !!a.keystoneEligible);
+  // A role met for the first time says so, so each new kind of piece arrives on its own (Mark, 2026-10-02).
+  const fresh = weaves() > 0 ? unlockedRoles().filter((r) => !unlockedRoles(weaves() - 1).includes(r)) : [];
 
   const reveal = async () => {
     setBusy(true);
@@ -161,7 +163,7 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
                 <button key={r} className="ws-role" disabled={busy || !afford || !a.affinities} onClick={() => weave(r)} data-testid={`weave-${r}`}>
                   <span className="ws-role-name">
                     <b className={`ws-role-sigil role-${r}`}>{ROLE_GLYPH[r]}</b>
-                    {ROLE_NAME[r]} <small>{ROLE_HINT[r]}</small>
+                    {ROLE_NAME[r]} {fresh.includes(r) && <em className="ws-new">New</em>} <small>{ROLE_HINT[r]}</small>
                   </span>
                   {a.affinities && <span className="ws-role-does">{becomes(a.affinities, r)}</span>}
                   <span className={`ws-role-fit ${CAPACITY_COST[r] <= free ? "" : "full"}`}>

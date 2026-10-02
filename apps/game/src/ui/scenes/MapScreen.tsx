@@ -1,3 +1,5 @@
+import { Guide, type GuideStep } from "../Guide";
+import { learned } from "../../game/firstUse";
 import { useEffect, useRef, useState } from "react";
 import { HeroPrebake } from "../battle/HeroPrebake";
 import { sfx } from "../battle/sfx";
@@ -67,6 +69,12 @@ const REALM_NAME: Record<string, string> = { "ashen-vault": "The Ashen Vault", "
 
 
 /** The branching Expedition route (§76–77), climbing from the bottom of the screen to the Boss at the top. */
+const MAP_GUIDE: GuideStep[] = [
+  { text: <>The Realm's road. You climb it one stop at a time, and the <b>Boss</b> waits at the top.</> },
+  { text: <><b>Glowing</b> stops are where you can go next. Fights drop Forms, a <b>Shrine</b> mends you, a <b>Mystery</b> could be either.</> },
+  { text: <>Between any two fights, <b>Bazaar</b> sells what you've found and <b>Loom</b> weaves it. Tap a glowing stop to set off.</> },
+];
+
 export function MapScreen() {
   const ex = useStore((s) => s.expedition);
   const { h } = useStage();
@@ -144,6 +152,8 @@ export function MapScreen() {
   // A tap on a stop you can't reach yet says where you can go, and the reachable stops flash.
   const [nudge, setNudge] = useState(0);
   const shownAt = useRef(performance.now());
+  // A finished guide hands the header back to the usual line.
+  const [, setGuideTick] = useState(0);
   // Only a touch that starts on the map, once it has been up a moment, can pick a stop. A thumb still tapping the last
   // fight's timing ring carried straight into the next fight, and the fresh foe read as the old one healing (blind round 31).
   const armed = useRef(false);
@@ -224,7 +234,12 @@ export function MapScreen() {
       <HeroPrebake />
       <header className="map-head">
         <div>
-          <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
+          {/* While the first road is walked through, the guide takes the title's place too, so the header keeps its height. */}
+          {(learned("map-1") || !!ex.at) && <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>}
+          {/* The first road is walked through in three steps before the usual line takes over (Mark, 2026-10-02). */}
+          {!learned("map-1") && !ex.at ? (
+            <Guide id="map-1" steps={MAP_GUIDE} className="in-head" onStep={() => setGuideTick((t) => t + 1)} />
+          ) : (
           <div className="map-sub">
             {ex.at ? `Step ${anchor + 1} of ${layers.length}. ` : ""}
             {layers.length - 1 - anchor <= 1 && ex.at
@@ -233,6 +248,7 @@ export function MapScreen() {
                 ? `Tap the glowing ${KIND[reach[0]!.kind]?.name ?? "stop"} to go on.`
                 : `Tap ${glowing(reach)} to choose your path.`}
           </div>
+          )}
         </div>
         {/* Withdrawing is rare and final, so it sits up top, out of the thumb's way. */}
       <button

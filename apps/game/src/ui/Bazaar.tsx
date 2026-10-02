@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Guide, type GuideStep } from "./Guide";
+import { learned, visit } from "../game/firstUse";
 import { api } from "../api";
 import { refreshCharacter, refreshWorld, toRealmChoice } from "../game/flow";
 import { getState, setState, toast, useStore } from "../state/store";
@@ -10,8 +12,32 @@ import { crowns, essenceColor, essenceName, fmt, qualityName, signed } from "../
 
 type Tab = "market" | "forms" | "contracts" | "prophecy";
 
+/** The Bazaar opens up a visit at a time (Mark, 2026-10-02): selling first, then buying, Forms, Contracts, and
+ *  last Prophecy and Waiting. Each new part gets one guided step the visit it appears. */
+const BAZAAR_GUIDES: { id: string; from: number; steps: GuideStep[] }[] = [
+  {
+    id: "bazaar-1",
+    from: 1,
+    steps: [
+      { text: <>The <b>Bazaar</b>. The <b>Essences</b> you find on runs sell here for <b>Crowns</b>.</> },
+      { text: <>Prices move every day. The line shows the last few days; <b>+%</b> means above its usual price, the time to sell.</> },
+      { text: <>Tap an Essence to <b>sell</b> some. Crowns buy what a run doesn't drop.</> },
+    ],
+  },
+  { id: "bazaar-buy", from: 2, steps: [{ text: <>New: <b>Buy</b>. Short of an Essence? Buy it here. <b>Good buy</b> marks one cheaper than usual.</> }] },
+  { id: "bazaar-forms", from: 3, steps: [{ text: <>New: <b>Forms</b>. Sell a Form you won't weave. A better Form sells for more.</> }] },
+  { id: "bazaar-contracts", from: 4, steps: [{ text: <>New: <b>Contracts</b>. A buyer wants a kind of Form and pays well for one that fits.</> }] },
+  { id: "bazaar-prophecy", from: 5, steps: [{ text: <>New: <b>Prophecy</b> bets on where a price goes next, and <b>Wait</b> lets a day pass without a run.</> }] },
+];
+const TAB_FROM: Record<Tab, number> = { market: 1, forms: 3, contracts: 4, prophecy: 5 };
+
 export function Bazaar() {
   const [tab, setTab] = useState<Tab>(() => getState().bazaarTab ?? "market");
+  // How deep this visit goes: one more part each time the Bazaar opens.
+  const [depth] = useState(() => visit("bazaar"));
+  const [asked] = useState(() => getState().bazaarTab);
+  const tabs = (["market", "forms", "contracts", "prophecy"] as Tab[]).filter((t) => depth >= TAB_FROM[t] || t === asked);
+  const guide = BAZAAR_GUIDES.find((g) => depth >= g.from && !learned(g.id));
   useEffect(() => () => setState({ bazaarTab: undefined }), []);
   const [bz, setBz] = useState<any>(null);
   const [inv, setInv] = useState<any>(null);
@@ -59,13 +85,16 @@ export function Bazaar() {
       testId="bazaar"
       onClose={homeward ? toRealmChoice : undefined}
     >
+      {guide && <Guide key={guide.id} id={guide.id} steps={guide.steps} />}
+      {(tabs.length > 1 || depth >= 5) && (
       <div className="tabs">
-        {(["market", "forms", "contracts", "prophecy"] as Tab[]).map((t) => (
+        {tabs.map((t) => (
           <button key={t} className={tab === t ? "tab on" : "tab"} onClick={() => setTab(t)} data-testid={`tab-${t}`}>
             {t === "market" ? "Market" : t === "forms" ? "Forms" : t === "contracts" ? `Contracts (${bz.contracts.length})` : "Prophecy"}
           </button>
         ))}
         <div className="hud-spacer" />
+        {depth >= 5 && (
         <button
           className="ghost small"
           disabled={busy}
@@ -84,9 +113,11 @@ export function Bazaar() {
         >
           Wait for the next turning
         </button>
+        )}
       </div>
+      )}
 
-      {bz.worldEvents.length > 0 && (
+      {depth >= 4 && bz.worldEvents.length > 0 && (
         <div className="events">
           {bz.worldEvents.map((e: string) => (
             <span key={e} className="event">
@@ -95,13 +126,13 @@ export function Bazaar() {
           ))}
         </div>
       )}
-      {bz.rumors.map((r: any, i: number) => (
+      {depth >= 4 && bz.rumors.map((r: any, i: number) => (
         <div key={i} className="event">
           Rumor: {r.text} ({r.runsLeft} runs left)
         </div>
       ))}
 
-      {tab === "market" && <Market bz={bz} busy={busy} act={act} purse={c?.crowns ?? 0} />}
+      {tab === "market" && <Market bz={bz} busy={busy} act={act} purse={c?.crowns ?? 0} canBuy={depth >= 2} />}
 
       {tab === "forms" && (
         <div className="bz-forms">
@@ -317,8 +348,9 @@ function Prophecy({ bz, busy, act }: { bz: any; busy: boolean; act: (fn: () => P
  * that side (price, how far it sits from its usual, what you hold), then tap a row for a trade sheet with the
  * price history, a quantity, the total and what you'll hold after, and one button that says exactly what happens.
  */
-function Market({ bz, busy, act, purse }: { bz: any; busy: boolean; act: (fn: () => Promise<any>, msg?: (o: any) => string) => Promise<any>; purse: number }) {
-  const [mode, setMode] = useState<"buy" | "sell">("buy");
+function Market({ bz, busy, act, purse, canBuy }: { bz: any; busy: boolean; act: (fn: () => Promise<any>, msg?: (o: any) => string) => Promise<any>; purse: number; canBuy: boolean }) {
+  // A first visit only sells: what the run brought home is what there is to do.
+  const [mode, setMode] = useState<"buy" | "sell">(canBuy ? "buy" : "sell");
   const [pick, setPick] = useState<string | null>(null);
   const rows = [...bz.essences].sort((a: any, b: any) =>
     mode === "buy" ? a.priceRatio - b.priceRatio : (b.held > 0 ? 1 : 0) - (a.held > 0 ? 1 : 0) || b.priceRatio - a.priceRatio,
@@ -327,14 +359,18 @@ function Market({ bz, busy, act, purse }: { bz: any; busy: boolean; act: (fn: ()
   return (
     <div className="mk" data-testid="essence-table">
       <div className="mk-top">
-        <div className="mk-mode" role="tablist">
-          <button className={mode === "buy" ? "on" : ""} onClick={() => setMode("buy")} data-testid="mk-buy">
-            Buy
-          </button>
-          <button className={mode === "sell" ? "on" : ""} onClick={() => setMode("sell")} data-testid="mk-sell">
-            Sell
-          </button>
-        </div>
+        {canBuy ? (
+          <div className="mk-mode" role="tablist">
+            <button className={mode === "buy" ? "on" : ""} onClick={() => setMode("buy")} data-testid="mk-buy">
+              Buy
+            </button>
+            <button className={mode === "sell" ? "on" : ""} onClick={() => setMode("sell")} data-testid="mk-sell">
+              Sell
+            </button>
+          </div>
+        ) : (
+          <b className="mk-only">Sell your Essences</b>
+        )}
         <div className="mk-purse">
           <small>Your Crowns</small>
           <b>{fmt(purse, 0)}</b>
@@ -368,12 +404,12 @@ function Market({ bz, busy, act, purse }: { bz: any; busy: boolean; act: (fn: ()
           );
         })}
       </ul>
-      {picked && <TradeSheet e={picked} mode={mode} purse={purse} busy={busy} act={act} onMode={setMode} onClose={() => setPick(null)} />}
+      {picked && <TradeSheet e={picked} mode={mode} purse={purse} busy={busy} act={act} onMode={canBuy ? setMode : undefined} onClose={() => setPick(null)} />}
     </div>
   );
 }
 
-function TradeSheet({ e, mode, purse, busy, act, onMode, onClose }: { e: any; mode: "buy" | "sell"; purse: number; busy: boolean; act: (fn: () => Promise<any>, msg?: (o: any) => string) => Promise<any>; onMode: (m: "buy" | "sell") => void; onClose: () => void }) {
+function TradeSheet({ e, mode, purse, busy, act, onMode, onClose }: { e: any; mode: "buy" | "sell"; purse: number; busy: boolean; act: (fn: () => Promise<any>, msg?: (o: any) => string) => Promise<any>; onMode?: (m: "buy" | "sell") => void; onClose: () => void }) {
   const each = mode === "buy" ? e.buyPrice : e.sellPrice;
   const max = mode === "buy" ? Math.floor(purse / e.buyPrice) : e.held;
   const [qty, setQty] = useState(Math.min(5, Math.max(1, max)));
@@ -404,14 +440,16 @@ function TradeSheet({ e, mode, purse, busy, act, onMode, onClose }: { e: any; mo
             Year <b>{fmt(e.band.low, 1)}–{fmt(e.band.high, 1)}</b>
           </span>
         </div>
+        {onMode && (
         <div className="mk-mode wide">
-          <button className={mode === "buy" ? "on" : ""} onClick={() => onMode("buy")}>
+          <button className={mode === "buy" ? "on" : ""} onClick={() => onMode!("buy")}>
             Buy at {fmt(e.buyPrice, 1)}
           </button>
-          <button className={mode === "sell" ? "on" : ""} onClick={() => onMode("sell")}>
+          <button className={mode === "sell" ? "on" : ""} onClick={() => onMode!("sell")}>
             Sell at {fmt(e.sellPrice, 1)}
           </button>
         </div>
+        )}
         <div className="mk-qty">
           <button onClick={() => setQty(Math.max(1, q - 1))} disabled={q <= 1} aria-label="One fewer">
             −
