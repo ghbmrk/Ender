@@ -194,7 +194,7 @@ export function Crossing() {
             ))}
         </div>
       </header>
-      {!lesson && familiarOn() && <FamiliarChip />}
+      {!lesson && familiarOn(weaves()) && <FamiliarChip rank={c?.rank ?? c?.level ?? 1} />}
       {lesson && <Coach text="You're ready. Tap **Set out**. Every fight drops **Forms**, the pieces your skills are made of." style={{ bottom: 250 }} />}
       {/* The two things done most here, Set out and the Loom, sit in the bottom-right thumb zone. */}
       <div className="hub-party hub-bar">
