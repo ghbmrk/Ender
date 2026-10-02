@@ -56,22 +56,6 @@ export type MasteryDomain = "discovery" | "craft" | "proof" | "prophecy" | "effi
 export const MASTERY_DOMAINS: MasteryDomain[] = ["discovery", "craft", "proof", "prophecy", "efficiency", "commerce"];
 export type MasteryState = { successes: number; failures: number; opportunities: number };
 
-export type GearSlot = "blade" | "ward" | "sigil" | "charm";
-export const GEAR_SLOTS: GearSlot[] = ["blade", "ward", "sigil", "charm"];
-
-export type CombatStats = {
-  maxHealth: number;
-  moveSpeed: number;
-  attackDamage: number;
-  attackSpeed: number;
-  critChance: number;
-  critMultiplier: number;
-  armor: number;
-  cooldownRate: number;
-  projectileSpeed: number;
-  areaMultiplier: number;
-};
-
 export type Character = {
   id: string;
   name: string;
@@ -80,9 +64,7 @@ export type Character = {
   crowns: number;
   focus: number;
   mastery: Record<MasteryDomain, MasteryState>;
-  passivePointsAvailable: number;
   buildPolicy: SearchPolicy;
-  equipped: Partial<Record<GearSlot, string>>;
 };
 
 export type Artifact = {
@@ -106,8 +88,9 @@ export type Artifact = {
   origin: "drop" | "temper" | "bazaar" | "seed";
   acquisitionCost: number;
   acquisitionValue?: number;
-  status: "held" | "equipped" | "sold" | "delivered" | "shattered";
-  equippedSlot?: GearSlot;
+  status: "held" | "sold" | "delivered" | "tempered" | "shattered";
+  /** Loom role once Inscribed (§51). */
+  inscribedRole?: "action" | "modifier" | "reaction" | "keystone";
   bound?: boolean;
 };
 

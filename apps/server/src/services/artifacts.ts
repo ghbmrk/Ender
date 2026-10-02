@@ -1,10 +1,11 @@
-import { QUALITY_KEYS, hash32, round, type EvidenceTier, type FormQualities, type GearSlot, type QualityKey } from "@ender/shared";
+import { QUALITY_KEYS, hash32, round, type EvidenceTier, type FormQualities, type QualityKey } from "@ender/shared";
+import { affinitiesOf, keystoneEligible, nodePotency, type Affinity, type RootId, type Role } from "@ender/battle";
 import { realmById } from "@ender/content";
 import { READING_NOISE, artifactPower, readQualities, revealedQualityKeys, scoreObjective } from "@ender/domain";
 import { evaluateForm, productionCost, productionRecipe } from "@ender/economy";
 import { all, get, now, run } from "../db";
 import type { Ctx } from "./context";
-import { HttpError, passivesFor } from "./character";
+import { HttpError } from "./character";
 import { currentSnapshot, marketContext } from "./world";
 
 export type ArtifactRow = {
@@ -28,10 +29,10 @@ export type ArtifactRow = {
   acquisition_cost: number;
   acquisition_value: number | null;
   status: string;
-  equipped_slot: GearSlot | null;
   bound: number;
   familiar: string | null;
   created_at: string;
+  inscribed_role: Role | null;
 };
 
 export type Readings = { qualities: FormQualities; predictedScore: number; noise: number };
@@ -63,8 +64,7 @@ export function createArtifact(
   opts: { realityId: string; realmId: string; origin: "drop" | "temper" | "bazaar" | "seed"; runId?: string; acquisitionCost?: number; tier?: EvidenceTier; parentId?: string },
 ): ArtifactRow {
   const id = nextArtifactId(ctx, charId);
-  const extra = passivesFor(ctx, charId).extraReveal ?? 0;
-  const revealCount = 1 + (hash32(`${id}:count`) % 2) + extra;
+  const revealCount = 1 + (hash32(`${id}:count`) % 2);
   const revealed = revealedQualityKeys(`${charId}:${opts.realityId}`, revealCount);
   const q = trueQualities(ctx, { reality_id: opts.realityId });
   const ev = evaluateForm(q, productionRecipe(q), realmById(opts.realmId).objective, "trialed", marketContext(ctx));
@@ -167,6 +167,9 @@ export function artifactView(ctx: Ctx, a: ArtifactRow) {
     };
   }
   const parent = get<{ parent_id: string }>(ctx.db, "SELECT parent_id FROM artifact_lineage WHERE child_id = ?", a.id);
+  const score = loomScore(ctx, a);
+  const exact = tier === "trialed" || tier === "witnessed";
+  const slot = get<{ root: RootId; q: number; r: number }>(ctx.db, "SELECT root, q, r FROM loom_nodes WHERE artifact_id = ?", a.id);
   return {
     id: a.id,
     fantasyId: fantasyIdFor(a.reality_id),
@@ -179,7 +182,16 @@ export function artifactView(ctx: Ctx, a: ArtifactRow) {
     evaluation,
     familiar: a.familiar ? JSON.parse(a.familiar) : null,
     status: a.status,
-    equippedSlot: a.equipped_slot,
+    inscribedRole: a.inscribed_role,
+    /** [dominant, secondary] from the true qualities once Attuned (§7). */
+    affinities: formAffinities(ctx, a),
+    /** §24, from the exact score when Trialed/Witnessed, else from the Attuned estimate. */
+    nodePotency: score === null ? null : nodePotency(score, tier),
+    nodePotencyExact: exact,
+    loom: slot ? { root: slot.root, q: slot.q, r: slot.r } : null,
+    keystoneEligible: tier === "witnessed" && keystoneEligible(score ?? 0, tier),
+    /** What Inscribing costs: the Form's production recipe in Essences (§51). */
+    inscribeCost: tierRank(tier) >= 1 ? productionRecipe(trueQ).essenceCosts : null,
     bound: !!a.bound,
     origin: a.origin,
     acquisitionCost: a.acquisition_cost,
@@ -189,6 +201,20 @@ export function artifactView(ctx: Ctx, a: ArtifactRow) {
   };
 }
 export type ArtifactView = ReturnType<typeof artifactView>;
+
+const tierRank = (t: EvidenceTier) => ["veiled", "attuned", "trialed", "witnessed"].indexOf(t);
+
+/** Affinities come from the true qualities once a Form is Attuned (null while Veiled). */
+export function formAffinities(ctx: Ctx, a: ArtifactRow): [Affinity, Affinity] | null {
+  return tierRank(a.evidence_tier) >= 1 ? affinitiesOf(trueQualities(ctx, a)) : null;
+}
+
+/** The technical score the Loom uses: exact once Trialed/Witnessed, the Attuned estimate before that, null while Veiled. */
+export function loomScore(ctx: Ctx, a: ArtifactRow): number | null {
+  if (a.evidence_tier === "trialed" || a.evidence_tier === "witnessed") return a.technical_score ?? trueEvaluation(ctx, a).technicalScore;
+  if (a.evidence_tier === "attuned") return a.readings ? ((JSON.parse(a.readings) as Readings).predictedScore ?? 0) : 0;
+  return null;
+}
 
 export function heldArtifacts(ctx: Ctx, charId: string) {
   return all<ArtifactRow>(ctx.db, "SELECT * FROM artifacts WHERE character_id = ? AND status IN ('held','equipped') ORDER BY rowid", charId);

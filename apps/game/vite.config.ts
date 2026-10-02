@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => ({
     fs: { allow: ["../.."] },
   },
   preview: { port: 4173, proxy: { "/api": `http://127.0.0.1:${process.env.PORT ?? 8787}` } },
-  // The no-install web build ships as one self-contained page.
-  build: mode === "web" ? { rolldownOptions: { output: { inlineDynamicImports: true } }, chunkSizeWarningLimit: 5000, assetsInlineLimit: 100_000_000 } : {},
+  // "web": one self-contained page (works from disk). "split": the published build, in parts, so the title
+  // shows before the rest of the game (server, seeds, other screens) and art loads only when shown.
+  build:
+    mode === "web"
+      ? { rolldownOptions: { output: { inlineDynamicImports: true } }, chunkSizeWarningLimit: 5000, assetsInlineLimit: 100_000_000 }
+      : mode === "split"
+        ? { chunkSizeWarningLimit: 5000 }
+        : {},
 }));

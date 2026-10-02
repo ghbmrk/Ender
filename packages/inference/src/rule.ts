@@ -9,7 +9,10 @@ import {
   type CritiqueRequest,
   type CritiqueResult,
   type InferenceEnvelope,
+  type InferenceKind,
   type InferenceProvider,
+  type PlanRequest,
+  type PlanResult,
   type TransformRequest,
   type TransformResult,
 } from "./types";
@@ -40,7 +43,7 @@ export function ruleFantasyName(fantasyId: string, q: AttuneRequest["artifact"][
   return { fantasyName: name, epithet };
 }
 
-const env = <T>(kind: "attune" | "transform" | "critique", request: unknown, result: T): InferenceEnvelope<T> => ({
+const env = <T>(kind: InferenceKind, request: unknown, result: T): InferenceEnvelope<T> => ({
   result,
   usage: { workUnits: DEFAULT_WU[kind] },
   provenance: { provider: "rule", requestHash: requestHash(kind, request) },
@@ -184,6 +187,14 @@ export function ruleCritique(req: CritiqueRequest): CritiqueResult {
   };
 }
 
+/** Best value per Focus; the first listed wins ties, so runs are reproducible. Stops when nothing is worth anything. */
+export function rulePlan(req: PlanRequest): PlanResult {
+  const per = (o: PlanRequest["options"][number]) => o.ruleValue / Math.max(1, o.focusCost);
+  const best = req.options.filter((o) => o.focusCost <= req.focusLeft).reduce<PlanRequest["options"][number] | null>((a, b) => (!a || per(b) > per(a) ? b : a), null);
+  if (!best || best.ruleValue <= 0) return { choice: "stop", rationale: "Nothing left worth the Focus." };
+  return { choice: best.id, rationale: `${best.label}: the most value per Focus.`.slice(0, 160) };
+}
+
 export class RuleInferenceProvider implements InferenceProvider {
   readonly name = "rule" as const;
   async attune(r: AttuneRequest) {
@@ -194,5 +205,8 @@ export class RuleInferenceProvider implements InferenceProvider {
   }
   async critique(r: CritiqueRequest) {
     return env("critique", r, ruleCritique(r));
+  }
+  async plan(r: PlanRequest) {
+    return env("plan", r, rulePlan(r));
   }
 }

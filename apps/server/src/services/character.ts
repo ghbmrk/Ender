@@ -1,12 +1,10 @@
-import { ESSENCE_IDS, MASTERY_DOMAINS, type Character, type EssenceId, type GearSlot, type MasteryDomain, type MasteryState, type SearchPolicy } from "@ender/shared";
+import { grantStarterKit } from "./loom";
+import { ESSENCE_IDS, MASTERY_DOMAINS, type Character, type EssenceId, type MasteryDomain, type MasteryState, type SearchPolicy } from "@ender/shared";
+import { boardRadius, capacityForRank } from "@ender/battle";
 import {
   BASE_FOCUS,
   DEFAULT_POLICY,
   PRESET_POLICIES,
-  aggregatePassives,
-  artifactPower,
-  computeCombatStats,
-  effectivePolicy,
   emptyMastery,
   levelForXp,
   masteryDisplay,
@@ -30,9 +28,7 @@ type CharRow = {
   crowns: number;
   focus: number;
   free_attunes_used: number;
-  passive_points: number;
   build_policy: string;
-  equipped: string;
   runs_started: number;
 };
 
@@ -68,6 +64,7 @@ export function createCharacter(ctx: Ctx, opts: { name?: string; preset?: Preset
     for (const d of MASTERY_DOMAINS) run(ctx.db, "INSERT INTO character_mastery VALUES (?, ?, 0, 0, 0)", id, d);
     for (const [e, q] of Object.entries(STARTING_ESSENCES)) addItem(ctx, id, "essence", e, q!);
   });
+  grantStarterKit(ctx, id);
   return getCharacter(ctx, id);
 }
 
@@ -88,10 +85,6 @@ export function getMastery(ctx: Ctx, id: string): Record<MasteryDomain, MasteryS
   return m;
 }
 
-export function passiveIds(ctx: Ctx, id: string): string[] {
-  return all<{ passive_id: string }>(ctx.db, "SELECT passive_id FROM passive_allocations WHERE character_id = ? ORDER BY allocated_at", id).map((r) => r.passive_id);
-}
-
 export function getCharacter(ctx: Ctx, id: string): Character {
   const r = get<CharRow>(ctx.db, "SELECT * FROM characters WHERE id = ?", id);
   if (!r) throw new HttpError(404, `no character ${id}`);
@@ -103,19 +96,16 @@ export function getCharacter(ctx: Ctx, id: string): Character {
     crowns: Math.round(r.crowns * 100) / 100,
     focus: r.focus,
     mastery: getMastery(ctx, id),
-    passivePointsAvailable: r.passive_points,
     buildPolicy: JSON.parse(r.build_policy),
-    equipped: JSON.parse(r.equipped),
   };
 }
 
 export const charRow = (ctx: Ctx, id: string) => get<CharRow>(ctx.db, "SELECT * FROM characters WHERE id = ?", id)!;
 
+/** The Familiar's search policy. There is no passive tree any more (§90), so it is the character's own policy. */
 export function policyFor(ctx: Ctx, id: string): SearchPolicy {
-  return effectivePolicy(getCharacter(ctx, id).buildPolicy, passiveIds(ctx, id));
+  return getCharacter(ctx, id).buildPolicy;
 }
-
-export const passivesFor = (ctx: Ctx, id: string) => aggregatePassives(passiveIds(ctx, id));
 
 export function adjustCrowns(ctx: Ctx, id: string, delta: number) {
   const c = charRow(ctx, id);
@@ -165,7 +155,7 @@ export function awardXp(ctx: Ctx, charId: string, key: string, xp: number): { xp
   const newXp = c.xp + xp;
   const newLevel = Math.min(LEVEL_CAP, levelForXp(newXp));
   const gained = newLevel - c.level;
-  run(ctx.db, "UPDATE characters SET xp = ?, level = ?, passive_points = passive_points + ? WHERE id = ?", newXp, newLevel, Math.max(0, gained), charId);
+  run(ctx.db, "UPDATE characters SET xp = ?, level = ? WHERE id = ?", newXp, newLevel, charId);
   return { xp, levelsGained: Math.max(0, gained) };
 }
 
@@ -178,17 +168,6 @@ export function recordMasteryEvent(ctx: Ctx, charId: string, domain: MasteryDoma
 }
 export type MasteryChange = ReturnType<typeof recordMasteryEvent>;
 
-export function equippedPowers(ctx: Ctx, charId: string): Partial<Record<GearSlot, number>> {
-  const eq = getCharacter(ctx, charId).equipped;
-  const out: Partial<Record<GearSlot, number>> = {};
-  for (const [slot, aid] of Object.entries(eq) as [GearSlot, string][]) {
-    const a = get<{ technical_score: number | null; evidence_tier: string; readings: string | null }>(ctx.db, "SELECT technical_score, evidence_tier, readings FROM artifacts WHERE id = ?", aid);
-    if (!a) continue;
-    out[slot] = artifactPower(a.technical_score ?? estimatedScore(ctx, aid), a.evidence_tier as never);
-  }
-  return out;
-}
-
 /** Score the Binder believes an untrialed Form has (from Attuned readings). */
 export function estimatedScore(ctx: Ctx, artifactId: string): number {
   const a = get<{ readings: string | null; objective_id: string }>(ctx.db, "SELECT readings, objective_id FROM artifacts WHERE id = ?", artifactId);
@@ -196,35 +175,26 @@ export function estimatedScore(ctx: Ctx, artifactId: string): number {
   return (JSON.parse(a.readings) as { predictedScore: number }).predictedScore ?? 0;
 }
 
-export function combatStatsFor(ctx: Ctx, charId: string) {
-  const c = getCharacter(ctx, charId);
-  const p = passivesFor(ctx, charId);
-  const stats = computeCombatStats({
-    level: c.level,
-    equippedPower: equippedPowers(ctx, charId),
-    passive: { damagePct: p.damagePct ?? 0, healthFlat: p.healthFlat ?? 0, critChance: p.critChance ?? 0 },
-  });
-  const me = masteryEffects(c.mastery);
-  return { ...stats, wardMultiplier: Math.round(me.proofWardMultiplier * p.wardDamage * 1000) / 1000 };
-}
-
+/**
+ * The character's structural progression: Loom Rank (the old level, capped at 20, §56), Loom Capacity and board size.
+ * No gear, no passive points, no +stat nodes (§47, §90); power comes from the Root, the crafted Loom and Mastery.
+ */
 export function characterView(ctx: Ctx, charId: string) {
   const c = getCharacter(ctx, charId);
-  const passives = passiveIds(ctx, charId);
-  const agg = aggregatePassives(passives);
   return {
     ...c,
+    rank: c.level,
+    capacity: capacityForRank(c.level),
+    boardRadius: boardRadius(c.level),
     xpForNext: c.level >= LEVEL_CAP ? null : xpRequired(c.level + 1),
     xpForLevel: xpRequired(c.level),
-    effectivePolicy: effectivePolicy(c.buildPolicy, passives),
+    effectivePolicy: c.buildPolicy,
     masteryDisplay: Object.fromEntries(MASTERY_DOMAINS.map((d) => [d, masteryDisplay(c.mastery[d])])),
     masteryEffects: masteryEffects(c.mastery),
-    passives,
-    passiveEffects: agg,
-    stats: combatStatsFor(ctx, charId),
     essences: essences(ctx, charId),
     currencies: currencies(ctx, charId),
-    maxFocus: BASE_FOCUS + (agg.bonusFocus ?? 0),
+    mirrorCharges: itemQty(ctx, charId, "charge", "mirror"),
+    maxFocus: BASE_FOCUS,
     world: { snapshotId: currentSnapshot(ctx).id, date: currentSnapshot(ctx).date },
   };
 }

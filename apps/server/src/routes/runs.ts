@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Ctx } from "../services/context";
 import { activeCharacterId } from "../services/character";
-import { checkpointRun, completeRun, startRun } from "../services/runs";
+import { activeRunId, checkpointRun, completeRun, resolveNode, runView, startRun } from "../services/runs";
 import { realmGateView, resolveDueProphecies, tickRumors } from "../services/market";
 import { advanceWorld, currentSnapshot } from "../services/world";
 import { now, run } from "../db";
@@ -25,28 +25,37 @@ export function registerRunRoutes(app: FastifyInstance, ctx: Ctx) {
     return out;
   });
 
-  app.post<{ Params: { id: string } }>("/api/runs/:id/checkpoint", async (req) => {
-    const { roomsCleared } = z.object({ roomsCleared: z.array(z.number().int().min(0).max(7)) }).parse(req.body);
-    return checkpointRun(ctx, activeCharacterId(ctx), req.params.id, roomsCleared);
+  app.get("/api/runs/active", async () => {
+    const charId = activeCharacterId(ctx);
+    const id = activeRunId(ctx, charId);
+    return id ? runView(ctx, charId, id) : { plan: null, status: null, visited: [], loom: null };
   });
+
+  app.get<{ Params: { id: string } }>("/api/runs/:id", async (req) => runView(ctx, activeCharacterId(ctx), req.params.id));
+
+  app.post<{ Params: { id: string } }>("/api/runs/:id/node", async (req) => {
+    const body = z
+      .object({ nodeId: z.string(), outcome: z.enum(["victory", "defeat", "skip"]), kills: z.record(z.string(), z.number()).optional() })
+      .parse(req.body);
+    return resolveNode(ctx, activeCharacterId(ctx), req.params.id, body);
+  });
+
+  // Leaving a Shrine (or the hub): save the Loom snapshot combat will use.
+  app.post<{ Params: { id: string } }>("/api/runs/:id/checkpoint", async (req) => checkpointRun(ctx, activeCharacterId(ctx), req.params.id));
 
   app.post<{ Params: { id: string } }>("/api/runs/:id/complete", async (req) => {
     const body = z
       .object({
         outcome: z.enum(["victory", "death", "abandon"]),
-        roomsCleared: z.array(z.number().int().min(0).max(7)),
         kills: z.record(z.string(), z.number()).optional(),
         durationMs: z.number().optional(),
-        deaths: z.number().optional(),
-        bossPhaseMs: z.array(z.number()).optional(),
-        wardBreaks: z.number().optional(),
         advanceWorld: z.boolean().default(true),
       })
       .parse(req.body);
     const charId = activeCharacterId(ctx);
     const out = completeRun(ctx, charId, req.params.id, body);
     tickRumors(ctx, charId);
-    // A Realm run takes a turning of world time.
+    // An expedition takes a turning of world time.
     let turned = null;
     if (body.advanceWorld) {
       const before = currentSnapshot(ctx);

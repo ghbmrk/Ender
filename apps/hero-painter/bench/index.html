@@ -1,0 +1,50 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painter speed test</title>
+<style>
+:root { color-scheme: dark; } body { margin: 0; padding: 16px; font: 16px/1.4 system-ui, sans-serif; background: #15110e; color: #eee6d8; }
+h1 { font-size: 20px; margin: 0 0 8px; } button { font: inherit; font-size: 18px; padding: 14px 20px; border-radius: 12px; border: 0; background: #c9953a; color: #15110e; width: 100%; }
+pre { white-space: pre-wrap; background: #221b16; padding: 12px; border-radius: 10px; font-size: 14px; } canvas { width: 160px; height: 160px; border-radius: 8px; }
+</style>
+<h1>Painter speed test</h1>
+<p>Paints one hero with each engine variant on this phone, then shows the times. Keep the screen on; it may take a few minutes.</p>
+<button id="go">Start</button>
+<pre id="log"></pre>
+<div id="pics"></div>
+<script type="module">
+import { createPainter } from "./engine.js";
+const $ = (id) => document.getElementById(id);
+const log = (s) => ($("log").textContent += s + "\n");
+const traits = ["look.armour.0", "burden.2", "weapon.armour", "view", "bg", "style"];
+async function cachedFetch(url) {
+  let cache = null;
+  try { cache = await caches.open("ender-painter-v1"); const hit = await cache.match(url); if (hit) return hit.arrayBuffer(); } catch {}
+  const r = await fetch(url); if (!r.ok) throw new Error(`download failed (${r.status})`);
+  if (cache) await cache.put(url, r.clone()).catch(() => {});
+  return r.arrayBuffer();
+}
+$("go").onclick = async () => {
+  $("go").disabled = true;
+  try {
+    const base = new URL("../model/", location.href);
+    const manifest = await (await fetch(new URL("manifest.json", base), { cache: "no-cache" })).json();
+    const rows = [], imgs = [];
+    for (const tiled of [false, true]) {
+      const t0 = performance.now();
+      const P = await createPainter({ manifest, tiled, fetchChunk: (f) => cachedFetch(new URL(f, base).href), onProgress: (p) => ($("go").textContent = `Loading ${Math.round(p * 100)}%`) });
+      if (!rows.length) log(`GPU: ${P.gpuName || "unknown"} · model ready in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+      $("go").textContent = `Painting (${tiled ? "tiled" : "basic"})…`;
+      await P.paint({ traits, seed: 7 }); // warm-up: compiles the shaders
+      const r = await P.paint({ traits, seed: 7 });
+      const m0 = performance.now(); await P.matte(r.rgba); const matte = performance.now() - m0;
+      rows.push(`${tiled ? "tiled" : "basic"}: model ${(r.ms.unet / 1000).toFixed(2)} s · image ${(r.ms.decode / 1000).toFixed(2)} s · cutout ${(matte / 1000).toFixed(2)} s · total ${((r.ms.total + matte) / 1000).toFixed(2)} s`);
+      log(rows.at(-1));
+      imgs.push(r.rgba);
+      const c = document.createElement("canvas"); c.width = c.height = 512; c.getContext("2d").putImageData(new ImageData(r.rgba, 512, 512), 0, 0); $("pics").appendChild(c);
+      P.device.destroy();
+    }
+    let mx = 0; for (let i = 0; i < imgs[0].length; i++) mx = Math.max(mx, Math.abs(imgs[0][i] - imgs[1][i]));
+    log(`largest pixel difference between variants: ${mx}/255`);
+    $("go").textContent = "Done: please send these numbers";
+  } catch (e) { log("Error: " + e.message); $("go").textContent = "Failed"; }
+};
+</script>

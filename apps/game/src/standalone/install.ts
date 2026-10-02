@@ -1,8 +1,24 @@
 // No-install web build: the Ender server runs inside the page. Every /api/* request the
 // game makes is answered by the same server code, backed by sql.js and bundled seeds.
 // The database is saved to this browser's IndexedDB, so progress survives a reload.
-import initSqlJs from "sql.js/dist/sql-asm-memory-growth.js";
-import type { Database } from "sql.js";
+import type { Database, SqlJsStatic } from "sql.js";
+
+/**
+ * SQLite for the in-page server. The split page fetches the compact WebAssembly build (quick to compile, a third of
+ * the size), falling back to the plain-JS build if this browser or host won't run it; the single-file page keeps the
+ * plain-JS build inside itself.
+ */
+async function loadSql(): Promise<SqlJsStatic> {
+  if (import.meta.env.MODE === "split") {
+    try {
+      const [{ default: init }, { default: wasm }] = await Promise.all([import("sql.js/dist/sql-wasm-browser.js"), import("sql.js/dist/sql-wasm-browser.wasm?url")]);
+      return await init({ locateFile: () => wasm });
+    } catch (e) {
+      console.warn("WebAssembly SQLite unavailable, using the JS build", e);
+    }
+  }
+  return (await import("sql.js/dist/sql-asm-memory-growth.js")).default();
+}
 import { memoryFixtureStore, type FixtureFile } from "@ender/inference";
 import { realityFromSeeds } from "@ender/reality";
 import { SCHEMA, createInPageServer, type Db } from "@ender/server/browser";
@@ -13,6 +29,7 @@ import marketSeed from "@data/seed/markets/ecb-exr.json";
 const fixtureFiles = Object.values(import.meta.glob("@data/inference-fixtures/*/*.json", { eager: true, import: "default" })) as FixtureFile[];
 const START_DATE = "2023-08-04";
 const IDB = { name: "ender", store: "db", key: "sqlite" };
+export const FRESH_KEY = "ender:fresh";
 
 function sqlJsDb(sdb: Database): Db {
   const norm = (ps: unknown[]) => ps.map((p) => (p === undefined ? null : p)) as never[];
@@ -50,6 +67,10 @@ function sqlJsDb(sdb: Database): Db {
   };
 }
 
+/** IndexedDB can hang without ever answering (seen in embedded pages on phones); a read gives up after this. */
+const IDB_READ_MS = 2500;
+const TIMED_OUT = Symbol("timed out");
+
 function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T | undefined> {
   return new Promise((resolve) => {
     try {
@@ -68,8 +89,23 @@ function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<
 }
 
 export async function installInPageServer() {
-  const SQL = await initSqlJs();
-  const saved = await idb<Uint8Array>("readonly", (s) => s.get(IDB.key) as IDBRequest<Uint8Array>);
+  const SQL = await loadSql();
+  const read = await Promise.race([
+    idb<Uint8Array>("readonly", (s) => s.get(IDB.key) as IDBRequest<Uint8Array>),
+    new Promise<typeof TIMED_OUT>((r) => setTimeout(() => r(TIMED_OUT), IDB_READ_MS)),
+  ]);
+  // If the save couldn't be read, play on without one, and never write over it: the old save stays intact.
+  const canSave = read !== TIMED_OUT;
+  if (!canSave) (window as { __enderNoSave?: boolean }).__enderNoSave = true;
+  // "Start over" (game/reset.ts) leaves this mark: the old save is ignored, and the first write replaces it.
+  let fresh = false;
+  try {
+    fresh = localStorage.getItem(FRESH_KEY) === "1";
+    localStorage.removeItem(FRESH_KEY);
+  } catch {
+    /* storage blocked */
+  }
+  const saved = read === TIMED_OUT || fresh ? undefined : read;
   const sdb = saved ? new SQL.Database(saved) : new SQL.Database();
   sdb.exec(SCHEMA);
   const server = createInPageServer({
@@ -82,15 +118,22 @@ export async function installInPageServer() {
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   const save = () => {
+    if (!canSave || (window as { __enderNoSave?: boolean }).__enderNoSave) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => void idb("readwrite", (s) => s.put(sdb.export(), IDB.key)), 400);
   };
 
   const realFetch = window.fetch.bind(window);
+  let lastYield = 0;
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const path = url.startsWith("/") ? url : new URL(url, location.href).origin === location.origin ? new URL(url).pathname + new URL(url).search : "";
     if (!path.startsWith("/api/")) return realFetch(input, init);
+    // The server runs on the page's own thread, so let the screen show the tap first (one frame), then answer.
+    if (performance.now() - lastYield > 40) {
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+      lastYield = performance.now();
+    }
     const method = (init?.method ?? "GET").toUpperCase();
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
     const out = await server.handle(method, path, body);

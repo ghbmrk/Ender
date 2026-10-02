@@ -1,0 +1,224 @@
+// Plays the built web game at phone size: new party → Loom → Gate → map → fights until the Expedition ends.
+// node scripts/play-flow.mjs [maxFights]   (uses ?autoplay=1, which only auto-times presses; commands are chosen here)
+import { chromium } from "@playwright/test";
+import { resolve } from "node:path";
+import { overlaps } from "./overlap.mjs";
+const root = resolve(import.meta.dirname, "..");
+const shots = resolve(root, "art-shots");
+const maxFights = Number(process.argv[2] ?? 3);
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+// The prologue has its own script (play-prologue.mjs); this one starts from the Crossing.
+// LS='{"key":"value"}' seeds extra localStorage entries before the page loads.
+await page.addInitScript((extra) => {
+  localStorage.setItem("ender:tutorial", "done");
+  for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, v);
+}, JSON.parse(process.env.LS ?? "{}"));
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+// Each stop also checks the screen for overlapping text and controls.
+const clashes = {};
+const shot = async (n) => {
+  await page.screenshot({ path: `${shots}/${n}.png` });
+  const o = await overlaps(page);
+  if (o.length) clashes[n] = o;
+};
+const tid = (t) => `[data-testid="${t}"]`;
+const visible = async (sel) => (await page.$(sel)) !== null;
+
+await page.goto((process.env.PAGE ?? "file://" + resolve(root, "apps/game/dist-web/ender.html")) + "?autoplay=1");
+await page.waitForSelector(tid("sign-in"), { timeout: 60000 });
+await shot("flow-landing");
+// Signing in leads straight into the game: with the prologue done, that is the Crossing.
+await page.click(tid("sign-in"));
+await page.waitForSelector(tid("crossing"));
+await page.waitForTimeout(500);
+// Home is the Realm choice (the Gate, over the Crossing); the Loom is a button on it.
+await page.waitForSelector(tid("realm-gate"));
+await shot("flow-gate");
+await page.click(tid("gate-loom"));
+await page.waitForSelector(tid("loom"));
+await page.waitForTimeout(600);
+await shot("flow-loom");
+await page.click(tid("loom-done"));
+await page.waitForSelector(tid("realm-gate"));
+await page.click('[data-testid^="enter-"]');
+await page.waitForSelector(tid("map"));
+await page.waitForTimeout(400);
+await shot("flow-map");
+
+let fights = 0;
+let bazaarShot = false;
+let woven = 0;
+let skipRaw = false;
+let spoilsShot = false;
+for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom-done")))); step++) {
+  if (await visible(tid("rewards-ok"))) {
+    if (fights === 1) await shot("flow-rewards");
+    await page.click(tid("rewards-ok"));
+    // Screen and panel changes land a frame after the tap (state/store.ts), so wait for it to go.
+    await page.waitForSelector(tid("rewards-ok"), { state: "detached" });
+    continue;
+  }
+  if (await visible(tid("run-summary"))) {
+    await page.waitForTimeout(900);
+    await shot("flow-summary");
+    // The loop home: the summary leads to the Bazaar, and the Bazaar on to the Realm choice.
+    await page.click(tid("return-crossing"));
+    await page.waitForSelector(tid("to-realms"));
+    await page.waitForTimeout(500);
+    await shot("flow-home-bazaar");
+    await page.click(tid("to-realms"));
+    await page.waitForSelector(tid("realm-gate"));
+    await page.waitForTimeout(400);
+    await shot("flow-home-gate");
+    break;
+  }
+  if (await visible(".panel-backdrop")) {
+    await page.keyboard.press("Escape");
+    continue;
+  }
+  if (await visible(tid("loom-done"))) {
+    // After a fight: weave each raw Form (reveal, pick the first role, place it on a glowing cell), then Continue.
+    if (await visible(tid("weave-sheet"))) {
+      if (!woven) await shot("flow-weave-sheet");
+      if (await visible(`${tid("weave-reveal")}:not([disabled])`)) {
+        await page.click(tid("weave-reveal"));
+        await page.waitForTimeout(500);
+        await shot("flow-weave-revealed");
+        continue;
+      }
+      const role = await page.$('[data-testid^="weave-"].ws-role:not([disabled])');
+      if (role) {
+        await role.click();
+        await page.waitForTimeout(500);
+        continue;
+      }
+      await page.click(".ws-close");
+      skipRaw = true;
+      continue;
+    }
+    const cell = await page.$('[data-testid^="place-"]');
+    if (cell) {
+      await shot("flow-weave-place");
+      await cell.click();
+      woven++;
+      await page.waitForTimeout(500);
+      await shot("flow-weave-placed");
+      continue;
+    }
+    const raw = !skipRaw && (await page.$('[data-testid^="raw-"]'));
+    if (raw) {
+      if (!woven) await shot("flow-weave");
+      await raw.click();
+      await page.waitForTimeout(400);
+      continue;
+    }
+    skipRaw = false;
+    await page.click(tid("loom-done"));
+    await page.waitForTimeout(300);
+    continue;
+  }
+  if (await visible(tid("battle"))) {
+    // While a foe attacks, autoplay parries on its own; stay out of the way. (In this container's software
+    // rendering, battle frames can still take 300ms+, so the bot's parries land late: trust the battle
+    // sim in packages/battle for balance, not this bot.)
+    if (await visible(tid("parry"))) {
+      await page.waitForTimeout(2500);
+      continue;
+    }
+    if (await visible(tid("battle-continue"))) {
+      fights++;
+      await shot(`flow-battle-end-${fights}`);
+      console.log("end", fights, JSON.stringify(await page.evaluate(() => ({ sx: scrollX, sy: scrollY, w: document.documentElement.scrollWidth, els: [...document.querySelectorAll("*")].filter((e) => e.scrollLeft > 0).map((e) => e.className + ":" + e.scrollLeft) }))));
+      await page.click(tid("battle-end"), { timeout: 1500 }).catch(() => undefined);
+      if (!spoilsShot && (await page.waitForSelector(tid("spoils"), { timeout: 4000 }).then(() => true, () => false))) {
+        spoilsShot = true;
+        await page.waitForTimeout(700);
+        await shot("flow-spoils");
+      }
+      await page.waitForTimeout(500);
+      continue;
+    }
+    const cards = await page.$$('[data-testid="commands"] .card:not(.poor):not(.basic):not(.empty)');
+    if (cards.length) {
+      if (fights === 0 && step < 40) await shot("flow-battle-command");
+      await cards[0].click();
+      await page.waitForTimeout(200);
+      if (await visible(".unit.pickable")) await page.click(".unit.pickable .hit");
+    } else if (await visible(tid("cmd-basic"))) await page.click(tid("cmd-basic"));
+    await page.waitForTimeout(400);
+    continue;
+  }
+  // A Mystery turns itself over on arrival; wait for it to resolve.
+  if (await visible(tid("mystery"))) {
+    await page.waitForTimeout(1500);
+    continue;
+  }
+  if (!bazaarShot && (await visible(tid("map-bazaar"))) && !(await visible(".panel-backdrop"))) {
+    bazaarShot = true;
+    await page.click(tid("map-bazaar"));
+    await page.waitForSelector(tid("essence-table"), { timeout: 10000 });
+    await page.waitForTimeout(300);
+    await shot("flow-bazaar");
+    await page.click(".mk-row");
+    await page.waitForSelector(tid("trade-sheet"));
+    await page.waitForTimeout(300);
+    await shot("flow-bazaar-trade");
+    await page.click(".mk-sheet .close");
+    await page.click(".panel .close");
+    await page.waitForTimeout(300);
+    continue;
+  }
+  if (await visible(tid("shrine-rest"))) {
+    await page.waitForTimeout(500);
+    await shot("flow-shrine");
+    await page.click(tid("shrine-continue"));
+    await page.waitForTimeout(400);
+    continue;
+  }
+  if (await visible(tid("attune"))) {
+    await page.waitForTimeout(500);
+    await shot("flow-attune");
+    await page.click(tid("attune-go"));
+    await page.waitForTimeout(400);
+    continue;
+  }
+  if (await visible(tid("boss-omen"))) {
+    await page.waitForTimeout(500);
+    await shot("flow-omen");
+    await page.click(tid("boss-omen"));
+    await page.waitForTimeout(300);
+    await shot("flow-map-boss");
+    continue;
+  }
+  if (await visible(".mp-delta") && !(await visible(".mn-done-delta"))) {
+    await page.waitForTimeout(400);
+    await shot("flow-map-delta");
+  }
+  if (await visible(tid("map"))) {
+    const next = await page.$(".map-node.next");
+    if (!next) {
+      await page.waitForTimeout(300);
+      continue;
+    }
+    if (fights === 2) {
+      await shot("flow-map-2");
+      // The purse: what Crowns and Essences are, and how many are held.
+      await page.click(tid("purse"));
+      await page.waitForSelector(tid("purse-sheet"));
+      await shot("flow-purse");
+      await page.click(`${tid("purse-sheet")} .close`);
+      await page.waitForTimeout(300);
+    }
+    if (fights === 4) await shot("flow-map-4");
+    await next.click();
+    await page.waitForTimeout(700);
+    continue;
+  }
+  await page.waitForTimeout(300);
+}
+await shot("flow-end");
+console.log(JSON.stringify({ fights, woven, errors: errors.slice(0, 10), clashes }, null, 1));
+await browser.close();

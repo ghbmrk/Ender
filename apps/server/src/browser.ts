@@ -15,6 +15,8 @@ import { registerRunRoutes } from "./routes/runs";
 import { registerArtifactRoutes } from "./routes/artifacts";
 import { registerBazaarRoutes } from "./routes/bazaar";
 import { registerDevRoutes } from "./routes/dev";
+import { registerLoomRoutes } from "./routes/loom";
+import { registerFamiliarRoutes } from "./routes/familiar";
 
 type Handler = (req: { params: Record<string, string>; body: unknown; query: Record<string, string> }) => unknown;
 type Route = { method: string; parts: string[]; handler: Handler };
@@ -28,13 +30,15 @@ export function createInPageServer(parts: { db: Db; reality: PubChemRealityAdapt
 
   const routes: Route[] = [];
   const add = (method: string) => (path: string, handler: Handler) => routes.push({ method, parts: path.split("/").filter(Boolean), handler });
-  // A Fastify-shaped registrar: the route modules only use app.get/app.post(path, handler).
-  const app = { get: add("GET"), post: add("POST") } as never;
+  // A Fastify-shaped registrar: the route modules only use app.get/app.post/app.put(path, handler).
+  const app = { get: add("GET"), post: add("POST"), put: add("PUT") } as never;
   registerCharacterRoutes(app, ctx);
   registerWorldRoutes(app, ctx);
   registerRunRoutes(app, ctx);
   registerArtifactRoutes(app, ctx);
   registerBazaarRoutes(app, ctx);
+  registerLoomRoutes(app, ctx);
+  registerFamiliarRoutes(app, ctx);
   registerDevRoutes(app, ctx);
   routes.push({ method: "GET", parts: ["api", "health"], handler: () => ({ ok: true, provider: ctx.inference.name, mode: "in-page" }) });
 

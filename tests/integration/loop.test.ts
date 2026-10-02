@@ -9,15 +9,16 @@ afterEach(async () => h?.close());
 const masteryOf = (changes: any[], domain: string) => changes.filter((m) => m.domain === domain);
 
 describe("combat → loot → crafting", () => {
-  it("combat → loot: clearing rooms yields Veiled Forms, Crowns and Essences", async () => {
+  it("combat → loot: winning expedition fights yields Veiled Forms, Crowns and Essences", async () => {
     h = await harness();
     const before = await h.character();
-    const { runId, forms } = await h.runToShrine();
+    const { runId, forms, rewards } = await h.runExpedition();
     expect(forms.length).toBeGreaterThan(0);
     expect(forms.every((f) => f.tier === "veiled")).toBe(true);
+    expect(rewards.reduce((s: number, r: any) => s + r.crowns, 0)).toBeGreaterThan(0);
+    expect(rewards.reduce((s: number, r: any) => s + Object.values(r.essences as Record<string, number>).reduce((a, b) => a + b, 0), 0)).toBeGreaterThan(0);
     const done = await h.finishRun(runId);
-    expect(done.loot.crowns).toBeGreaterThan(0);
-    expect(Object.values(done.loot.essences as Record<string, number>).reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
+    expect(done.status).toBe("victory");
     const after = await h.character();
     expect(after.crowns).toBeGreaterThan(before.crowns);
     const inv = await h.call("GET", "/api/inventory");

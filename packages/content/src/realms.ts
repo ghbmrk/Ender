@@ -13,6 +13,8 @@ export type RealmTemplate = {
   enemyWeights: Partial<Record<EnemyKind, number>>;
   /** Plain-language bias shown to players (fantasy terms only). */
   bias: string[];
+  /** The expedition's boss (a @ender/battle FoeKind, §96). */
+  boss: "king" | "wyrm";
 };
 
 export const REALMS: RealmTemplate[] = [
@@ -33,6 +35,7 @@ export const REALMS: RealmTemplate[] = [
     essenceDrops: { ash: 3, glass: 3, ember: 1.5, storm: 1 },
     enemyWeights: { husk: 3, hound: 2, wisp: 1.5, swarm: 1.5, keeper: 0.5, seer: 0.5 },
     bias: ["Light Forms", "Many Knots", "Balanced Veil"],
+    boss: "king",
   },
   {
     id: "glass-fen",
@@ -51,6 +54,7 @@ export const REALMS: RealmTemplate[] = [
     essenceDrops: { tide: 3, root: 3, storm: 2, glass: 1 },
     enemyWeights: { wisp: 3, seer: 2, swarm: 2, hound: 1.5, husk: 1, keeper: 0.8 },
     bias: ["Far Reach", "Deep Veil", "Supple Flex"],
+    boss: "wyrm",
   },
   {
     id: "hollow-keep",
@@ -70,6 +74,7 @@ export const REALMS: RealmTemplate[] = [
     essenceDrops: { ember: 3, glass: 2, ash: 2, root: 1.5, storm: 1 },
     enemyWeights: { keeper: 2.5, seer: 2, husk: 2, hound: 2, wisp: 1.5, swarm: 1 },
     bias: ["Light Forms", "Intricate", "Tight Bonds", "Rigid"],
+    boss: "king",
   },
 ];
 

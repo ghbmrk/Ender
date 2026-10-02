@@ -16,4 +16,7 @@ export class ChatGPTPlanInferenceProvider implements InferenceProvider {
   async critique(): Promise<never> {
     throw new Error("ChatGPTPlanInferenceProvider is not implemented in the MVP");
   }
+  async plan(): Promise<never> {
+    throw new Error("ChatGPTPlanInferenceProvider is not implemented in the MVP");
+  }
 }

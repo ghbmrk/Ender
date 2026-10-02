@@ -1,0 +1,3376 @@
+/* Motion: smooth and quick. Replaces the earlier stop-motion steps() timings in battle, adds
+   breathing idles, dashes, wind-ups, knockback and camera kicks. Loaded last. */
+
+/* ── Figures ── */
+.battle .unit {
+  transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --lx: 120px;
+  --ly: -60px;
+}
+.battle .unit.foe {
+  --lx: -140px;
+  --ly: 90px;
+  animation: enter-foe 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards;
+}
+.battle .unit.party {
+  animation: enter-hero 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards;
+}
+@keyframes enter-foe {
+  from {
+    transform: translateX(260px);
+    opacity: 0;
+  }
+}
+@keyframes enter-hero {
+  from {
+    transform: translateX(-260px);
+    opacity: 0;
+  }
+}
+/* A dash in: fast, accelerating. The return uses the slower ease-out above. */
+.battle .unit.lunge,
+.battle .unit.party.lunge,
+.battle .unit.foe.lunge {
+  transform: translate(var(--lx), var(--ly));
+  transition: transform 110ms cubic-bezier(0.6, 0, 0.9, 0.5);
+}
+/* A foe's blow: it rears up and back for as long as the blow's ring takes to close (--wind-ms), then lunges in so
+   it lands on the hero exactly at the impact (--strike-ms); the vector and scale come from the screen. */
+.battle .unit.windup {
+  transform: translate(calc(var(--lx) * -0.12), calc(var(--ly) * -0.12)) scale(1.04);
+  transition: transform 360ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.battle .unit.foe.windup {
+  transform: translate(calc(var(--lx) * -0.15), calc(var(--ly) * -0.15)) scale(1.22) rotate(-6deg);
+  transition: transform var(--wind-ms, 360ms) cubic-bezier(0.25, 0.1, 0.4, 1);
+}
+.battle .unit.foe.rewind {
+  transform: translate(calc(var(--lx) * 0.7), calc(var(--ly) * 0.7)) scale(calc(1 + (var(--ls, 1) - 1) * 0.7)) rotate(-4deg);
+  transition: transform var(--wind-ms, 200ms) cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.battle .unit.foe.lunge {
+  transform: translate(var(--lx), var(--ly)) scale(var(--ls, 1));
+  transition: transform var(--strike-ms, 110ms) cubic-bezier(0.55, 0, 1, 0.6);
+}
+/* A red glow builds behind the foe while it winds up and flares as it strikes (opacity only: no repaint). */
+.battle .unit .menace {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #ff3a1acc, #ff3a1a55 55%, transparent);
+  transform: scale(1.5);
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  pointer-events: none;
+}
+.battle .unit.foe.windup .menace,
+.battle .unit.foe.rewind .menace {
+  opacity: 0.85;
+  transition: opacity var(--wind-ms, 360ms) ease-in;
+}
+.battle .unit.foe.lunge .menace {
+  opacity: 1;
+  transition-duration: 80ms;
+}
+/* The foe's name plate steps aside while it strikes rather than flying about with the blow. */
+.battle .unit.foe.windup .foe-tag,
+.battle .unit.foe.rewind .foe-tag,
+.battle .unit.foe.lunge .foe-tag {
+  opacity: 0;
+  transition: opacity 60ms;
+}
+
+/* Breathing idle: the 0×0 bob box sits on the feet, so it scales from the ground up. */
+.battle .unit .bob {
+  transform-origin: 0 0;
+  animation: breathe 2.4s ease-in-out infinite alternate;
+}
+.battle .unit.foe .bob {
+  animation: breathe-foe 1.9s ease-in-out infinite alternate;
+}
+.battle .unit.active.party .bob {
+  animation-duration: 1.3s;
+}
+@keyframes breathe {
+  from {
+    transform: translateY(0) scale(1, 1);
+  }
+  to {
+    transform: translateY(-3px) scale(1.012, 1.026);
+  }
+}
+@keyframes breathe-foe {
+  from {
+    transform: translateY(0) rotate(-0.8deg) scale(1, 1);
+  }
+  to {
+    transform: translateY(-9px) rotate(0.9deg) scale(1.01, 1.03);
+  }
+}
+
+/* Struck: a white flash and a knockback away from the blow. */
+.battle .unit.foe {
+  --kx: 40px;
+}
+.battle .unit.party {
+  --kx: -40px;
+}
+.battle .unit.hurt .bob {
+  animation: knock 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.battle .unit.hurt .fig {
+  filter: none;
+  animation: hit-flash 220ms ease-out;
+}
+@keyframes knock {
+  0% {
+    transform: translateX(var(--kx)) skewX(-4deg) scale(1.04, 0.96);
+  }
+  60% {
+    transform: translateX(calc(var(--kx) * -0.15));
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes hit-flash {
+  0% {
+    filter: brightness(3) saturate(0);
+  }
+  100% {
+    filter: none;
+  }
+}
+.battle .unit.dead .bob {
+  animation: fall 520ms cubic-bezier(0.5, 0, 0.8, 0.4) forwards;
+}
+.battle .unit.is-broken .bob {
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.battle .unit.active.party::before {
+  animation: ring 900ms ease-in-out infinite alternate;
+}
+@keyframes ring {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.6;
+    transform: scale(1.06);
+  }
+}
+.battle .reticle > div {
+  animation: spin 5s linear infinite;
+}
+
+/* ── Paint and numbers ── */
+.battle .fx.slash {
+  animation: slash 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.battle .fx.splat {
+  animation: splat 420ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+.battle .fx.spark {
+  animation: splat 320ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+.battle .fx.bloom {
+  animation: bloom 480ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+.battle .floater {
+  animation: floatup 950ms cubic-bezier(0.15, 0.9, 0.3, 1) both;
+}
+.battle .floater.crit,
+.battle .floater.grade.perfect,
+.battle .floater.broken {
+  animation-name: floatup-big;
+}
+@keyframes floatup-big {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -30%) scale(0.4);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -70%) scale(1.5);
+  }
+  30% {
+    transform: translate(-50%, -80%) scale(1.15);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(1.05);
+  }
+}
+.battle .weak-point {
+  animation: pulse 260ms ease-in-out infinite alternate;
+}
+.battle .banner {
+  animation: bannerin 900ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.battle .tell {
+  animation: tellin 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.battle .gbar > div {
+  transition: width 240ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.battle-end {
+  animation: fadein 220ms ease-out both;
+}
+.battle .card {
+  animation: cardin 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* A burst of light where a Perfect, Parry or Break lands. */
+.flash {
+  position: absolute;
+  z-index: 3150;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 8%, var(--flash) 22%, transparent 62%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: flash 220ms ease-out both;
+}
+@keyframes flash {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+/* ── Camera kicks (two copies of each so a repeat restarts the animation) ── */
+@keyframes cam-shake-0 {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-7px, 4px); }
+  50% { transform: translate(6px, -3px); }
+  75% { transform: translate(-3px, 2px); }
+  100% { transform: none; }
+}
+@keyframes cam-shake-1 {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-7px, 4px); }
+  50% { transform: translate(6px, -3px); }
+  75% { transform: translate(-3px, 2px); }
+  100% { transform: none; }
+}
+@keyframes cam-big-0 {
+  0% { transform: translate(0, 0) scale(1.03); }
+  15% { transform: translate(-18px, 10px) scale(1.03); }
+  35% { transform: translate(15px, -8px) scale(1.02); }
+  55% { transform: translate(-9px, 5px) scale(1.01); }
+  75% { transform: translate(4px, -2px); }
+  100% { transform: none; }
+}
+@keyframes cam-big-1 {
+  0% { transform: translate(0, 0) scale(1.03); }
+  15% { transform: translate(-18px, 10px) scale(1.03); }
+  35% { transform: translate(15px, -8px) scale(1.02); }
+  55% { transform: translate(-9px, 5px) scale(1.01); }
+  75% { transform: translate(4px, -2px); }
+  100% { transform: none; }
+}
+@keyframes cam-punch-0 {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes cam-punch-1 {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* ── Controls answer the thumb at once ── */
+.stage button {
+  transition: transform 60ms ease-out, filter 60ms ease-out;
+}
+.stage button:active:not(:disabled) {
+  transform: scale(0.95);
+  filter: brightness(1.18);
+}
+.stage .def-btn:active {
+  transform: scale(0.97);
+  filter: brightness(1.35);
+}
+/* Two or more command cards share the row instead of leaving an empty third column. */
+.stage .cards {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.cards-idle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  opacity: 0.4;
+  filter: saturate(0.5);
+  pointer-events: none;
+}
+.cards-idle .card {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle .world {
+    animation: none !important;
+  }
+  .battle .unit .bob {
+    animation: none;
+  }
+}
+
+/* The world is its own layer, so coach bubbles, captions and banners always sit above the figures
+   (and a camera kick, which also makes a layer, cannot reorder them mid-shake). */
+.battle .world {
+  z-index: 0;
+}
+
+/* Painted backdrops cover the whole stage on tall phones (cropping a little off the sides), so no
+   screen shows an empty band above or below its scene. The world's figures stay put. */
+.world > .backdrop {
+  transform: scale(var(--cover, 1));
+  transform-origin: 50% 50%;
+}
+
+/* The Loom is laid out from the stage's top edge, so its bottom bar and summary anchor to the stage's foot. */
+.stage .loom-screen .loom-done {
+  top: calc(var(--stage-h) - 178px - var(--safe-b));
+}
+.loom-screen .compile {
+  bottom: calc(1920px - var(--stage-h) + 178px + var(--safe-b));
+}
+/* Toasts are news, not controls: they appear at the top, clear of the thumb zone. */
+.toasts {
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  bottom: auto;
+  left: 16px;
+  right: 16px;
+  align-items: center;
+}
+
+/* The Loom's lower half is one column: the Forms tray takes whatever room the skills summary leaves. */
+.loom-screen .loom-lower {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: calc(1920px - var(--stage-h) + 178px + var(--safe-b));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.loom-screen .loom-lower .tray,
+.loom-screen .loom-lower .compile {
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+}
+.loom-screen .loom-lower .tray {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.loom-screen .loom-lower .tray-row {
+  flex: 1;
+  align-items: center;
+}
+.loom-screen .loom-lower .compile {
+  flex: none;
+}
+.compile-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 24px;
+  row-gap: 6px;
+  align-items: baseline;
+}
+.compile-grid h3 {
+  margin: 0;
+  border: none;
+  white-space: nowrap;
+}
+.loom-screen .loom-lower .c-diff {
+  position: static;
+  margin-top: 8px;
+}
+/* Cells to place on glow clearly, not just a faint outline. */
+.loom-board .cell.coach-cell {
+  fill: #f4d58c33;
+  stroke: #ffd67a;
+  stroke-width: 10;
+}
+
+/* Map dock: one bar, health on the left, the Loom under the thumb. */
+.stage .map-dock.map-party {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px;
+}
+.map-dock .mp-hero {
+  flex-direction: row;
+  gap: 18px;
+  align-items: center;
+}
+.map-dock .mp-hp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.map-dock .mp-name {
+  font-family: var(--display);
+  font-size: 36px;
+  color: #f4d58c;
+}
+.map-dock .mp-hero .gbar {
+  width: 300px;
+}
+.stage .map-dock button.big {
+  min-width: 300px;
+  min-height: 124px;
+  font-size: 46px;
+}
+.stage .map-head button.map-withdraw {
+  flex: none;
+  min-height: 88px;
+  padding: 0 22px;
+  font-size: 30px;
+  background: none;
+  border: 2px solid #8f642099;
+  box-shadow: none;
+  color: #c9b48a;
+}
+
+/* A station that just opened up: a soft pulse and a New tag until it is visited. */
+.station.fresh {
+  animation: st-fresh 1.6s ease-in-out infinite;
+}
+@keyframes st-fresh {
+  50% {
+    box-shadow: 0 0 0 4px #f4d58c, 0 0 40px #f4d58caa;
+  }
+}
+.station .st-new {
+  position: absolute;
+  top: -22px;
+  right: -12px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: #b8402f;
+  color: #fff3dc;
+  font-family: var(--display);
+  font-size: 26px;
+  box-shadow: 0 3px 8px #000a;
+}
+@media (prefers-reduced-motion: reduce) {
+  .station.fresh {
+    animation: none;
+  }
+}
+
+/* Revealing a Form: a burst of light behind the sheet, the name pops in, the choices rise one by one. */
+.weave-sheet {
+  position: relative;
+  animation: ws-rise 260ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes ws-rise {
+  from {
+    transform: translateY(40%);
+    opacity: 0;
+  }
+}
+.ws-burst {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 900px;
+  height: 900px;
+  margin: -450px 0 0 -450px;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff6d8 0%, #f4d58caa 18%, #b47cff55 38%, transparent 62%);
+  animation: ws-burst 900ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+  z-index: -1;
+}
+@keyframes ws-burst {
+  from {
+    transform: scale(0.2);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+.weave-sheet.just-revealed h2 {
+  animation: ws-name 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes ws-name {
+  from {
+    transform: scale(0.6);
+    letter-spacing: 12px;
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+.weave-sheet .ws-role {
+  animation: ws-role 360ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.weave-sheet .ws-role:nth-child(2) {
+  animation-delay: 70ms;
+}
+.weave-sheet .ws-role:nth-child(3) {
+  animation-delay: 140ms;
+}
+.weave-sheet .ws-role:nth-child(4) {
+  animation-delay: 210ms;
+}
+@keyframes ws-role {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weave-sheet,
+  .ws-burst,
+  .weave-sheet h2,
+  .weave-sheet .ws-role {
+    animation: none;
+  }
+}
+
+/* The stage never scrolls, even when focus lands on something past its edge (it used to shift whole screens sideways). */
+.stage {
+  overflow: clip;
+}
+
+/* Victory: the title slams in, then three stat medallions pop one after another. */
+.battle-end h1 {
+  animation: end-title 520ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+@keyframes end-title {
+  from {
+    transform: scale(1.8);
+    opacity: 0;
+    letter-spacing: 30px;
+  }
+}
+.stage .end-stats {
+  display: flex;
+  gap: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+.end-stats span {
+  width: 230px;
+  padding: 22px 0 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 32px;
+  color: var(--rules-ink);
+  border: 6px solid transparent;
+  border-radius: 22px;
+  background:
+    var(--parchment) padding-box,
+    var(--metal) border-box;
+  box-shadow: 0 0 0 3px var(--ink-deep), 0 14px 30px #000c;
+  animation: end-stat 380ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.end-stats span:nth-child(1) {
+  animation-delay: 260ms;
+}
+.end-stats span:nth-child(2) {
+  animation-delay: 360ms;
+}
+.end-stats span:nth-child(3) {
+  animation-delay: 460ms;
+}
+.end-stats b {
+  font-family: var(--display);
+  font-size: 76px;
+  line-height: 1;
+  color: #6b1a28;
+}
+@keyframes end-stat {
+  from {
+    transform: translateY(40px) scale(0.7);
+    opacity: 0;
+  }
+}
+.stage .battle-end button.big {
+  animation: end-stat 320ms 560ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-end h1,
+  .end-stats span,
+  .stage .battle-end button.big {
+    animation: none;
+  }
+}
+
+/* Chain of clean timings: pops on each step and heats up from gold to fire. */
+.battle .streak {
+  position: absolute;
+  left: 40px;
+  top: 340px;
+  z-index: 3100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  pointer-events: none;
+  color: #f4d58c;
+  text-shadow: 0 3px 0 #1d1208, 0 0 18px #000;
+  animation: streak-pop 300ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.battle .streak b {
+  font-family: var(--display);
+  font-size: 96px;
+  line-height: 0.9;
+}
+.battle .streak span {
+  font-family: var(--display);
+  font-size: 34px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.battle .streak.warm {
+  color: #ffb45c;
+}
+.battle .streak.hot {
+  color: #ff6a3d;
+  text-shadow: 0 3px 0 #1d1208, 0 0 30px #ff6a3d99;
+}
+@keyframes streak-pop {
+  from {
+    transform: scale(1.7) rotate(-6deg);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .streak {
+    animation: none;
+  }
+}
+
+/* Three or more cards: a slimmer title bar and one short rules line, so nothing is cut off. */
+.bpanel.thumb .cards:has(> .card:nth-child(3)) .card-top {
+  height: 58px;
+}
+.bpanel.thumb .cards:has(> .card:nth-child(3)) .card-top + .card-line {
+  margin-top: 6px;
+  font-size: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bpanel.thumb .cards:has(> .card:nth-child(3)) .card {
+  justify-content: center;
+}
+
+/* A node placed on the Loom lands with a pop and a ring of light. */
+.loom-board .node.landed {
+  animation: node-land 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes node-land {
+  from {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+.loom-board .land-ring {
+  fill: none;
+  stroke: #fff4cc;
+  stroke-width: 10;
+  animation: land-ring 700ms ease-out both;
+}
+@keyframes land-ring {
+  from {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+/* Forms waiting in the tray float gently so they read as "tap me". */
+.tray-item.raw svg {
+  animation: raw-float 2.4s ease-in-out infinite;
+}
+@keyframes raw-float {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loom-board .node.landed,
+  .loom-board .land-ring,
+  .tray-item.raw svg {
+    animation: none;
+  }
+}
+
+/* Map: the choices ahead pulse gently; stops left behind stay on the route. */
+.map-node.next {
+  animation: node-next 1.4s ease-in-out infinite;
+}
+@keyframes node-next {
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-node.next {
+    animation: none;
+  }
+}
+.map-node.passed {
+  opacity: 0.35;
+}
+.map-link.behind {
+  opacity: 0.3;
+}
+
+/* A lone hero's plaque: big portrait, chunky health and AP, filling the column top to bottom. */
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps {
+  justify-content: space-evenly;
+  gap: 10px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps .head {
+  width: 150px !important;
+  height: 150px !important;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps-name {
+  flex-direction: column;
+  font-size: 40px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps-hp {
+  font-size: 34px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .gbar {
+  height: 22px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ap-pips {
+  gap: 6px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ap-pips span {
+  width: 32px;
+  height: 32px;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps-name {
+  align-items: center;
+}
+.bpanel.thumb .party-strip:has(> .ps:only-child) .ps-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* A lone card (the first fights): bigger rules text, centred in the card. */
+.bpanel.thumb .cards:has(> .card:only-child) .card-top + .card-line {
+  margin-top: auto;
+  font-size: 46px;
+}
+.bpanel.thumb .cards:has(> .card:only-child) .card-line.dim {
+  margin-bottom: auto;
+  font-size: 38px;
+}
+
+/* Realm Gate: one line per Realm, the market detail behind Details. */
+.realm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 14px;
+}
+.stage .realm-card button.realm-more,
+.stage button.realm-more {
+  min-height: 64px;
+  padding: 0 22px;
+  margin-left: auto;
+  font-size: 30px;
+  background: none;
+  border: 2px solid #8f6420aa;
+  box-shadow: none;
+  color: #6b4a1a;
+}
+.contracts-strip .realm-more {
+  margin: 0 auto;
+  color: #c9b48a;
+}
+.realm-details {
+  margin-bottom: 14px;
+  animation: ws-role 220ms ease-out both;
+}
+.stage .realm-card button.primary {
+  min-height: 120px;
+  font-size: 48px;
+}
+.stage .title-actions {
+  bottom: calc(110px + var(--safe-b, 0px));
+}
+.stage .panel .realm-card button.realm-more,
+.stage .panel button.realm-more {
+  background: none;
+  border: 2px solid #8f6420aa;
+  box-shadow: none;
+  color: #6b4a1a;
+}
+.stage .panel .contracts-strip button.realm-more {
+  color: #c9b48a;
+}
+/* Tighter still, so a three-card column fits even short panels. */
+.stage .bpanel.thumb .cards:has(> .card:nth-child(3)) .card {
+  padding: 5px 5px 5px 7px;
+}
+.bpanel.thumb .cards:has(> .card:nth-child(3)) .card-top {
+  height: 52px;
+}
+.stage .bpanel.thumb .cards:has(> .card:nth-child(3)) .card-top + .card-line {
+  margin-top: 10px;
+  font-size: 27px;
+  line-height: 1.15;
+}
+/* The parchment rules box follows the slimmer title bar in a three-card column. */
+.stage .bpanel.thumb .cards:has(> .card:nth-child(3)) .card:not(.empty)::after {
+  top: 70px;
+  bottom: 6px;
+}
+
+/* Spoils: loot tiles pop in one after another. */
+.loot {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 10px 0 24px;
+}
+.loot-tile {
+  --c: #f4d58c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 18px 8px 14px;
+  border-radius: 20px;
+  border: 4px solid var(--c);
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--c) 30%, transparent), #120d12cc 70%);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--c) 35%, transparent), 0 10px 20px #000a;
+  color: var(--c);
+  animation: loot-in 380ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.loot-tile:nth-child(2) { animation-delay: 90ms; }
+.loot-tile:nth-child(3) { animation-delay: 180ms; }
+.loot-tile:nth-child(4) { animation-delay: 270ms; }
+.loot-tile:nth-child(5) { animation-delay: 360ms; }
+.loot-tile:nth-child(6) { animation-delay: 450ms; }
+.loot-tile .lt-glyph {
+  font-size: 64px;
+  line-height: 1;
+}
+.loot-tile b {
+  font-family: var(--display);
+  font-size: 46px;
+  color: #fbe8b0;
+}
+.loot-tile .lt-name {
+  font-family: var(--serif-body);
+  font-size: 28px;
+  text-align: center;
+  color: #d9c7a2;
+}
+.loot-tile.crowns {
+  --c: #ecc56a;
+}
+.loot-tile.form {
+  --c: #b47cff;
+  grid-column: span 3;
+}
+.loot-tile.mirror {
+  --c: #9fd8ff;
+}
+@keyframes loot-in {
+  from {
+    transform: translateY(30px) scale(0.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loot-tile {
+    animation: none;
+  }
+}
+/* Compact loot tiles: four to a row, so a whole haul and its button fit on one screen. */
+.loot {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.loot-tile {
+  padding: 12px 4px 10px;
+  border-width: 3px;
+  border-radius: 16px;
+}
+.loot-tile .lt-glyph {
+  font-size: 46px;
+}
+.loot-tile b {
+  font-size: 40px;
+}
+.loot-tile .lt-name {
+  font-size: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.loot-tile.form {
+  grid-column: span 2;
+}
+/* Tiles share the row evenly, however many there are. */
+.loot.loot {
+  display: flex;
+  flex-wrap: wrap;
+}
+.loot .loot-tile.loot-tile {
+  flex: 1 1 0;
+  min-width: 22%;
+}
+.loot .loot-tile .lt-name.lt-name {
+  font-size: 26px;
+}
+.loot .loot-tile.loot-tile.form {
+  flex-basis: 40%;
+}
+
+/* Loop 9: first meeting with a foe. The card sits on a dark band and says how it fights, under the name. */
+.battle .banner.has-lore {
+  padding: 34px 0 30px;
+  background: linear-gradient(90deg, transparent, rgba(14, 9, 6, 0.86) 12%, rgba(14, 9, 6, 0.86) 88%, transparent);
+  border-top: 3px solid rgba(214, 170, 90, 0.6);
+  border-bottom: 3px solid rgba(214, 170, 90, 0.6);
+}
+.battle .banner .banner-lore {
+  margin: 16px auto 0;
+  max-width: 820px;
+  font-family: var(--serif-body);
+  font-weight: 400;
+  font-style: italic;
+  font-size: 42px;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: #f4e3b8;
+  text-shadow: 0 2px 0 #000;
+}
+
+/* Loop 9: a station that has just opened rises out of the ground with a flare. */
+.crossing .station.risen {
+  animation: st-rise 900ms cubic-bezier(0.2, 0.9, 0.3, 1.15) 250ms both;
+}
+.crossing .station.risen.fresh {
+  animation:
+    st-rise 900ms cubic-bezier(0.2, 0.9, 0.3, 1.15) 250ms both,
+    st-fresh 1.6s ease-in-out 1150ms infinite;
+}
+.crossing .station.risen::before {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 130, 0.7), rgba(255, 214, 130, 0) 65%);
+  animation: st-flare 1100ms ease-out 350ms both;
+  pointer-events: none;
+}
+@keyframes st-rise {
+  0% { opacity: 0; transform: translate(-50%, calc(-50% + 80px)) scale(0.6); }
+  100% { opacity: 1; transform: translate(-50%, -50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crossing .station.risen,
+  .crossing .station.risen::before {
+    animation: none;
+  }
+}
+@keyframes st-flare {
+  0% { opacity: 0; transform: scale(0.3); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
+/* Loop 10: the killing blow. The camera leans in and holds, colour drains, then a soft white bloom. */
+@keyframes cam-finale-0 {
+  0% { transform: scale(1.02); filter: none; }
+  12% { transform: scale(1.1) translate(-6px, 4px); filter: saturate(0.4) contrast(1.15); }
+  70% { transform: scale(1.13); filter: saturate(0.25) contrast(1.2) brightness(1.05); }
+  100% { transform: none; filter: none; }
+}
+@keyframes cam-finale-1 {
+  0% { transform: scale(1.02); filter: none; }
+  12% { transform: scale(1.1) translate(6px, 4px); filter: saturate(0.4) contrast(1.15); }
+  70% { transform: scale(1.13); filter: saturate(0.25) contrast(1.2) brightness(1.05); }
+  100% { transform: none; filter: none; }
+}
+.battle .finale-bloom {
+  position: absolute;
+  inset: 0;
+  z-index: 3200;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 42%, rgba(255, 248, 228, 0.95), rgba(255, 236, 190, 0.5) 40%, rgba(255, 236, 190, 0) 75%);
+  animation: finale-bloom 1000ms ease-out both;
+}
+@keyframes finale-bloom {
+  0%, 55% { opacity: 0; }
+  72% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .finale-bloom { animation-duration: 1ms; }
+}
+
+/* Loop 10: toasts drop in just under the screen headers instead of covering them. */
+.toasts {
+  top: calc(96px + env(safe-area-inset-top, 0px));
+}
+/* The final foe falls slowly through the finale, flaring white as it goes. */
+.battle.finale .unit.foe.dead .bob {
+  animation: foe-die 1100ms cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
+}
+@keyframes finale-fall {
+  0% { filter: brightness(1); }
+  25% { filter: brightness(2.2) saturate(0.2); transform: translateY(0) scaleY(1); opacity: 1; }
+  100% { filter: brightness(3) saturate(0); transform: translateY(30px) scaleY(0.15); opacity: 0; }
+}
+
+/* Loop 11: each realm card opens on a window of its painted backdrop. */
+.realm-card .realm-head.has-art {
+  min-height: 118px;
+  display: flex;
+  align-items: flex-end;
+  background:
+    linear-gradient(180deg, rgba(20, 14, 22, 0) 25%, rgba(20, 14, 22, 0.88) 100%),
+    var(--realm-art) center 58% / cover no-repeat;
+}
+.realm-card .realm-head.has-art h3,
+.realm-card .realm-head.has-art .diff {
+  text-shadow: 0 2px 0 #000, 0 0 12px #000;
+}
+.realm-card .realm-head.has-art {
+  align-items: last baseline;
+  padding-bottom: 12px;
+}
+
+/* Loop 11: the drawn hero beside painted foes. A soft ink outline and a warm rim of light from the scene
+   pull the flat figure into the painting; painted foes get a matching contact shadow. */
+.battle .unit.party .fig-svg {
+  filter: drop-shadow(0 0 1.5px rgba(10, 6, 4, 0.85)) drop-shadow(-6px -4px 14px rgba(255, 214, 150, 0.22)) saturate(0.92) contrast(1.06);
+}
+.battle .unit.foe .fig-img {
+  filter: drop-shadow(0 0 1.5px rgba(10, 6, 4, 0.7)) drop-shadow(0 12px 18px rgba(0, 0, 0, 0.45));
+}
+
+/* Loop 12: reachable map nodes show what they hold. A fight shows the foe's face in the medallion,
+   with a count when more than one will step up; other stops say what you'd do there. */
+.stage .map-node .mn-foe {
+  position: relative;
+  width: 124px;
+  height: 124px;
+}
+.stage .map-node .mn-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.stage .map-node .mn-more {
+  position: absolute;
+  right: -14px;
+  top: -10px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #b8402f;
+  color: #fff3dc;
+  font-family: var(--display);
+  font-size: 28px;
+  line-height: 40px;
+  box-shadow: 0 2px 6px #000a;
+}
+.stage .map-node .mn-name .mn-peek {
+  display: block;
+  margin-top: -4px;
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 26px;
+  color: #f4e3b8;
+  text-align: center;
+}
+
+/* Loop 13: an Action card's rules plate carries its Affinity's painting, fading in from the right
+   behind the rules so the numbers stay on clean parchment. */
+.stage .card.has-art:not(.empty)::after {
+  background:
+    var(--tex-grain),
+    linear-gradient(90deg, #f1e3c0 40%, rgba(241, 227, 192, 0.78) 62%, rgba(241, 227, 192, 0.55) 100%),
+    var(--card-art) right 40% / 60% auto no-repeat,
+    radial-gradient(ellipse at 45% 35%, #fbf2da, #ecdcb4 55%, #d6bf8e);
+}
+
+/* Loop 13: the Bazaar's essence table becomes one card per Essence at phone width: name and trend
+   beside the sparkline, the numbers on one line, and Buy and Sell as two full-width buttons. */
+@media (max-width: 720px) {
+  table.market.market,
+  table.market.market tbody {
+    display: block;
+    width: 100%;
+  }
+  table.market.market thead {
+    display: none;
+  }
+  table.market.market tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.7fr;
+    grid-template-areas:
+      "name name spark"
+      "price trade held"
+      "act act act";
+    gap: 6px 10px;
+    align-items: center;
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #ffffff0a;
+    box-shadow: inset 0 0 0 1px #ffffff1a;
+  }
+  table.market.market td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+  table.market.market td:nth-child(1) { grid-area: name; }
+  table.market.market td:nth-child(2) { grid-area: spark; justify-self: end; max-width: 100%; overflow: hidden; }
+  table.market.market td:nth-child(3) { grid-area: price; }
+  table.market.market td:nth-child(4) { grid-area: trade; }
+  table.market.market td:nth-child(5) { grid-area: held; text-align: right; }
+  table.market.market td:nth-child(4)::before { content: "Buy / Sell"; display: block; font-size: 12px; opacity: 0.6; }
+  table.market.market td:nth-child(5)::before { content: "Held"; display: block; font-size: 12px; opacity: 0.6; }
+  table.market.market td:nth-child(6) {
+    grid-area: act;
+    display: flex;
+    gap: 10px;
+  }
+  table.market.market td:nth-child(6) button {
+    flex: 1;
+    min-height: 44px;
+  }
+  table.market.market td:nth-child(2) svg {
+    width: 120px;
+    height: auto;
+  }
+}
+@media (max-width: 720px) {
+  .tabs.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .tabs.tabs > .tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 4px;
+    font-size: 15px;
+    line-height: 1.15;
+  }
+  .tabs.tabs > .hud-spacer {
+    flex-basis: 100%;
+    height: 0;
+  }
+  .tabs.tabs > .ghost {
+    margin-left: auto;
+  }
+}
+
+/* Loop 14: a Form card's worth in two big numbers and a verdict; the painted Affinity art in its window. */
+.fc-art .fc-paint {
+  width: 100%;
+  height: 100%;
+  background-size: 160% auto;
+  background-repeat: no-repeat;
+}
+.fc-rules .eval.eval {
+  align-items: flex-end;
+  gap: 4px 20px;
+  font-family: var(--serif);
+}
+.fc-rules .eval .ev-big {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.fc-rules .eval .ev-big small {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rules-dim);
+}
+.fc-rules .eval .ev-big b {
+  font-size: 22px;
+  font-weight: 800;
+}
+.fc-rules .eval .ev-verdict {
+  margin-left: auto;
+  align-self: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #2f6b3a22;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.fc-rules .eval .ev-verdict.bad {
+  background: #9a2a3918;
+}
+
+/* Loop 15: on a phone the chosen Form opens at the top of the Crucible, and isn't repeated in the list. */
+@media (max-width: 720px) {
+  .crucible.crucible {
+    display: flex;
+    flex-direction: column;
+  }
+  .crucible.crucible .form-detail {
+    order: -1;
+    scroll-margin-top: 12px;
+  }
+  .crucible.crucible .form-list .form-card.selected {
+    display: none;
+  }
+}
+
+/* Loop 16: a defeat ends with one thing to try next time. */
+.battle-end .end-tip {
+  max-width: 820px;
+  margin: 0 auto 34px;
+  padding: 18px 28px;
+  border-radius: 16px;
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-size: 40px;
+  line-height: 1.3;
+  color: #f4e3b8;
+  text-align: center;
+  background: #120d12cc;
+  box-shadow: inset 0 0 0 2px #b58a3c88;
+  animation: fadein 400ms ease-out 500ms both;
+}
+/* Each Crucible act says what it does under its name. */
+.crucible .actions button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+}
+.crucible .actions .act-hint {
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.85;
+}
+/* Elites and the Boss frame the foe's face in their own colours. */
+.stage .map-node.k-elite .mn-face {
+  box-shadow: inset 0 0 0 6px #b8402f, inset 0 0 18px #000a;
+}
+.stage .map-node.k-boss .mn-face {
+  box-shadow: inset 0 0 0 7px #e0b450, inset 0 0 22px #000a;
+}
+.stage .map-node.k-boss .mn-foe {
+  width: 164px;
+  height: 164px;
+}
+
+/* A foe below a third of its health enrages and hits harder. The rage is a red heat behind it,
+   so it keeps breathing and the painting keeps its edges. */
+.battle .unit.foe.enraged::after {
+  content: "";
+  position: absolute;
+  left: -300px;
+  top: -820px;
+  width: 600px;
+  height: 860px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, #ff4a2acc, #e0402f55 55%, transparent);
+  animation: enraged 640ms ease-in-out infinite alternate;
+}
+@keyframes enraged {
+  from { opacity: 0.45; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1.04); }
+}
+.battle .floater.enrage {
+  color: #ff6b4a;
+  font-size: 64px;
+  letter-spacing: 0.06em;
+  text-shadow: 0 4px 0 #3a0a06, 0 0 24px #e0402f;
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .unit.foe.enraged::after { animation: none; opacity: 0.8; }
+}
+
+/* With nothing to place, the summary sits on the Continue bar. */
+.loom-screen .loom-lower.bare {
+  justify-content: flex-end;
+}
+/* With nothing to place there is no tray; dragging a Form off the board raises one above the summary to drop it in. */
+.loom-screen .loom-lower .tray.empty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 16px);
+  height: 170px;
+  flex: none;
+}
+.loom-screen .loom-lower .tray.empty .tray-empty {
+  padding: 8px 4px;
+}
+
+/* An enraged foe's new move: the banner burns hotter and shakes, so the new rhythm reads as a warning. */
+.battle .tell.rage {
+  background:
+    var(--tex-grain) padding-box,
+    radial-gradient(ellipse at 50% 0%, #e0602a, #5a1206 80%) padding-box,
+    var(--metal) border-box;
+  animation: tellin 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both, rage-shake 80ms 180ms 4 alternate;
+}
+.battle .tell.rage .tell-name::before {
+  content: "Rage · ";
+  color: #ffcf5a;
+}
+@keyframes rage-shake {
+  from { translate: -6px 0; }
+  to { translate: 6px 0; }
+}
+
+/* A notice can be tapped away. */
+.toasts .toast {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* "Drops" labels a Realm's Essence chips, so they read as loot rather than tags. */
+.chips-label {
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--rules-ink, #3a2c1c);
+  opacity: 0.8;
+  align-self: center;
+}
+.realm-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.realm-actions button.primary {
+  flex: 1;
+}
+.realm-actions button.realm-more {
+  margin-left: 0 !important;
+}
+
+/* The run summary: how far you climbed, as a row of steps up to the Boss, in the game's serif. */
+.summary,
+.summary .event {
+  font-family: var(--serif-body);
+}
+.summary > p.dim {
+  font-size: 17px;
+}
+.sum-reach {
+  display: grid;
+  gap: 8px;
+  font-family: var(--serif-body);
+  font-size: 19px;
+  color: #e9dcc0;
+}
+.sum-reach b {
+  color: #f4d58c;
+}
+.sum-track {
+  display: flex;
+  gap: 6px;
+}
+.sum-track i {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: #ffffff1f;
+}
+.sum-track i.on {
+  background: linear-gradient(90deg, #d9a441, #f4d58c);
+  box-shadow: 0 0 8px #f4d58c66;
+}
+.sum-track i.boss {
+  background: #7a1f2a;
+  box-shadow: inset 0 0 0 2px #e0b450;
+}
+/* Crowns needs the most room of any loot name, so its tile takes a wider share of the row. */
+.loot .loot-tile.loot-tile.crowns {
+  flex-grow: 1.4;
+}
+.loot .loot-tile .lt-name.lt-name {
+  font-size: 24px;
+}
+
+/* A long foe name stays on one line, centred over its bars, rather than wrapping onto the figure. */
+.stage .foe-tag .foe-name {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+/* Your best climb sits on each Realm's painting, and a run that beats it says so. */
+.realm-card .realm-head {
+  position: relative;
+}
+.realm-best {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--serif-body);
+  font-size: 14px;
+  color: #f4e6c4;
+  background: #120c10cc;
+  border: 1px solid #d9a44188;
+}
+.realm-best.cleared {
+  color: #1d1408;
+  background: linear-gradient(180deg, #f4d58c, #c8963a);
+  border-color: #fff3c8;
+  font-weight: 700;
+}
+.sum-best {
+  margin-left: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 15px;
+  color: #1d1408;
+  background: linear-gradient(180deg, #f4d58c, #c8963a);
+  animation: loot-in 380ms 300ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+  display: inline-block;
+}
+.sum-fell {
+  font-family: var(--serif-body);
+  font-size: 17px;
+  color: #e9dcc0;
+}
+.sum-fell b {
+  color: #ffb4a8;
+}
+.sum-fell .gbar {
+  margin-top: 6px;
+  height: 10px;
+  border-width: 2px;
+}
+
+/* A Mystery: a sealed card turned over on the map before you learn whether it is loot or an ambush. */
+.stage .mystery-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 50%, #1a1024cc, #07050add 70%);
+  animation: ws-role 220ms ease-out both;
+}
+.stage .mystery-card {
+  position: relative;
+  width: 700px;
+  height: 980px;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  animation: loot-in 420ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+/* The turn is two flat half-flips (back folds away, face unfolds), which every browser draws the same. */
+.stage .mystery-card.open .mc-back {
+  animation: mc-fold 180ms ease-in forwards;
+}
+.stage .mystery-card.open .mc-face {
+  animation: mc-unfold 260ms 180ms cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+@keyframes mc-fold {
+  to { transform: scaleX(0); }
+}
+@keyframes mc-unfold {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.stage .mystery-card .mc-back,
+.stage .mystery-card .mc-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  border-radius: 36px;
+  border: 8px solid #c9a24f;
+  box-shadow: 0 0 60px #b47cff55, 0 30px 60px #000c;
+  font-family: var(--display);
+  color: #fbe8b0;
+}
+.stage .mystery-card .mc-back {
+  background: radial-gradient(circle at 50% 40%, #4a2a6a, #1a0f24 75%);
+}
+.stage .mystery-card .mc-back b {
+  font-size: 300px;
+  line-height: 1;
+  color: #d9b8ff;
+  text-shadow: 0 0 40px #b47cff;
+  animation: pulse 1.1s ease-in-out infinite alternate;
+}
+.stage .mystery-card small {
+  font-family: var(--serif-body);
+  font-size: 40px;
+  color: #e9dcc0;
+}
+.stage .mystery-card .mc-face {
+  transform: scaleX(0);
+  background: radial-gradient(circle at 50% 35%, #5a4420, #1d1408 75%);
+}
+.stage .mystery-card.ambush .mc-face {
+  background: radial-gradient(circle at 50% 35%, #7a1f2a, #1d0808 75%);
+  border-color: #e0402f;
+}
+.stage .mystery-card .mc-face b {
+  font-size: 84px;
+}
+.stage .mystery-card .mc-glow {
+  font-style: normal;
+  font-size: 220px;
+  line-height: 1;
+  color: #f4d58c;
+  text-shadow: 0 0 50px #f4d58c;
+}
+
+/* The hero's name is set in the game's display face, like every other name in Ender. */
+.stage .ch-name input {
+  font-family: var(--display);
+  letter-spacing: 0.02em;
+}
+
+/* The dock's health bars slide from what you last saw to where they are now, with the change called out. */
+.map-dock .mp-hero .gbar > div {
+  transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.map-dock .mp-hp {
+  position: relative;
+}
+.map-dock .mp-delta {
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  font: 700 44px/1 var(--display);
+  text-shadow: 0 2px 6px #000;
+  animation: mp-delta 1800ms ease-out both;
+  pointer-events: none;
+}
+.map-dock .mp-delta.up {
+  color: #8fe08a;
+}
+.map-dock .mp-delta.down {
+  color: #ff7b6b;
+}
+@keyframes mp-delta {
+  0% { opacity: 0; transform: translateY(16px); }
+  15% { opacity: 1; transform: none; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* One step from the Boss, the map darkens and the Boss shows its face once. */
+.stage .boss-omen {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  border: 0;
+  background: radial-gradient(ellipse at 50% 40%, #3a0d0acc 0%, #000000e6 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #f3e6c8;
+  animation: omen 4200ms ease-in-out both;
+}
+.boss-omen .bo-face {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 8px #e0b450, 0 0 80px #c0302acc;
+  background: #1a0806;
+  animation: omen-face 2600ms ease-out both;
+}
+.boss-omen b {
+  font: 700 72px/1.1 var(--display);
+  letter-spacing: 1px;
+}
+.boss-omen small {
+  font: italic 40px/1.2 var(--display);
+  opacity: 0.85;
+}
+@keyframes omen {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes omen-face {
+  0% { transform: scale(0.6); }
+  20% { transform: scale(1.06); }
+  30% { transform: scale(1); }
+}
+/* After the moment, the Boss's node keeps a slow red pulse while it is your next step. */
+.stage .map-node.k-boss.next .mn-face {
+  animation: boss-pulse 1600ms ease-in-out infinite;
+}
+@keyframes boss-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 7px #e0b450, inset 0 0 22px #000a, 0 0 0 0 #c0302a00; }
+  50% { box-shadow: inset 0 0 0 7px #e0b450, inset 0 0 22px #000a, 0 0 40px 10px #c0302acc; }
+}
+/* Notices wait behind the Boss's moment rather than sitting on top of it. */
+:root:has(.boss-omen) .toasts {
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+/* Loop 34: each Essence card leads with the price and what it means (a good buy, a fair price, a good
+   sell), and the trade buttons carry their totals, so the Buy / Sell column is gone. */
+@media (max-width: 720px) {
+  table.market.market {
+    font-family: var(--serif-body);
+  }
+  table.market.market tr {
+    grid-template-areas:
+      "name name spark"
+      "price price held"
+      "act act act";
+  }
+  table.market.market td:nth-child(4) {
+    display: none;
+  }
+  table.market.market .mk-price {
+    font-size: 30px;
+    margin-right: 6px;
+  }
+  table.market.market .status {
+    white-space: nowrap;
+  }
+  table.market.market td:nth-child(6) button small {
+    font: 400 15px var(--serif-body);
+    text-transform: none;
+    opacity: 0.8;
+    margin-left: 4px;
+  }
+}
+.events .event.event {
+  font-family: var(--serif-body);
+}
+
+/* Loop 35: a won Expedition leads with the Boss you beat, struck through in gold, over the whole climb lit. */
+.sum-win {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--serif-body);
+  font-size: 22px;
+  color: #e9dcc0;
+  animation: sw-in 600ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.sum-win b {
+  color: #f4d58c;
+}
+.sum-win .sw-text {
+  flex: 1;
+  display: grid;
+  gap: 10px;
+}
+.sum-win .sw-face {
+  position: relative;
+  flex: none;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #1a0806;
+  box-shadow: 0 0 0 5px #e0b450, 0 0 30px #f4d58c66;
+  filter: saturate(0.6);
+}
+.sum-win .sw-slash {
+  position: absolute;
+  left: -10%;
+  top: 46%;
+  width: 120%;
+  height: 8px;
+  background: linear-gradient(90deg, transparent, #f4d58c 20%, #fff6d8 50%, #f4d58c 80%, transparent);
+  box-shadow: 0 0 12px #f4d58c;
+  transform: rotate(-35deg) scaleX(0);
+  animation: sw-slash 380ms 450ms ease-out forwards;
+}
+.sum-track.won i.crown {
+  background: linear-gradient(90deg, #f4d58c, #fff1c4);
+  box-shadow: 0 0 12px #f4d58ccc, inset 0 0 0 2px #e0b450;
+}
+@keyframes sw-in {
+  from { opacity: 0; transform: scale(0.9); }
+}
+@keyframes sw-slash {
+  to { transform: rotate(-35deg) scaleX(1); }
+}
+.sum-win .sum-best {
+  justify-self: start;
+}
+
+/* The Boss's warning: its heaviest blow and the tell that comes before it. */
+.boss-omen .bo-tip {
+  max-width: 820px;
+  margin-top: 26px;
+  padding: 22px 30px;
+  border-radius: 18px;
+  background: #00000080;
+  box-shadow: inset 0 0 0 2px #e0b45066;
+  font: 400 40px/1.35 var(--serif-body);
+  color: #f3e6c8;
+  text-align: center;
+  animation: bo-tip 4200ms ease-out both;
+}
+.boss-omen .bo-tip b {
+  font: inherit;
+  font-weight: 700;
+  color: #f4d58c;
+  letter-spacing: 0;
+}
+@keyframes bo-tip {
+  0%, 22% { opacity: 0; transform: translateY(14px); }
+  32% { opacity: 1; transform: none; }
+}
+
+/* Loop 39: the Crossing's header shows a count only once something uses it. Crowns always (gold, at the
+   right); Essences once the Bazaar opens; Focus once the Crucible does. */
+.hub-ess .hub-crowns {
+  grid-column: 1 / -1;
+  justify-self: end;
+  color: #f4d58c;
+}
+.hub-ess.solo {
+  display: flex;
+  align-items: center;
+}
+.hub-ess.solo .hub-crowns {
+  font: 700 56px/1 var(--display);
+  text-shadow: 0 2px 8px #000a;
+}
+
+/* Loop 40: a Shrine is a rest you see: a card over the map with what it mended, then Move on (the
+   thumb's side) or Rework Loom. */
+.stage .shrine-rest {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 40px 300px;
+  background: radial-gradient(ellipse at 50% 60%, #2b1d4acc 0%, #000000d9 75%);
+  animation: sr-in 300ms ease-out both;
+}
+.shrine-rest .sr-card {
+  box-sizing: border-box;
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 44px 40px 40px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #2a2140, #17121f);
+  box-shadow: inset 0 0 0 3px #b99cf266, 0 20px 60px #000c, 0 0 80px #8f6fe055;
+  color: #f3e6c8;
+  text-align: center;
+}
+.shrine-rest .sr-glow {
+  font-style: normal;
+  font-size: 120px;
+  line-height: 1;
+  color: #d9c8ff;
+  text-shadow: 0 0 30px #b99cf2, 0 0 60px #8f6fe0;
+  animation: sr-glow 1800ms ease-in-out infinite;
+}
+.shrine-rest b {
+  font: 700 60px/1.1 var(--display);
+}
+.shrine-rest .sr-gain {
+  font: 700 76px/1 var(--display);
+  color: #8fe08a;
+  text-shadow: 0 0 24px #8fe08a66;
+  animation: sr-gain 700ms 150ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+.shrine-rest .gbar {
+  width: 80%;
+  height: 22px;
+}
+.shrine-rest .gbar > div {
+  animation: sr-bar 900ms 200ms ease-out both;
+}
+.shrine-rest small {
+  font: 400 36px/1.3 var(--serif-body);
+  opacity: 0.85;
+}
+.shrine-rest .sr-actions {
+  box-sizing: border-box;
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  margin-top: 10px;
+}
+.shrine-rest .sr-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 130px;
+}
+@keyframes sr-in {
+  from { opacity: 0; }
+}
+@keyframes sr-glow {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes sr-gain {
+  from { opacity: 0; transform: scale(0.6); }
+}
+@keyframes sr-bar {
+  from { filter: brightness(2.2); }
+}
+/* An Attunement is the Loom's stop: teal, and quiet when there is nothing to weave. */
+.shrine-rest.attune .sr-glow {
+  color: #bfeef2;
+  text-shadow: 0 0 30px #5fc6cf, 0 0 60px #2f9aa5;
+}
+.shrine-rest.attune .sr-gain {
+  color: #8fd8e0;
+  text-shadow: 0 0 24px #5fc6cf66;
+}
+.shrine-rest.attune .sr-gain.none {
+  color: #e9dcc0;
+  text-shadow: none;
+  font-size: 60px;
+}
+
+/* Loop 44: contracts and offers in the game's serif, with the reward in gold, like the rest of the Bazaar. */
+.contracts .contract,
+.offer {
+  font-family: var(--serif-body);
+}
+.contracts .contract b,
+.contracts .contract strong {
+  font-family: var(--display);
+}
+.contracts .contract .reward {
+  color: #f4d58c;
+  font: 700 22px var(--display);
+}
+
+/* Contracts: what is wanted as a short list, and your nearest Form. */
+.ct-wants{margin:.4em 0 .3em;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.35em}
+.ct-wants li{padding:.15em .7em;border-radius:999px;background:rgba(255,220,150,.1);border:1px solid rgba(255,220,150,.28);font-size:.95em;line-height:1.35}
+.ct-near{margin-top:.4em;padding:.4em .7em;border-left:3px solid #d9b25a;background:rgba(0,0,0,.25);border-radius:6px;color:#e8dcc2}
+
+/* Spoils: what you now hold in all, under each gain. */
+.loot-tile .lt-have{font-family:var(--serif-body);font-size:22px;color:rgba(240,225,190,.62);margin-top:-2px}
+
+/* Loop 47: card art is a faint wash behind the rules so every word stays readable; boosts sit by the name. */
+.stage .card .card-boost{margin-left:.3em;font-size:.75em;color:#ffe9a0;text-shadow:0 0 2px #4a2205,0 0 2px #4a2205,0 0 10px rgba(255,214,120,.9);vertical-align:.12em;letter-spacing:.05em}
+
+/* Loop 48: the hero's statuses sit above the head, named and large enough to read at a glance. */
+.hero-tag{left:-200px;width:400px;pointer-events:none}
+.hero-tag .statuses{font-size:34px;gap:10px}
+.hero-tag .st{display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:999px;background:#140f16e6;border-color:currentColor;font-family:var(--serif-body);font-weight:700}
+.st .st-g{font-style:normal;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif}
+.hero-tag .st .st-n{color:#f3e6c8;font-weight:600}
+
+/* Loop 49: a status seen for the first time is explained on a plate, so it reads over any scene. */
+.hint.fresh{left:40px;right:40px;padding:16px 26px;border-radius:16px;background:#140f16e8;border:2px solid #c9953a;box-shadow:0 8px 24px #000a;text-shadow:none;text-align:center;line-height:1.25;transform:translateY(calc(-100% + 50px));animation:hint-in .28s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes hint-in{from{opacity:0;transform:translateY(calc(-100% + 70px)) scale(.94)}}
+.compile .c-boost{margin-left:.25em;font-size:.8em;color:#b07a10;text-shadow:0 0 6px rgba(255,210,110,.8)}
+
+/* Loop 53: the Gate points a new player at the easiest Realm, and Essence chips use the game's serif. */
+.realm-card .realm-head .realm-next{position:absolute;top:10px;left:12px;padding:2px 12px;border-radius:999px;background:linear-gradient(180deg,#fbe8b0,#c9953a);color:#2a1a08;font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 0 0 2px #2a1a08,0 0 18px rgba(255,214,120,.55);animation:realm-next 1.6s ease-in-out infinite alternate}
+@keyframes realm-next{to{box-shadow:0 0 0 2px #2a1a08,0 0 30px rgba(255,214,120,.9)}}
+@media (prefers-reduced-motion:reduce){.realm-card .realm-head .realm-next{animation:none}}
+.realm-chips .ess-chip,.realm-details .ess-chip{font-family:var(--serif-body)}
+
+/* Loop 54: a win lights the hero instead of sinking them into the dark, and names what stood out. */
+.battle-end.victory{padding-bottom:700px;background:linear-gradient(180deg,#0b0a10f0 0%,#0b0a10c8 22%,#0b0a10a0 40%,#0b0a1018 54%,#0b0a1030 73%,#0b0a10f4 80%,#0b0a10f4 100%)}
+.battle:has(.battle-end.victory) .unit.party .fig{filter:drop-shadow(0 0 2px #2a1a08) drop-shadow(0 0 26px rgba(255,214,120,.75)) brightness(1.08)}
+.battle:has(.battle-end.victory) .unit.party .bob{animation:hero-cheer .9s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes hero-cheer{0%{transform:translateY(0)}35%{transform:translateY(-34px)}100%{transform:translateY(0)}}
+.battle:has(.battle-end) .hero-tag{display:none}
+.battle-end .end-praise{margin:-6px 0 18px;font-family:var(--display);font-size:44px;color:#fbe8b0;letter-spacing:.04em;text-shadow:0 2px 0 #000,0 0 18px rgba(255,200,100,.6);animation:praise-in .5s .25s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes praise-in{from{opacity:0;transform:scale(.6)}}
+@media (prefers-reduced-motion:reduce){.battle:has(.battle-end.victory) .unit.party .bob,.battle-end .end-praise{animation:none}}
+.battle:has(.battle-end.victory) .unit.foe .shadow{opacity:0;transition:opacity .3s}
+
+/* Loop 55: a loss shows the foe that beat you above the card, and how close it was. */
+.battle-end.defeat{justify-content:flex-end;padding-bottom:330px;background:linear-gradient(180deg,#0b0a1060 0%,#0b0a1030 18%,#0b0a1060 34%,#0b0a10d8 48%,#0b0a10f2 100%)}
+.battle:has(.battle-end.defeat) .unit.foe .fig{filter:drop-shadow(0 0 2px #1a0505) drop-shadow(0 0 28px rgba(200,60,70,.7))}
+.battle:has(.battle-end) .boss-bar,.battle:has(.battle-end) .timeline{opacity:.25;transition:opacity .3s}
+.battle-end .end-left{margin:0 0 22px;font-family:var(--serif-body);font-size:42px;color:#f3d9d0;text-align:center;text-shadow:0 2px 0 #000}
+
+/* Loop 56: the Crossing uses its painted square, darkened at the edges so the station signs read. */
+.crossing .backdrop.hub-painted::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 55% 60%,transparent 40%,#0b0a1088 100%),linear-gradient(180deg,#0b0a1066 0%,transparent 20%,transparent 80%,#0b0a10aa 100%);pointer-events:none}
+.crossing:has(.hub-painted) .station{width:400px;box-sizing:border-box}
+.crossing:has(.hub-painted) .station .st-name{white-space:nowrap}
+
+/* Loop 57: the painted Crossing breathes: window light swells and embers drift up the lane. */
+.hub-amb{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.hub-glow{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,180,90,.32),rgba(255,150,60,.12) 40%,transparent 70%);mix-blend-mode:screen;animation:hub-breathe 5.5s ease-in-out infinite alternate}
+@keyframes hub-breathe{0%{opacity:.45}40%{opacity:.9}55%{opacity:.7}100%{opacity:1}}
+.hub-mote{position:absolute;top:1900px;border-radius:50%;background:#ffd08a;box-shadow:0 0 12px 3px rgba(255,190,100,.7);opacity:0;animation:hub-rise 10s linear infinite}
+@keyframes hub-rise{0%{transform:translate(0,0);opacity:0}10%{opacity:.85}50%{transform:translate(40px,-700px)}90%{opacity:.6}100%{transform:translate(-30px,-1400px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.hub-glow,.hub-mote{animation:none}.hub-mote{display:none}}
+
+/* Loop 58: the Crucible's acts are an even grid of equal buttons, and its prose uses the game's serif. */
+.form-detail .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}
+.form-detail .actions > button{width:100%;min-height:64px;margin:0;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.form-detail .actions > button:only-child,.form-detail .actions > button.primary:first-child:nth-last-child(odd){grid-column:1/-1}
+.form-detail .actions > .check{grid-column:1/-1}
+.form-detail .bind,.form-detail .bind .dim{font-family:var(--serif-body)}
+.form-detail .bind > .dim.small{font-size:15px;line-height:1.35;color:#d9c9a8}
+.form-detail .inscribe-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}.form-detail .inscribe-grid > button{width:100%;box-sizing:border-box;margin:0}
+
+/* Loop 59: the Grimoire narrows by kind with one tap. */
+.grim-filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.grim-chip{min-height:44px;padding:6px 14px;border-radius:999px;font-family:var(--serif-body);font-size:16px;background:#1d1822;border:1px solid #8f6420;color:#e8dcc2}
+.grim-chip span{opacity:.6;margin-left:4px}
+.grim-chip.on{background:linear-gradient(180deg,#fbe8b0,#c9953a);color:#2a1a08;border-color:#2a1a08}
+
+/* Loop 62: while a panel is open, notices sit in the dimmed strip above it, not over its header. */
+:root:has(.panel-backdrop) .toasts {
+  top: calc(10px + env(safe-area-inset-top, 0px));
+}
+:root:has(.panel-backdrop) .toasts .toast {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* Fight figures keep their own layer, so moving or breathing never re-runs their drop-shadow filters. */
+.battle .unit .fig-svg,
+.battle .unit .fig-img {
+  will-change: transform;
+}
+
+/* ═════════════ Over-the-shoulder fight layout (Mark's sketch, 2026-10-01) ═════════════
+   Corner badge top-left beside the turn bar; Dodge and Parry as round buttons on the thumb arc;
+   four skill cards across the bottom row. Stage px throughout. */
+.battle .timeline {
+  left: 300px;
+  right: 16px;
+  top: 20px;
+}
+/* The hero's plate (Mark, 22:50): framed in gold like the turn bar and AP bar, with the foe tag's name, bar and
+   numbers, so both sides of the duel read the same way. */
+.battle .hero-badge {
+  position: absolute;
+  z-index: 3060;
+  left: 16px;
+  top: 16px;
+  width: 270px;
+  padding: 18px 18px 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 4px solid #ecc56a;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #2a2234f2, #120d18f2);
+  box-shadow: 0 0 0 3px #0b0910, inset 0 0 24px #000a, 0 12px 26px #000c;
+  pointer-events: none;
+}
+.battle .hb-portrait {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #3a3142, #15121a);
+  box-shadow: 0 0 0 5px #ecc56a, 0 0 0 9px #1d1822, 0 8px 18px #000c;
+  margin-bottom: 4px;
+}
+.battle .hb-portrait .head {
+  width: 100% !important;
+  height: 100% !important;
+}
+.battle .hero-badge.down .hb-portrait {
+  filter: grayscale(1) brightness(0.5);
+}
+.battle .hb-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 32px/1.1 "Alegreya SC", var(--display), serif;
+  color: #f4d58c;
+  text-shadow: 0 2px 0 #000;
+}
+.battle .hb-bar {
+  position: relative;
+  width: 100%;
+  height: 22px;
+  border-radius: 11px;
+  background: #0b0910;
+  box-shadow: 0 0 0 2px #8a6a32, inset 0 2px 4px #000;
+  overflow: hidden;
+}
+.battle .hb-bar i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 11px;
+}
+/* What a hit took stays pale for a beat, then drains. */
+.battle .hb-lag {
+  background: #f3e6c8;
+  transition: width 420ms ease-in 260ms;
+}
+.battle .hb-fill {
+  background: linear-gradient(180deg, #7fe0b0, #2e9a6a 55%, #1f7a52);
+  box-shadow: inset 0 2px 0 #ffffff55;
+  transition: width 140ms ease-out, background 200ms;
+}
+.battle .hero-badge.mid .hb-fill {
+  background: linear-gradient(180deg, #ffd98a, #d9a441 55%, #a87420);
+}
+.battle .hero-badge.low .hb-fill {
+  background: linear-gradient(180deg, #ff9a8a, #d9534f 55%, #a8302c);
+}
+.battle .hb-hp {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+  color: #e6f5ec;
+  text-shadow: 0 2px 0 #000, 0 0 10px #000;
+  font-variant-numeric: tabular-nums;
+}
+.battle .hb-hp small {
+  font-size: 28px;
+  color: #c9b48a;
+}
+.battle .hb-others {
+  position: absolute;
+  left: 20px;
+  top: 470px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.battle .hb-other {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 260px;
+}
+.battle .hb-other .head {
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 4px #ecc56a;
+  flex: none;
+}
+.battle .hb-other .gbar {
+  flex: 1;
+}
+.battle .hero-badge .impacts {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 14px);
+  justify-content: center;
+  gap: 10px;
+}
+
+/* The thumb arc: the field darkens below it, toward the controls. */
+.battle .thumb-arc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1080px;
+  z-index: 3000;
+  pointer-events: none;
+}
+.battle .def-arc .def-btn.round {
+  position: absolute;
+  z-index: 3070;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  border-radius: 50%;
+  border: 8px solid #ecc56a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 50px;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-shadow: 0 3px 0 #0009;
+  box-shadow: 0 0 0 8px #1d1822, 0 18px 36px #000c;
+  transition: filter 140ms ease-out, transform 90ms ease-out;
+}
+.battle .def-arc .def-btn.round .def-glyph {
+  font-size: 66px;
+  line-height: 1;
+  margin: 0;
+}
+.battle .def-arc .def-btn.round small {
+  font-family: var(--serif-body);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0;
+  opacity: 0.9;
+}
+.battle .def-arc .def-btn.round.parry {
+  background: radial-gradient(circle at 40% 30%, #d0505e, #6b1a28 72%);
+}
+.battle .def-arc .def-btn.round.dodge {
+  border-color: #b3cbf5;
+  background: radial-gradient(circle at 40% 30%, #5f7fd8, #1f2f6b 72%);
+}
+.battle .def-arc:not(.live) .def-btn.round {
+  filter: saturate(0.3) brightness(0.5);
+  border-color: #8f6420aa;
+  pointer-events: none;
+}
+.battle .def-arc.live .def-btn.round:active {
+  transform: scale(0.94);
+  filter: brightness(1.35);
+}
+
+/* Four skill cards across the bottom: Basic, then up to three crafted skills. */
+.stage .battle .bpanel.arc {
+  display: block;
+  padding: 0 16px calc(18px + var(--safe-b));
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+.stage .battle .bpanel.arc::before,
+.stage .battle .bpanel.arc::after {
+  display: none;
+}
+.stage .battle .bpanel.arc .cards-wrap {
+  display: block;
+  height: 100%;
+}
+.stage .battle .bpanel.arc .cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  height: calc(100% - 4px);
+  margin: 0;
+}
+.stage .battle .bpanel.arc .card {
+  min-width: 0;
+  padding: 7px;
+  border-width: 5px;
+}
+.stage .battle .bpanel.arc .card-top {
+  height: auto;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 4px 10px;
+  gap: 8px;
+}
+.stage .battle .bpanel.arc .card-name {
+  max-width: 100%;
+  font-size: 34px;
+  text-align: center;
+}
+.stage .battle .bpanel.arc .card-boost {
+  margin-left: 4px;
+}
+.stage .battle .bpanel.arc .card-ap {
+  font-size: 30px;
+  padding: 5px 14px 7px;
+}
+.stage .battle .bpanel.arc .card:not(.empty)::after {
+  top: 146px;
+  left: 9px;
+  right: 9px;
+  bottom: 9px;
+}
+.stage .battle .bpanel.arc .card-line {
+  margin: 0;
+  padding: 0 6px;
+  font-size: 31px;
+  line-height: 1.1;
+  text-align: center;
+  -webkit-line-clamp: 3;
+}
+.stage .battle .bpanel.arc .card-top + .card-line {
+  margin-top: 22px;
+}
+.stage .battle .bpanel.arc .card .card-line.dim {
+  font-size: 28px;
+  margin-top: 8px;
+}
+.stage .battle .bpanel.arc .card.empty.slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-style: italic;
+  font-size: 32px;
+  color: #c9b48a;
+  background: #2a2236aa;
+  border: 5px solid #8f642066;
+  box-shadow: 0 0 0 3px var(--ink-deep);
+}
+.stage .battle .bpanel.arc .tap-anywhere,
+.stage .battle .bpanel.arc .ally-pick {
+  position: absolute;
+  left: 20px;
+  right: 380px;
+  top: -120px;
+  margin: 0;
+  font-size: 40px;
+  text-align: left;
+}
+/* The foe's attack name sits under the hero's badge; hints sit above the cards on the left. */
+.battle .tell,
+.battle .boss-bar ~ .tell {
+  left: 20px;
+  right: auto;
+  width: 560px;
+  top: 480px;
+}
+.battle .hint {
+  left: 20px;
+  right: auto;
+  max-width: 470px;
+  text-align: left;
+}
+.battle .hint {
+  top: 700px !important;
+}
+/* Resting cards are dimmed but solid, so the hero's legs never show through them. */
+.stage .battle .bpanel.arc .cards-idle {
+  opacity: 1;
+  filter: saturate(0.35) brightness(0.48);
+}
+/* Tutorial tips sit in the left column above the cards, clear of Dodge and Parry. */
+.battle .coach {
+  left: 16px;
+  right: auto;
+  width: 420px;
+  z-index: 3080;
+  font-size: 36px;
+  padding: 20px 22px;
+  gap: 14px;
+}
+
+/* ═════════════ Landing: title and button over a full-bleed painting ═════════════ */
+.landing.painted {
+  position: absolute;
+  inset: 0;
+  background: #0b0910;
+  overflow: hidden;
+}
+.landing.painted .cover-fill {
+  position: absolute;
+  inset: 0;
+}
+.landing .landing-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+.landing .landing-fade.top {
+  top: 0;
+  height: 700px;
+  background: linear-gradient(180deg, #0b0910 0%, #0b0910ee 38%, #0b091099 64%, transparent 100%);
+}
+.landing .landing-fade.bottom {
+  bottom: 0;
+  height: 520px;
+  background: linear-gradient(0deg, #0b0910 0%, #0b0910ee 38%, #0b091099 66%, transparent 100%);
+}
+.landing .landing-card {
+  top: calc(170px + env(safe-area-inset-top, 0px) * 2.6);
+}
+.stage .landing-actions button.landing-signin {
+  min-width: 760px;
+  min-height: 150px;
+  font-size: 56px;
+}
+.landing .cv-paint {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #120c08;
+}
+.landing .cv-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: cv-drift 24s ease-in-out infinite alternate;
+}
+.landing .cv-bg.composed {
+  filter: sepia(0.55) saturate(1.3) brightness(0.55) contrast(1.15) hue-rotate(-10deg);
+}
+@keyframes cv-drift {
+  from { transform: scale(1.04); }
+  to { transform: scale(1.1) translateY(-14px); }
+}
+.landing .cv-dais {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 22%;
+  background: linear-gradient(180deg, #3a2a1c, #120c08);
+  clip-path: polygon(16% 0, 84% 0, 100% 40%, 100% 100%, 0 100%, 0 40%);
+  box-shadow: inset 0 4px 0 #6b4a2a;
+}
+.landing .cv-idol {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  width: 78%;
+  aspect-ratio: 832 / 1067;
+  transform: translateX(-50%);
+}
+.landing .cv-idol img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) sepia(0.45) brightness(0.62) contrast(1.35) drop-shadow(0 0 30px #00000099);
+}
+.landing .cv-eye {
+  position: absolute;
+  top: 21.2%;
+  width: 3.6%;
+  aspect-ratio: 1;
+  margin-left: -1.8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3e0 0 12%, #ff3b2a 30%, #a8100a 62%, transparent 72%);
+  box-shadow: 0 0 26px 10px #ff2a1a99;
+  animation: cv-eye 3.2s ease-in-out infinite alternate;
+}
+.landing .cv-eye.l { left: 48.3%; }
+.landing .cv-eye.r { left: 52.5%; }
+@keyframes cv-eye {
+  from { opacity: 0.75; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1.15); }
+}
+.landing .cv-party {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 2%;
+}
+.landing .cv-party > div {
+  filter: brightness(0.5) sepia(0.55) saturate(1.2) drop-shadow(-8px -6px 12px #ff9a3a88);
+}
+/* Fig places a figure by its feet at its parent's origin, so each wrapper sets that origin. */
+.landing .cv-party > div:not(.cv-climber) {
+  top: auto;
+}
+.landing .cv-climber {
+  position: absolute;
+  left: 63%;
+  top: 52%;
+  transform: rotate(-10deg);
+}
+.landing .cv-torch {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 14% 78%, #ffb85a88 0%, #ff7a2a33 22%, transparent 48%),
+    radial-gradient(circle at 86% 30%, #ff9a3a33 0%, transparent 35%);
+  mix-blend-mode: screen;
+  animation: cv-flicker 1.9s steps(1) infinite;
+  pointer-events: none;
+}
+@keyframes cv-flicker {
+  0% { opacity: 0.9; }
+  13% { opacity: 1; }
+  27% { opacity: 0.78; }
+  41% { opacity: 0.95; }
+  58% { opacity: 0.84; }
+  72% { opacity: 1; }
+  86% { opacity: 0.88; }
+}
+.landing .cv-embers span {
+  position: absolute;
+  bottom: -20px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffcf7a;
+  box-shadow: 0 0 12px 4px #ff8a2a99;
+  opacity: 0;
+  animation: cv-ember 6s linear infinite;
+}
+@keyframes cv-ember {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translate(40px, -900px); opacity: 0; }
+}
+.landing .cv-vignette {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 120px 40px #000c;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing .cv-bg,
+  .landing .cv-eye,
+  .landing .cv-torch,
+  .landing .cv-embers span {
+    animation: none !important;
+  }
+}
+/* The painted cover: keep the idol and the demon on its dais in frame; the braziers flicker. */
+.landing .cv-bg:not(.composed) {
+  object-position: 50% 30%;
+}
+.landing .cv-paint:has(.on-cover) .cv-torch {
+  background:
+    radial-gradient(circle at 14% 64%, #ffb85a77 0%, #ff7a2a2a 16%, transparent 34%),
+    radial-gradient(circle at 87% 60%, #ffb85a77 0%, #ff7a2a2a 16%, transparent 34%),
+    radial-gradient(circle at 50% 8%, #ff9a3a44 0%, transparent 22%);
+}
+.landing .cv-party.on-cover {
+  bottom: calc(290px + var(--safe-b, 0px));
+}
+.landing .cv-party.on-cover > div {
+  filter: brightness(0.42) sepia(0.7) saturate(1.3) drop-shadow(0 -4px 10px #ff9a3a99);
+}
+
+/* ═════════════ Launch: "boot" holds a dark screen while a signed-in save loads; the hub's back control ═════════════ */
+.stage .boot {
+  position: absolute;
+  inset: 0;
+  background: #0b0910;
+}
+.stage .hub-top button.hub-back {
+  flex: none;
+  min-width: 88px;
+  width: 88px;
+  height: 88px;
+  padding: 0;
+  margin-right: -4px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  font-size: 72px;
+  line-height: 1;
+  color: #c9b48a;
+}
+.stage .hub-top .hub-name {
+  margin-right: auto;
+}
+
+/* Hero select: the landing's gilt wordmark over the same painting, so the two read as one. */
+.landing .landing-card h1 {
+  font-size: 230px;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: 0.06em;
+  color: transparent;
+  background: linear-gradient(180deg, #fffbe8 0%, #f4d58c 38%, #b58a3c 58%, #f0cf7c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-stroke: 0;
+  filter: drop-shadow(0 5px 0 #1d1208) drop-shadow(0 0 28px #b98cff66);
+}
+.landing .landing-card::after {
+  width: 620px;
+  height: 3px;
+  margin-top: 18px;
+  background: #c9953a99;
+}
+.landing .landing-card .tagline {
+  color: #e6d6c8;
+  text-shadow: 0 2px 8px #000;
+}
+.landing .cv-lone {
+  position: absolute;
+  left: 300px;
+  bottom: -520px;
+  filter: brightness(0.12) saturate(0.3) drop-shadow(8px -4px 3px #ffb070) drop-shadow(0 0 18px #ff3a1acc);
+}
+/* The sign-in button is OpenAI's mark itself, round, with "Sign in" at its heart, in the right-thumb corner. */
+.stage .landing-actions {
+  left: auto;
+  right: 70px;
+  bottom: calc(110px + var(--safe-b, 0px));
+}
+.stage .landing-actions button.landing-signin {
+  position: relative;
+  width: 360px;
+  height: 360px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 4px solid #ffffffcc;
+  background: radial-gradient(circle, #1a1a1a 0%, #000 70%);
+  box-shadow: 0 0 0 10px #00000066, 0 0 50px #ff3a1a77, 0 20px 40px #000c;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  animation: signin-breathe 2.6s ease-in-out infinite alternate;
+}
+.stage .landing-actions button.landing-signin:active {
+  transform: scale(0.95);
+}
+.landing .signin-mark {
+  grid-area: 1 / 1;
+  opacity: 0.92;
+}
+.landing .signin-text {
+  grid-area: 1 / 1;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 176px;
+  height: 176px;
+  border-radius: 50%;
+  background: #000;
+  box-shadow: 0 0 0 5px #000, inset 0 0 0 3px #ffffff33;
+  font-family: var(--ui, "Atkinson Hyperlegible", sans-serif);
+  font-weight: 700;
+  font-size: 46px;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+}
+@keyframes signin-breathe {
+  from { box-shadow: 0 0 0 10px #00000066, 0 0 36px #ff3a1a55, 0 20px 40px #000c; }
+  to { box-shadow: 0 0 0 10px #00000066, 0 0 70px #ff3a1aaa, 0 20px 40px #000c; }
+}
+.landing .title-hero-name {
+  font-family: var(--display);
+  font-size: 52px;
+  color: #e6d6c8;
+  text-shadow: 0 2px 10px #000, 0 0 20px #ff3a1a88;
+}
+
+/* The title begins on any tap; this line says so, at the bottom left beside the sign-in mark. */
+.stage .landing .landing-tap {
+  position: absolute;
+  left: 70px;
+  bottom: calc(250px + var(--safe-b, 0px));
+  z-index: 5;
+  margin: 0;
+  font-size: 44px;
+  letter-spacing: 0.06em;
+  color: #f3e6c8;
+  text-shadow: 0 2px 0 #000, 0 0 18px #000;
+  animation: landing-tap 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes landing-tap {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* ═════════════ Timing cues (cues.ts): compositor-driven rings, the mark, instant judgements ═════════════ */
+.battle .cue-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1080px;
+  height: 1920px;
+  pointer-events: none;
+  z-index: 3150;
+}
+.battle .cue-ring {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 50%;
+  will-change: transform, opacity;
+  pointer-events: none;
+  box-shadow: 0 0 18px #0009;
+}
+/* A chain's notes: gems sliding along the lane onto the mark (see LaneBands). */
+.battle .cue-note {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 6px solid #fff4dc;
+  will-change: transform, opacity;
+  pointer-events: none;
+  box-shadow: 0 0 0 5px #1d1822d9, 0 0 22px #000a;
+}
+.battle .cue-note.queued {
+  border-color: #fff4dc88;
+}
+/* Rings queued behind the one the next tap answers. */
+.battle .cue-ring.queued {
+  border-style: dashed;
+}
+.battle .cue-mark {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 5px solid #ecc56a;
+  box-shadow: 0 0 0 6px #1d1822d9;
+  will-change: transform;
+}
+.battle .cue-mark.pulse {
+  animation: cue-pulse 200ms ease-out;
+}
+.battle .cue-mark.pulse.perfect { border-color: #fff4dc; }
+.battle .cue-mark.pulse.miss { border-color: #ff6b6b; }
+.battle .cue-mark.pulse.parry { border-color: #ecc56a; }
+.battle .cue-mark.pulse.dodge { border-color: #b3cbf5; }
+@keyframes cue-pulse {
+  0% { transform: scale(1.32); box-shadow: 0 0 0 6px #1d1822d9, 0 0 40px 14px #fff4dcaa; }
+  100% { transform: scale(1); box-shadow: 0 0 0 6px #1d1822d9, 0 0 0 0 transparent; }
+}
+.battle .judge {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 64px;
+  color: #fff4dc;
+  white-space: nowrap;
+  text-shadow: 0 4px 0 var(--ink), 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 -3px 0 var(--ink);
+  will-change: transform, opacity;
+  animation: judge-pop 700ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.battle .judge.grade.perfect { color: #ffd45e; font-size: 84px; text-shadow: 0 4px 0 var(--ink), 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 -3px 0 var(--ink), 0 0 36px #ffb52e; }
+.battle .judge.grade.good { color: #d9dde6; font-size: 50px; }
+.stage .foe-tag .brk-label { margin: 6px auto 0; width: fit-content; padding: 2px 14px; border-radius: 16px; background: #120c10cc; white-space: nowrap; text-align: center; font-size: 26px; font-weight: 600; color: #f0d79c; text-shadow: 0 2px 0 #000; }
+.stage .foe-tag .brk-label.full { color: #ffe08a; opacity: 1; }
+.battle .judge.grade.miss { color: #ff8c8c; }
+.battle .judge.def { color: #ecc56a; }
+@keyframes judge-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  70% { opacity: 1; transform: translate(-50%, -90%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -120%) scale(0.95); }
+}
+.battle .weak-bar {
+  position: absolute;
+  left: 140px;
+  top: 1340px;
+  width: 800px;
+  height: 10px;
+  border-radius: 5px;
+  background: #86c6f2;
+  opacity: 0.8;
+  transform-origin: left center;
+  will-change: transform;
+  animation: weak-bar linear both;
+}
+@keyframes weak-bar {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+.battle .judge.small { font-size: 44px; opacity: 0.9; }
+.battle .judge.def.hit { color: #ff8c8c; font-size: 48px; }
+
+/* Map: stops further up the route read as "later", and a tap on one flashes the stops you can reach now. */
+.stage .map-node.ahead {
+  opacity: 0.4;
+  filter: saturate(0.5);
+}
+.stage .map-node.nudge-0 .mn-name,
+.stage .map-node.nudge-1 .mn-name {
+  color: #ffe9a8;
+}
+.stage .map-node.nudge-0 {
+  animation: node-nudge-0 520ms ease-out;
+}
+.stage .map-node.nudge-1 {
+  animation: node-nudge-1 520ms ease-out;
+}
+@keyframes node-nudge-0 {
+  30% {
+    transform: translate(-50%, -50%) scale(1.3);
+    box-shadow: inset 0 0 0 6px #ffe9a8, 0 0 60px #ffd67a;
+  }
+}
+@keyframes node-nudge-1 {
+  30% {
+    transform: translate(-50%, -50%) scale(1.3);
+    box-shadow: inset 0 0 0 6px #ffe9a8, 0 0 60px #ffd67a;
+  }
+}
+
+/* The card the tutorial wants pressed glows gold, strongly enough to read at a glance. */
+.stage .bpanel .card.coach-pulse {
+  animation: card-glow 1s ease-in-out infinite;
+  filter: brightness(1.12);
+  z-index: 5;
+}
+@keyframes card-glow {
+  0%,
+  100% { box-shadow: 0 0 0 4px #ffd67a, 0 0 30px 8px #ffd67a99; }
+  50% { box-shadow: 0 0 0 8px #fff1c2, 0 0 70px 24px #ffd67add; }
+}
+
+/* While the rest of the game is still arriving after a sign-in tap, the mark breathes so the tap reads as taken. */
+.landing-signin:disabled .signin-mark { animation: signin-wait 0.9s ease-in-out infinite alternate; }
+@keyframes signin-wait { to { opacity: 0.55; transform: scale(0.96); } }
+
+/* A duel's painted backdrop is placed by hand (GroundedBackdrop), so it skips the cover zoom. */
+.world > .backdrop.grounded-box {
+  transform: none;
+  overflow: hidden;
+  left: 0;
+  right: 0;
+  top: -400px;
+  bottom: -600px;
+}
+.backdrop.grounded-box > .grounded {
+  margin-top: 400px;
+  will-change: transform;
+  object-fit: cover;
+  pointer-events: none;
+}
+.backdrop.grounded-box > .grounded-fade {
+  position: absolute;
+  margin-top: 400px;
+  background: linear-gradient(180deg, transparent, #0b0910 260px);
+  pointer-events: none;
+}
+
+/* ═════════════ AP on the card row ═════════════ */
+/* AP sits right on top of the skill cards that spend it, from the right edge, packed, in the same blue as each
+   card's cost. Basic, which fills it, is the card at the left end of the row (Mark, 20:26). */
+.stage .battle .bpanel.arc .ap-bar {
+  position: absolute;
+  right: 16px;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  top: -96px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 22px;
+  border-radius: 42px;
+  background: linear-gradient(180deg, #16243aee, #0b1220ee);
+  box-shadow: 0 0 0 3px var(--ink-deep), 0 0 0 6px #3f86c4aa, 0 8px 18px #000a;
+  pointer-events: none;
+}
+.ap-bar .ap-label {
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #9fd8ff;
+  white-space: nowrap;
+}
+.ap-bar .ap-label b {
+  display: inline-block;
+  min-width: 1.1em;
+  font-size: 52px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 0 12px #86c6f2;
+}
+/* Gems sit packed together, so the bar reads as one count rather than a spread of slots. */
+.ap-bar .ap-gems {
+  display: flex;
+  gap: 4px;
+}
+.ap-bar .ap-gem {
+  width: 46px;
+  height: 46px;
+}
+.ap-gem {
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  transform: rotate(45deg) scale(0.86);
+  border-radius: 6px;
+  border: 3px solid #1d1822;
+  box-shadow: 0 0 0 2px #3f86c466;
+  background: radial-gradient(circle at 40% 35%, #1f2d45, #0a111e);
+  transition: background 160ms ease-out, box-shadow 160ms ease-out;
+}
+.ap-gem.on {
+  background: radial-gradient(circle at 38% 32%, #ffffff 0 12%, #9fd8ff 24%, #3f86c4 62%, #1f4a7a);
+  box-shadow: 0 0 0 2px #b3e5ff, 0 0 14px #86c6f2;
+}
+/* Pressing a skill: the gems it would spend flicker; pressing Basic: the gems it would add show faintly. */
+.ap-gem.aim-spend {
+  animation: ap-aim 260ms ease-in-out infinite alternate;
+}
+.ap-gem.aim-gain {
+  background: radial-gradient(circle at 40% 35%, #3f86c4aa, #1f4a7a88);
+  box-shadow: 0 0 0 2px #b3e5ffaa;
+}
+@keyframes ap-aim {
+  to {
+    opacity: 0.25;
+  }
+}
+.ap-bar.gain {
+  animation: ap-flash-gain 450ms ease-out;
+}
+.ap-bar.spend {
+  animation: ap-flash-spend 450ms ease-out;
+}
+@keyframes ap-flash-gain {
+  30% {
+    box-shadow: 0 0 0 3px var(--ink-deep), 0 0 0 8px #b3e5ff, 0 0 40px #86c6f2;
+  }
+}
+@keyframes ap-flash-spend {
+  30% {
+    box-shadow: 0 0 0 3px var(--ink-deep), 0 0 0 8px #ffd67a, 0 0 40px #ffd67a99;
+  }
+}
+/* Each card's cost carries the same gem, so cost and bar read as one currency. */
+.card-ap .ap-gem {
+  width: 22px;
+  height: 22px;
+  margin: 0 8px 0 2px;
+  vertical-align: -2px;
+  border-width: 2px;
+  background: radial-gradient(circle at 38% 32%, #ffffff 0 12%, #9fd8ff 24%, #3f86c4 62%, #1f4a7a);
+}
+.card-ap.gain .ap-gem {
+  background: radial-gradient(circle at 38% 32%, #ffffff 0 12%, #b9f2cf 24%, #3fa86a 62%, #1f5a3a);
+}
+/* Things that used to sit just above the cards move above the AP bar. */
+.stage .battle .bpanel.arc .tap-anywhere,
+.stage .battle .bpanel.arc .ally-pick {
+  top: -200px;
+}
+/* Skip sits clear of the hero badge's curved foot. */
+.stage .battle .skip-tutorial {
+  top: 520px;
+}
+/* "Round 2" and other plain banners sit in the open stone on the left, not across the foe, and below where the
+   tip sits while a blow comes in. */
+.battle .banner:not(.has-lore) {
+  left: 36px;
+  right: auto;
+  width: 600px;
+  top: 1000px;
+  text-align: left;
+}
+
+/* Each realm's painting gets its own layer, so pressing Set out repaints the button, not three paintings. */
+.realm-card .realm-head.has-art {
+  will-change: transform;
+}
+
+/* Loom: a Modifier's boost to the skills it touches. */
+.loom-board .boost-link {
+  pointer-events: none;
+  animation: boost-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+.loom-board .boost-plus {
+  fill: #1d1822;
+  font: 800 52px var(--display);
+}
+@keyframes boost-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+/* Weave sheet: what a reveal found, in two numbers with what each means. */
+.weave-sheet .ws-eval {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin: 6px 0 18px;
+}
+.weave-sheet .ws-eval > span {
+  display: grid;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: #1d182214;
+  border: 2px solid #8f642055;
+}
+.weave-sheet .ws-eval small {
+  font: 700 26px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.weave-sheet .ws-eval b {
+  font: 800 56px/1.1 var(--display);
+}
+.weave-sheet .ws-eval i {
+  font-size: 26px;
+  opacity: 0.8;
+}
+
+/* Crossing header: Start over, a quiet button that turns red once armed. */
+.stage .hub-top button.hub-reset {
+  flex: none;
+  min-width: 0;
+  min-height: 88px;
+  margin-right: 20px;
+  padding: 0 22px;
+  border: 3px solid #8f642088;
+  border-radius: 14px;
+  background: #1d182299;
+  color: #e6d6c8;
+  font: 600 30px var(--serif-body);
+  box-shadow: none;
+}
+.stage .hub-top button.hub-reset.armed {
+  border-color: #ff6b6b;
+  background: #5a1418;
+  color: #fff4dc;
+}
+
+/* Choose a Realm: why each one is worth the trip today, visible before you pick. */
+.gate-why {
+  margin: 0 0 12px;
+  font-family: var(--serif-body);
+  font-size: 17px;
+  line-height: 1.3;
+  color: #e9dcc0;
+}
+.realm-why {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 4px 0 2px;
+  font-family: var(--serif-body);
+  font-size: 22px;
+  color: var(--rules-ink);
+}
+.realm-why .haul b {
+  font-weight: 800;
+  color: #6b4a10;
+}
+.realm-why .why-tag {
+  padding: 2px 12px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d1408;
+  background: linear-gradient(180deg, #f4d58c, #c8963a);
+  box-shadow: 0 0 0 1px #2a1a08;
+}
+.realm-why .why-tag.want {
+  color: #f1fbf4;
+  background: linear-gradient(180deg, #2e8a53, #1c6a3a);
+}
+.realm-why .why-event {
+  flex-basis: 100%;
+  font-size: 18px;
+  color: #43296f;
+}
+
+/* Turn handoff: the screen's edges glow gold on your turn and red on the foe's, cross-fading (opacity only);
+   your cards rise into place when the turn comes back, and settle as it passes. */
+.battle .turn-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.battle .turn-tint i {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 340ms ease-out;
+}
+.battle .turn-tint .t-party {
+  background: radial-gradient(ellipse 80% 70% at 50% 62%, transparent 62%, #ecc56a2e 100%);
+}
+.battle .turn-tint .t-foe {
+  background: radial-gradient(ellipse 80% 70% at 50% 45%, transparent 58%, #c8241a40 100%);
+}
+.battle .turn-tint i.on {
+  opacity: 1;
+}
+.stage .battle .bpanel.arc > .cards .card {
+  animation: turn-rise 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) backwards;
+}
+.stage .battle .bpanel.arc > .cards .card:nth-child(2) { animation-delay: 30ms; }
+.stage .battle .bpanel.arc > .cards .card:nth-child(3) { animation-delay: 60ms; }
+.stage .battle .bpanel.arc > .cards .card:nth-child(4) { animation-delay: 90ms; }
+@keyframes turn-rise {
+  from { transform: translateY(26px); opacity: 0.55; }
+}
+.stage .battle .bpanel.arc .cards-idle .cards {
+  animation: turn-settle 240ms ease-out backwards;
+}
+@keyframes turn-settle {
+  from { transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .turn-tint i { transition: none; }
+  .stage .battle .bpanel.arc > .cards .card,
+  .stage .battle .bpanel.arc .cards-idle .cards { animation: none; }
+}
+.ap-bar .ap-ready {
+  margin-left: 14px;
+  font-family: var(--serif-body);
+  font-style: italic;
+  font-size: 26px;
+  color: #9fd4ff;
+  white-space: nowrap;
+}
+
+/* A fight's spoils, passing over the map: in, tally, out. Transform and opacity only. */
+.spoils-strip {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: calc(200px + env(safe-area-inset-top, 0px) * 2.6);
+  z-index: 4000;
+  padding: 18px 24px;
+  border: 5px solid transparent;
+  border-radius: 20px;
+  background: linear-gradient(#1a1420f2, #1a1420f2) padding-box, var(--metal) border-box;
+  box-shadow: 0 0 0 3px var(--ink-deep), 0 14px 30px #000c;
+  pointer-events: none;
+  animation: spoils-in 2600ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.spoils-strip .ss-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 40px;
+  color: #f4d58c;
+  margin-bottom: 6px;
+}
+.spoils-strip .ss-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-family: var(--serif-body);
+  font-weight: 700;
+  font-size: 40px;
+  color: #fbe8b0;
+}
+.spoils-strip .ss-tile i {
+  font-style: normal;
+}
+.spoils-strip .ss-tile small {
+  font-weight: 400;
+  font-size: 26px;
+  opacity: 0.85;
+}
+@keyframes spoils-in {
+  0% { opacity: 0; transform: translateY(-30px); }
+  10% { opacity: 1; transform: none; }
+  85% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-16px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spoils-strip { animation-duration: 1ms; animation-delay: 0s; opacity: 1; }
+}
+
+/* A defence lesson holding time: the scene dims around the hero, the tip and the button to press stay bright. */
+.battle.frozen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3010;
+  background: radial-gradient(ellipse 70% 55% at 50% 55%, transparent 30%, #0b0910b0 100%);
+  pointer-events: none;
+  animation: fadein 160ms ease-out both;
+}
+.battle.frozen .coach {
+  z-index: 3090;
+}
+
+/* ── Attacks with a body: coil, strike, recoil ──
+   The figure is one baked image, so the motion is in how it bends: the bob box sits on the feet and every pose
+   turns and squashes about them. Foes lean in toward the lower left, the hero toward the upper right (--lean).
+   Transform and opacity only. */
+.battle .unit.foe { --lean: -1; }
+.battle .unit.party { --lean: 1; }
+/* Coil: rear back and crouch, then a tremble just before release. */
+.battle .unit.windup .bob {
+  animation: coil var(--wind-ms, 260ms) cubic-bezier(0.3, 0, 0.6, 1) forwards;
+}
+@keyframes coil {
+  0% { transform: none; }
+  70% { transform: rotate(calc(var(--lean) * -8deg)) scale(1.06, 0.9); }
+  80% { transform: rotate(calc(var(--lean) * -9deg)) scale(1.07, 0.89) translateX(3px); }
+  90% { transform: rotate(calc(var(--lean) * -8deg)) scale(1.06, 0.9) translateX(-3px); }
+  100% { transform: rotate(calc(var(--lean) * -9deg)) scale(1.07, 0.89); }
+}
+/* Strike: uncoil into the blow, stretched along it, then settle into the follow-through. */
+.battle .unit.lunge .bob {
+  animation: strike-body 240ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+@keyframes strike-body {
+  0% { transform: rotate(calc(var(--lean) * -9deg)) scale(0.94, 1.08); }
+  35% { transform: rotate(calc(var(--lean) * 13deg)) scale(1.16, 0.88); }
+  100% { transform: rotate(calc(var(--lean) * 7deg)) scale(1.04, 0.97); }
+}
+/* Between chained blows: a short pull back, not a full reset. */
+.battle .unit.rewind .bob {
+  animation: rewind-body var(--wind-ms, 200ms) ease-out forwards;
+}
+@keyframes rewind-body {
+  from { transform: rotate(calc(var(--lean) * 7deg)) scale(1.04, 0.97); }
+  to { transform: rotate(calc(var(--lean) * -5deg)) scale(1.04, 0.93); }
+}
+/* The streak behind a striking figure: from its middle back along the way it came. */
+.battle .unit .trail {
+  position: absolute;
+  left: 0;
+  top: calc(var(--fh, 200px) * -1);
+  width: 520px;
+  height: 90px;
+  margin-top: -45px;
+  transform-origin: 0 50%;
+  rotate: calc(atan2(var(--ly), var(--lx)) + 180deg);
+  background: linear-gradient(90deg, #fff4dccc, #fff4dc55 35%, transparent);
+  border-radius: 0 50% 50% 0;
+  pointer-events: none;
+  animation: trail 300ms ease-out forwards;
+}
+.battle .unit.foe .trail {
+  background: linear-gradient(90deg, #ff6b5ad0, #ff6b5a55 35%, transparent);
+}
+@keyframes trail {
+  0% { opacity: 0; transform: scaleX(0.2) scaleY(0.6); }
+  25% { opacity: 1; transform: scaleX(1) scaleY(1); }
+  100% { opacity: 0; transform: scaleX(0.6) scaleY(0.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .unit.windup .bob,
+  .battle .unit.lunge .bob,
+  .battle .unit.rewind .bob,
+  .battle .unit .trail { animation: none; }
+}
+
+/* ── Weight on contact ──
+   Hit-stop: for a few frames everything that moves holds still, so the blow reads as landing on something. */
+.battle.hitstop .unit,
+.battle.hitstop .unit .bob,
+.battle.hitstop .unit .trail,
+.battle.hitstop .fx {
+  animation-play-state: paused !important;
+}
+.battle.hitstop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3005;
+  background: radial-gradient(ellipse at 50% 50%, #fff4dc22, #0b091066 75%);
+  pointer-events: none;
+}
+/* The camera leans in on the one about to be hit while the blow builds, and eases back after. */
+.battle .world {
+  transition: scale 320ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.battle.dolly .world {
+  scale: 1.07;
+  transition: scale 420ms cubic-bezier(0.4, 0, 0.6, 1);
+}
+.battle .fx.shards rect {
+  animation: shard 520ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+  animation-delay: inherit;
+}
+@keyframes shard {
+  0% { transform: translate(0, 0) rotate(var(--rot)) scale(1.2); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.3); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle.dolly .world { scale: 1; }
+  .battle .fx.shards rect { animation: none; opacity: 0; }
+}
+
+/* The Loom laid out once ahead of its first visit: never seen, never touched. */
+.loom-warm {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+.loom-warm * {
+  visibility: hidden !important;
+  animation: none !important;
+}
+
+/* Under a hit's number, what made it bigger or smaller: Perfect, Off-beat, Marked, Broken, Crit. */
+.battle .floater.why {
+  font-size: 34px;
+  font-weight: 700;
+  color: #f0d79c;
+  letter-spacing: 0.02em;
+}
+
+/* Basic leads the card row, at the left end (Mark, 20:26). */
+.stage .battle .cards > .card.basic {
+  order: -1;
+}
+
+/* A Parry's counter has its own move: the hero darts in with a twist and springs back, and a gold crescent sweeps
+   through the foe. Transform and opacity only. */
+.battle .unit.riposte .bob {
+  animation: riposte-body 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes riposte-body {
+  0% { transform: none; }
+  30% { transform: translate(70px, -50px) rotate(-10deg) scale(1.06); }
+  55% { transform: translate(90px, -64px) rotate(12deg) scale(1.1, 0.94); }
+  100% { transform: none; }
+}
+.battle .fx.riposte {
+  animation: riposte-sweep 380ms cubic-bezier(0.15, 0.85, 0.3, 1) both;
+}
+@keyframes riposte-sweep {
+  0% { opacity: 0; transform: rotate(-80deg) scale(0.7); }
+  25% { opacity: 1; }
+  70% { opacity: 0.95; transform: rotate(18deg) scale(1.05); }
+  100% { opacity: 0; transform: rotate(40deg) scale(1.12); }
+}
+.battle .floater.counter-call {
+  font-family: var(--display);
+  font-size: 72px;
+  font-weight: 800;
+  color: #ffd45e;
+  letter-spacing: 0.06em;
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px #ffb52e;
+  animation-name: floatup-big;
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .unit.riposte .bob { animation: none; }
+}
+
+/* A foe's death (Mark, 20:42: the old squash-and-fade was sloppy): it reels back from the blow, buckles, and folds
+   to the ground as its body scatters into embers and dust kicks up. Transform and opacity only. */
+.battle .unit.foe.dead .bob {
+  transform-origin: 50% 100%;
+  animation: foe-die 900ms cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
+}
+@keyframes foe-die {
+  0% { transform: none; opacity: 1; }
+  14% { transform: translate(28px, -14px) rotate(9deg); opacity: 1; }
+  34% { transform: translate(16px, 0) rotate(4deg) scale(1.03, 0.97); opacity: 1; }
+  58% { transform: translate(6px, 20px) rotate(-12deg) scale(1, 0.9); opacity: 0.95; }
+  100% { transform: translate(-14px, 64px) rotate(-26deg) scale(0.94, 0.66); opacity: 0; }
+}
+.battle .fx.ash rect {
+  animation: ember 900ms cubic-bezier(0.2, 0.6, 0.4, 1) both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes ember {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
+  12% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.2); opacity: 0; }
+}
+.battle .fx.dust {
+  animation: dust 620ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+@keyframes dust {
+  0% { transform: scale(0.3, 0.5); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: scale(1.3, 1.1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle .unit.foe.dead .bob { animation: fall 1ms forwards; }
+  .battle .fx.ash rect, .battle .fx.dust { animation: none; opacity: 0; }
+}
+
+/* ═════════════ Bazaar market: a trading screen ═════════════ */
+.mk { display: flex; flex-direction: column; gap: 10px; }
+.mk-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mk-mode { display: inline-flex; padding: 3px; border-radius: 12px; background: #0d0a12; box-shadow: inset 0 0 0 1px #c9a24a44; }
+.mk-mode button { min-height: 44px; min-width: 84px; padding: 0 16px; border: none; border-radius: 9px; background: transparent; color: #cbbf9f; font: 700 17px var(--display); letter-spacing: 0.04em; }
+.mk-mode button.on { background: linear-gradient(180deg, #e9c46a, #b98a2e); color: #1d1406; box-shadow: 0 2px 0 #000; }
+.mk-mode.wide { display: flex; }
+.mk-mode.wide button { flex: 1; font-size: 15px; }
+.mk-purse { text-align: right; line-height: 1.1; }
+.mk-purse small { display: block; font-size: 12px; color: #b6a888; }
+.mk-purse b { font: 800 24px var(--display); color: #ffd45e; }
+.mk-hint { margin-top: -2px; }
+.mk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mk-row { position: relative; width: 100%; min-height: 64px; display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; border: 1px solid #c9a24a33; background: linear-gradient(180deg, #1c1622, #130f18); color: inherit; text-align: left; }
+.mk-row:active { transform: scale(0.99); }
+.mk-row.off { opacity: 0.5; }
+.mk-glyph { font-size: 26px; text-align: center; line-height: 1; }
+.mk-name { display: flex; flex-direction: column; min-width: 0; }
+.mk-name b { font-size: 17px; }
+.mk-name small, .mk-price small { font-size: 12px; color: #a99d84; white-space: nowrap; }
+.mk-price { display: flex; flex-direction: column; align-items: flex-end; min-width: 86px; }
+.mk-price b { font: 800 22px var(--display); color: #fff3d6; }
+.mk-price small.good { color: #8fe0a3; }
+.mk-price small.bad { color: #f19a8a; }
+.mk-deal { position: absolute; top: -7px; right: 10px; padding: 1px 8px; border-radius: 8px; background: #2f7a48; color: #eafff0; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.mk-sheet-back { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: flex-end; justify-content: center; background: #0008; }
+.mk-sheet { width: min(560px, 100%); max-height: 92vh; overflow: auto; padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); border-radius: 16px 16px 0 0; background: linear-gradient(180deg, #221a28, #120e17); box-shadow: 0 -10px 40px #000c, inset 0 1px 0 #c9a24a55; display: flex; flex-direction: column; gap: 12px; animation: mk-up 200ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes mk-up { from { transform: translateY(40px); opacity: 0; } }
+.mk-sheet header { display: flex; align-items: center; gap: 10px; }
+.mk-sheet header b { flex: 1; font: 800 22px var(--display); }
+.mk-sheet .close { min-width: 44px; min-height: 44px; }
+.mk-chart { width: 100%; height: 120px; display: block; border-radius: 8px; background: #0c0910; }
+.mk-facts { display: flex; justify-content: space-between; font-size: 13px; color: #b6a888; }
+.mk-facts b { color: #fff3d6; font-size: 15px; }
+.mk-qty { display: flex; align-items: center; gap: 8px; }
+.mk-qty > button { min-width: 44px; min-height: 44px; border-radius: 10px; font-size: 22px; font-weight: 700; }
+.mk-qty > b { min-width: 48px; text-align: center; font: 800 28px var(--display); }
+.mk-qty .chip { font-size: 15px; padding: 0 12px; }
+.mk-sum { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 15px; }
+.mk-sum dt { color: #b6a888; }
+.mk-sum dd { margin: 0; text-align: right; }
+.mk-sum dd b { font: 800 22px var(--display); color: #ffd45e; }
+.mk-go { min-height: 54px; font-size: 18px; }
+@media (prefers-reduced-motion: reduce) { .mk-sheet { animation: none; } }
+
+/* Map dock: health on the left, then the Bazaar and the Loom side by side under the thumb. */
+.stage .map-dock .mp-actions { display: flex; gap: 14px; }
+.stage .map-dock .mp-actions button.big { min-width: 0; width: 240px; padding: 0 12px; font-size: 42px; }
+.stage .map-dock .mp-hero .gbar { width: 250px; }

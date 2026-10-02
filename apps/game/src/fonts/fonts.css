@@ -1,0 +1,9 @@
+@font-face { font-family: "Alegreya SC"; font-weight: 500; font-display: swap; src: url(./AlegreyaSC-500.woff2) format("woff2"); }
+@font-face { font-family: "Alegreya SC"; font-weight: 700; font-display: swap; src: url(./AlegreyaSC-700.woff2) format("woff2"); }
+@font-face { font-family: "Alegreya SC"; font-weight: 800; font-display: swap; src: url(./AlegreyaSC-800.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-display: swap; src: url(./AtkinsonHyperlegible-400.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-display: swap; src: url(./AtkinsonHyperlegible-700.woff2) format("woff2"); }
+/* Rules-text serif for parchment boxes (Alegreya, SIL OFL 1.1, via @fontsource/alegreya). */
+@font-face { font-family: "Alegreya"; font-weight: 400; font-style: normal; font-display: swap; src: url(./Alegreya-400.woff2) format("woff2"); }
+@font-face { font-family: "Alegreya"; font-weight: 400; font-style: italic; font-display: swap; src: url(./Alegreya-400i.woff2) format("woff2"); }
+@font-face { font-family: "Alegreya"; font-weight: 700; font-style: normal; font-display: swap; src: url(./Alegreya-700.woff2) format("woff2"); }

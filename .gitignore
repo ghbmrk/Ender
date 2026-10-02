@@ -7,3 +7,12 @@ scratch
 *.sqlite*
 .vite
 dist-web
+dist-split
+dist-pages
+art-shots/
+
+# Painted art: raw renders/uploads stay local; the fitted webp files in apps/game/src/art/painted are committed.
+art/raw/
+art/contact-sheet.png
+scripts/__pycache__/
+art/raw-*/

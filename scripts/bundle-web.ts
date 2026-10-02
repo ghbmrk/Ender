@@ -17,14 +17,37 @@ if (!jsFile || assets.filter((f) => f.endsWith(".js")).length !== 1) throw new E
 const js = readFileSync(resolve(dist, "assets", jsFile), "utf8").replace(/<\/script/gi, "<\\/script");
 
 const title = html.match(/<title>.*?<\/title>/)?.[0] ?? "<title>Ender</title>";
-const icon = html.match(/<link rel="icon"[^>]*>/)?.[0] ?? "";
+const icon = html.match(/<link rel="icon" href="[^"]*"\s*\/?>/)?.[0] ?? "";
 const style = `<style>\n${css}\n</style>`;
 const script = `<script type="module">\n${js}\n</script>`;
 
+// Shown until the game draws its first screen (the script is large), so a slow phone never sees a blank page.
+const root = `<div id="root"><div style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0910;color:#c3ccd7;font:600 18px system-ui,sans-serif;letter-spacing:.2em">LOADING ENDER</div></div>`;
 writeFileSync(
   resolve(dist, "ender.html"),
-  `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="UTF-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1.0" />\n${title}\n${icon}\n${style}\n</head>\n<body>\n<div id="root"></div>\n${script}\n</body>\n</html>\n`,
+  `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="UTF-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1.0" />\n${title}\n${icon}\n${style}\n</head>\n<body>\n${root}\n${script}\n</body>\n</html>\n`,
 );
-writeFileSync(resolve(dist, "artifact.html"), `${title}\n${style}\n<div id="root"></div>\n${script}\n`);
+writeFileSync(resolve(dist, "artifact.html"), `${title}\n${style}\n${root}\n${script}\n`);
 const mb = (s: string) => (Buffer.byteLength(s) / 1e6).toFixed(2);
 console.log(`ender.html + artifact.html written (${mb(js)} MB script, ${mb(css)} MB css)`);
+
+// The split build (apps/game/dist-split): a small first script that draws the title, with the rest fetched beside it.
+// artifact.html is its body fragment; the files under assets/ are published next to it.
+const split = resolve(ROOT, "apps/game/dist-split");
+const shtml = readFileSync(resolve(split, "index.html"), "utf8");
+const head = shtml.match(/<head>([\s\S]*?)<\/head>/)?.[1] ?? "";
+const links = head
+  .split("\n")
+  .map((l) => l.trim())
+  .filter((l) => /^<(script|link rel="(stylesheet|modulepreload)")/.test(l));
+writeFileSync(resolve(split, "artifact.html"), `${title}\n${links.join("\n")}\n${root}\n`);
+console.log(`dist-split/artifact.html written (${readdirSync(resolve(split, "assets")).length} supporting files)`);
+
+// A stylesheet with an unclosed brace silently swallows every rule after it (a merge once dropped one), so the
+// build refuses to finish until each sheet balances.
+const srcDir = resolve(ROOT, "apps/game/src");
+for (const f of readdirSync(srcDir).filter((f) => f.endsWith(".css"))) {
+  let depth = 0;
+  for (const c of readFileSync(resolve(srcDir, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "")) depth += c === "{" ? 1 : c === "}" ? -1 : 0;
+  if (depth !== 0) throw new Error(`apps/game/src/${f}: ${depth > 0 ? "an unclosed {" : "an extra }"}; every rule after it would be lost`);
+}

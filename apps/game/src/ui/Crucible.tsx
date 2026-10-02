@@ -5,18 +5,29 @@ import { toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
 import { EvalLine, FormCard, QualityRunes, Recipe } from "./FormCard";
 import { announceProgress } from "./craftActions";
+import { KEYSTONES, MODIFIER_TEXT, REACTIONS, TEMPLATES, templateFor, type Affinity } from "@ender/battle";
 import { TIER_LABEL, crowns, fmt, qualityName, essenceName } from "../economy/format";
 
-const SLOTS = [
-  { id: "blade", name: "Blade", effect: "damage" },
-  { id: "ward", name: "Ward", effect: "health" },
-  { id: "sigil", name: "Sigil", effect: "cooldowns" },
-  { id: "charm", name: "Charm", effect: "loot quality" },
-];
+const ROLES = [
+  { id: "action", name: "Action", cost: 3 },
+  { id: "modifier", name: "Modifier", cost: 1 },
+  { id: "reaction", name: "Reaction", cost: 2 },
+  { id: "keystone", name: "Keystone", cost: 3 },
+] as const;
+
+function becomes(a: any, role: string) {
+  const aff = a.affinities as [Affinity, Affinity] | null;
+  if (!aff) return "";
+  if (role === "action") return `${TEMPLATES[templateFor(aff[0])].name} with a ${aff[1]} rider`;
+  if (role === "modifier") return `boosts adjacent nodes: ${MODIFIER_TEXT[aff[0]].action}`;
+  if (role === "reaction") return REACTIONS[aff[0]].desc;
+  return `${KEYSTONES[aff[0]].name}: ${KEYSTONES[aff[0]].desc}`;
+}
 
 export function Crucible() {
   const c = useStore((s) => s.character);
   const mode = useStore((s) => s.crucibleMode ?? "craft");
+  const focus = useStore((s) => s.crucibleFocus);
   const [forms, setForms] = useState<any[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
@@ -29,7 +40,7 @@ export function Crucible() {
   const load = async (keep?: string) => {
     const inv = await api.inventory();
     setForms(inv.artifacts);
-    const want = keep ?? sel;
+    const want = keep ?? sel ?? focus;
     if (want && inv.artifacts.some((a: any) => a.id === want)) setSel(want);
     else setSel(inv.artifacts.find((a: any) => (mode === "mirror" ? a.tier === "trialed" : true))?.id ?? inv.artifacts[0]?.id ?? null);
   };
@@ -43,7 +54,7 @@ export function Crucible() {
   }, [sel, a?.tier]);
 
   const hasWild = (c?.currencies ?? []).some((x: any) => x.item_id === "wild-sigil" && x.quantity > 0);
-  const temperCost = Math.max(0, 2 - (c?.passiveEffects?.temperDiscount ?? 0));
+  const temperCost = 2;
 
   const act = async (label: string, fn: () => Promise<any>, after?: (out: any) => string | undefined) => {
     setBusy(true);
@@ -100,12 +111,22 @@ export function Crucible() {
   const bestMargin = evaluated.reduce((m, f) => (f.evaluation.margin > (m?.evaluation.margin ?? -1e9) ? f : m), null as any);
 
   return (
-    <Panel title={mode === "mirror" ? "The Mirror" : "The Crucible"} subtitle={`✦ ${c?.focus ?? 0} Focus · each act of the Familiar costs Focus and teaches you (XP); only true results earn Mastery.`} wide testId="crucible">
+    <Panel title={mode === "mirror" ? "The Mirror" : "The Crucible"} subtitle={`✦ ${c?.focus ?? 0} Focus to spend. Each test below costs Focus and tells you more about a Form.`} wide testId="crucible">
       <div className="crucible">
         <div className="form-list">
           {forms.length === 0 && <p className="dim">You hold no Forms. Fight in a Realm to find them.</p>}
           {forms.map((f) => (
-            <FormCard key={f.id} a={f} compact selected={f.id === sel} onClick={() => setSel(f.id)} />
+            <FormCard
+              key={f.id}
+              a={f}
+              compact
+              selected={f.id === sel}
+              onClick={() => {
+                setSel(f.id);
+                // On a phone the chosen Form opens above the list, so bring it into view.
+                document.querySelector(".form-detail")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
           ))}
         </div>
         <div className="form-detail">
@@ -116,34 +137,41 @@ export function Crucible() {
                 {a.tier === "veiled" && (
                   <button className="primary" disabled={busy} onClick={() => act("Attune", () => api.attune(a.id))} data-testid="act-attune">
                     Attune · 1 ✦
+                    <small className="act-hint">reveal what it is</small>
                   </button>
                 )}
                 {a.tier === "attuned" && (
                   <button className="primary" disabled={busy} onClick={() => act("Trial", () => api.trial(a.id))} data-testid="act-trial">
                     Trial · free
+                    <small className="act-hint">learn its exact worth</small>
                   </button>
                 )}
                 {(a.tier === "trialed" || a.tier === "witnessed") && (
                   <button disabled={busy} onClick={() => act("Trial", () => api.trial(a.id))} data-testid="act-retrial">
                     Re-Trial at today's prices
+                    <small className="act-hint">re-price at today's market</small>
                   </button>
                 )}
                 {a.tier === "trialed" && (
                   <button className={mode === "mirror" ? "primary" : ""} disabled={busy} onClick={() => act("Mirror", () => api.mirror(a.id))} data-testid="act-mirror">
                     Mirror · 2 ✦
+                    <small className="act-hint">prove it holds up</small>
                   </button>
                 )}
                 {a.tier !== "veiled" && (
                   <>
                     <button disabled={busy} onClick={() => act("Fracture", () => api.fracture(a.id))} data-testid="act-fracture">
                       Fracture · 1 ✦
+                    <small className="act-hint">find its weak spot</small>
                     </button>
-                    <button disabled={busy || a.status === "equipped"} onClick={startTemper} data-testid="act-temper" title={a.status === "equipped" ? "Unequip first" : ""}>
+                    <button disabled={busy} onClick={startTemper} data-testid="act-temper">
                       Temper · {temperCost} ✦
+                    <small className="act-hint">reshape it into a near cousin</small>
                     </button>
                     {a.tier !== "witnessed" && (
                       <button disabled={busy} onClick={() => act("Deep Trial", () => api.deepTrial(a.id))} data-testid="act-deep">
                         Deep Trial · 3 ✦
+                    <small className="act-hint">a harder, surer test</small>
                       </button>
                     )}
                   </>
@@ -155,27 +183,27 @@ export function Crucible() {
                 )}
               </div>
               {a.tier !== "veiled" && (
-                <div className="bind">
+                <div className="bind" data-testid="inscribe">
+                  <h4>Inscribe {a.inscribedRole && <span className="dim small">· now {/^[aeiou]/i.test(a.inscribedRole) ? "an" : "a"} {a.inscribedRole}</span>}</h4>
                   <div className="dim small">
-                    Binding manifests the Form: its recipe is paid once (from your Essences, the rest bought at the Bazaar)
-                    {quote?.quote && !quote.quote.alreadyBound && <> — shortfall today ≈ {crowns(quote.quote.crownsIfBought)}</>}
-                    {quote?.quote?.alreadyBound && <> — already bound</>}.
+                    Pick a role to place it on your Loom. Costs
+                    {a.evaluation?.recipe ? ` ${Object.entries(a.evaluation.recipe).map(([e, q]) => `${fmt(q as number, 1)} ${essenceName(e)}`).join(", ")}` : " its Essence recipe"}, and again if you change it.
                   </div>
-                  <div className="row">
-                    {SLOTS.map((s) => (
+                  <div className="inscribe-grid">
+                    {ROLES.filter((r) => r.id !== "keystone" || a.keystoneEligible).map((r) => (
                       <button
-                        key={s.id}
-                        className="small"
-                        disabled={busy}
-                        onClick={() =>
-                          act(`Bind as ${s.name}`, () => api.equip(s.id, a.id), () => a.id)
-                        }
-                        data-testid={`equip-${s.id}`}
+                        key={r.id}
+                        className={`small ${a.inscribedRole === r.id ? "toggled" : ""}`}
+                        disabled={busy || a.inscribedRole === r.id}
+                        onClick={() => act(`Inscribed as ${r.name}`, () => api.inscribe(a.id, r.id), () => a.id)}
+                        data-testid={`inscribe-${r.id}`}
                       >
-                        Bind as {s.name} <span className="dim">({s.effect})</span>
+                        <b>{r.name}</b> <span className="dim">· {r.cost} Capacity</span>
+                        <div className="dim small">{becomes(a, r.id)}</div>
                       </button>
                     ))}
                   </div>
+                  {!a.keystoneEligible && <div className="dim small">Keystone: needs a Witnessed Form scoring 80 or more.</div>}
                 </div>
               )}
               {result && <ActionResult r={result} />}
@@ -353,7 +381,7 @@ function ActionResult({ r }: { r: { label: string; out: any } }) {
       )}
       {o.inference && (
         <div className="dim small">
-          {o.inference.provider === "fixture" ? "Familiar (recorded)" : "Familiar (rules)"} · {o.inference.workUnits} WU · +{o.inference.xp} XP
+          {o.inference.xp > 0 ? `+${o.inference.xp} Loom Rank progress` : "No Rank progress: this was done before"}
         </div>
       )}
       {o.productionCost !== undefined && o.payout !== undefined && (

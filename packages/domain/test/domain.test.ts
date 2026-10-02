@@ -8,8 +8,6 @@ import {
   artifactPower,
   brierQuality,
   computeBands,
-  computeCombatStats,
-  effectivePolicy,
   emptyMastery,
   levelForXp,
   masteryConfidence,
@@ -76,11 +74,6 @@ describe("artifact power", () => {
     expect(artifactPower(80, "trialed")).toBe(80);
     expect(artifactPower(80, "witnessed")).toBe(88);
   });
-  it("an equipped blade raises attack damage", () => {
-    const base = computeCombatStats({ level: 1, equippedPower: {}, passive: { damagePct: 0, healthFlat: 0, critChance: 0 } });
-    const armed = computeCombatStats({ level: 1, equippedPower: { blade: 80 }, passive: { damagePct: 0, healthFlat: 0, critChance: 0 } });
-    expect(armed.attackDamage).toBeGreaterThan(base.attackDamage);
-  });
 });
 
 describe("XP, levels and Work Units", () => {
@@ -89,13 +82,13 @@ describe("XP, levels and Work Units", () => {
     expect(xpForWorkUnits(3)).toBe(Math.round(20 * 3 ** 0.72));
     expect(xpForWorkUnits(0)).toBe(0);
   });
-  it("level threshold = round(100 × (L−1)^1.55), capped at 30", () => {
+  it("level threshold = round(100 × (L−1)^1.55), capped at 20 (Loom Rank)", () => {
     expect(xpRequired(1)).toBe(0);
     expect(xpRequired(2)).toBe(100);
     expect(xpRequired(3)).toBe(Math.round(100 * 2 ** 1.55));
     expect(levelForXp(99)).toBe(1);
     expect(levelForXp(100)).toBe(2);
-    expect(levelForXp(1e9)).toBe(30);
+    expect(levelForXp(1e9)).toBe(20);
   });
   it("Work Units and Focus are fixed per action; Trial is free", () => {
     expect(WORK_UNITS).toMatchObject({ attune: 1, fracture: 1, temper: 3, trial: 0, mirror: 3, "deep-trial": 5 });
@@ -141,12 +134,5 @@ describe("SearchPolicy weighting", () => {
     const n = normalizePolicy(PRESET_POLICIES.merchant);
     expect(Object.values(n).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 3);
     expect(n.arbitrage).toBeGreaterThan(n.exploration);
-  });
-  it("passives shift the effective policy", () => {
-    const base = PRESET_POLICIES.smith;
-    expect(effectivePolicy(base, [])).toEqual(base);
-    const forged = effectivePolicy(base, ["tempered-purpose", "narrow-search"]);
-    expect(forged.optimization).toBe(1); // 0.9 + 0.35, clamped
-    expect(forged.exploration).toBeCloseTo(0.05, 3);
   });
 });

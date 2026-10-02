@@ -1,0 +1,60 @@
+/* Painted art (src/art/painted): images that stand in for the code-drawn figures and backdrops. */
+.backdrop-svg.painted {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.fig-img {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  height: 92%;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+/* Portraits: the top of the cut-out, zoomed to the face. */
+.head .head-img {
+  position: absolute;
+  left: 50%;
+  top: -4%;
+  height: 360%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.head {
+  position: relative;
+}
+
+/* Paintings whose head is not at the top centre get their own crop: the head's centre as shares of the
+   painting's width and height, and how much of the painting's height the portrait shows. */
+.head .head-img[data-fig="swarm"],
+.head .head-img[data-fig="wyrm"] {
+  left: 50%;
+  top: 50%;
+  height: calc(100% / var(--hs));
+  transform: translate(calc(var(--hx) * -100%), calc(var(--hy) * -100%));
+}
+.head .head-img[data-fig="swarm"] {
+  --hx: 0.5;
+  --hy: 0.3;
+  --hs: 0.36;
+}
+.head .head-img[data-fig="wyrm"] {
+  --hx: 0.2;
+  --hy: 0.15;
+  --hs: 0.3;
+}
+
+/* On-device character art (art/ondevice): it arrives in a short burst of light, as if woven into place. */
+.art-new {
+  animation: art-arrive 520ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+@keyframes art-arrive {
+  0% { opacity: 0; filter: brightness(2.6) blur(6px); }
+  60% { opacity: 1; filter: brightness(1.5) blur(0); }
+  100% { opacity: 1; filter: none; }
+}
+canvas.fig-img { width: auto; }
+canvas.head-img { width: auto; }

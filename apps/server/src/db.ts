@@ -22,9 +22,9 @@ CREATE TABLE IF NOT EXISTS characters (
   crowns REAL NOT NULL,
   focus INTEGER NOT NULL,
   free_attunes_used INTEGER NOT NULL DEFAULT 0,
-  passive_points INTEGER NOT NULL,
+  passive_points INTEGER NOT NULL DEFAULT 0, -- legacy (passive tree removed, §90)
   build_policy TEXT NOT NULL,
-  equipped TEXT NOT NULL,
+  equipped TEXT NOT NULL DEFAULT '{}', -- legacy (gear removed, §47)
   runs_started INTEGER NOT NULL DEFAULT 0,
   active INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
@@ -45,12 +45,6 @@ CREATE TABLE IF NOT EXISTS mastery_events (
   reason TEXT NOT NULL,
   level INTEGER NOT NULL,
   created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS passive_allocations (
-  character_id TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-  passive_id TEXT NOT NULL,
-  allocated_at TEXT NOT NULL,
-  PRIMARY KEY (character_id, passive_id)
 );
 CREATE TABLE IF NOT EXISTS inventory (
   character_id TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
@@ -80,10 +74,19 @@ CREATE TABLE IF NOT EXISTS artifacts (
   acquisition_cost REAL NOT NULL DEFAULT 0,
   acquisition_value REAL,
   status TEXT NOT NULL,
-  equipped_slot TEXT,
+  equipped_slot TEXT, -- legacy (gear removed, §47)
   bound INTEGER NOT NULL DEFAULT 0,
   familiar TEXT,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  inscribed_role TEXT
+);
+CREATE TABLE IF NOT EXISTS loom_nodes (
+  character_id TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+  root TEXT NOT NULL,
+  artifact_id TEXT NOT NULL UNIQUE,
+  q INTEGER NOT NULL,
+  r INTEGER NOT NULL,
+  PRIMARY KEY (character_id, root, q, r)
 );
 CREATE TABLE IF NOT EXISTS artifact_revisions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,10 +131,12 @@ CREATE TABLE IF NOT EXISTS runs (
   seed TEXT NOT NULL,
   plan TEXT NOT NULL,
   status TEXT NOT NULL,
-  rooms_granted TEXT NOT NULL,
+  rooms_granted TEXT NOT NULL, -- legacy
   result TEXT,
   started_at TEXT NOT NULL,
-  completed_at TEXT
+  completed_at TEXT,
+  visited TEXT NOT NULL DEFAULT '[]',
+  loom_snapshot TEXT
 );
 CREATE TABLE IF NOT EXISTS run_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -236,6 +241,27 @@ CREATE TABLE IF NOT EXISTS prophecies (
 );
 `;
 
+/**
+ * Additive migrations for databases created before the Loom (Node and the in-page build both run SCHEMA first,
+ * then this). Each step is idempotent.
+ */
+export function migrate(db: Db) {
+  const cols = (table: string) => new Set((db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name));
+  const add = (table: string, col: string, decl: string) => {
+    if (!cols(table).has(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${decl}`);
+  };
+  add("artifacts", "inscribed_role", "TEXT");
+  add("runs", "visited", "TEXT NOT NULL DEFAULT '[]'");
+  add("runs", "loom_snapshot", "TEXT");
+  db.exec(`CREATE TABLE IF NOT EXISTS loom_nodes (
+  character_id TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+  root TEXT NOT NULL,
+  artifact_id TEXT NOT NULL UNIQUE,
+  q INTEGER NOT NULL,
+  r INTEGER NOT NULL,
+  PRIMARY KEY (character_id, root, q, r)
+)`);
+}
 
 export const now = () => new Date().toISOString();
 

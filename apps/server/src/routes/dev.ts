@@ -1,10 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { REALMS } from "@ender/content";
+import { ESSENCE_IDS } from "@ender/shared";
 import type { Ctx } from "../services/context";
 import { activeCharacterId } from "../services/character";
 import { artifactView, createArtifact, getArtifact, makeReadings } from "../services/artifacts";
-import { passivesFor } from "../services/character";
+import { addItem } from "../services/character";
 import { analytics } from "../services/analytics";
 import { economyDebug, missingFixtures, provenance } from "../services/dev";
 import { run } from "../db";
@@ -26,18 +27,26 @@ export function registerDevRoutes(app: FastifyInstance, ctx: Ctx) {
     const charId = activeCharacterId(ctx);
     const a = createArtifact(ctx, charId, { realityId: body.realityId, realmId: body.realmId, origin: "seed", tier: body.tier });
     if (body.tier === "attuned") {
-      const r = makeReadings(ctx, a, passivesFor(ctx, charId).readingNoise);
+      const r = makeReadings(ctx, a, 1);
       run(ctx.db, "UPDATE artifacts SET readings = ?, fantasy_name = ?, revealed = '[]' WHERE id = ?", JSON.stringify(r), "Granted Form", a.id);
     }
     return artifactView(ctx, getArtifact(ctx, a.id));
   });
 
   app.post("/api/dev/grant", async (req) => {
-    const body = z.object({ crowns: z.number().optional(), focus: z.number().optional(), passivePoints: z.number().optional() }).parse(req.body);
+    const body = z
+      .object({
+        crowns: z.number().optional(),
+        focus: z.number().optional(),
+        essences: z.record(z.enum(ESSENCE_IDS), z.number()).optional(),
+        mirrorCharges: z.number().int().optional(),
+      })
+      .parse(req.body);
     const charId = activeCharacterId(ctx);
     if (body.crowns) run(ctx.db, "UPDATE characters SET crowns = crowns + ? WHERE id = ?", body.crowns, charId);
     if (body.focus) run(ctx.db, "UPDATE characters SET focus = focus + ? WHERE id = ?", body.focus, charId);
-    if (body.passivePoints) run(ctx.db, "UPDATE characters SET passive_points = passive_points + ? WHERE id = ?", body.passivePoints, charId);
+    for (const [e, q] of Object.entries(body.essences ?? {})) addItem(ctx, charId, "essence", e, q!);
+    if (body.mirrorCharges) addItem(ctx, charId, "charge", "mirror", body.mirrorCharges);
     return { ok: true };
   });
 }

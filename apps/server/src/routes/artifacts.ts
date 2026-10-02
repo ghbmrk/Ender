@@ -1,11 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { GEAR_SLOTS } from "@ender/shared";
 import type { Ctx } from "../services/context";
 import { activeCharacterId, characterView } from "../services/character";
 import { artifactView, getArtifact, heldArtifacts } from "../services/artifacts";
 import { attune, deepTrial, fracture, mirror, temperChoose, temperOptions, trial } from "../services/craft";
-import { equip, sellPreview } from "../services/market";
+import { sellPreview } from "../services/market";
 import { all } from "../db";
 
 export function registerArtifactRoutes(app: FastifyInstance, ctx: Ctx) {
@@ -18,7 +17,7 @@ export function registerArtifactRoutes(app: FastifyInstance, ctx: Ctx) {
       currencies: c.currencies,
       crowns: c.crowns,
       focus: c.focus,
-      equipped: c.equipped,
+      mirrorCharges: c.mirrorCharges,
     };
   });
 
@@ -46,9 +45,4 @@ export function registerArtifactRoutes(app: FastifyInstance, ctx: Ctx) {
   app.post<{ Params: { id: string } }>("/api/artifacts/:id/trial", async (req) => trial(ctx, activeCharacterId(ctx), req.params.id));
   app.post<{ Params: { id: string } }>("/api/artifacts/:id/mirror", async (req) => mirror(ctx, activeCharacterId(ctx), req.params.id));
   app.post<{ Params: { id: string } }>("/api/artifacts/:id/deep-trial", async (req) => deepTrial(ctx, activeCharacterId(ctx), req.params.id));
-
-  app.post("/api/equipment", async (req) => {
-    const body = z.object({ slot: z.enum(GEAR_SLOTS as [string, ...string[]]), artifactId: z.string().nullable() }).parse(req.body);
-    return equip(ctx, activeCharacterId(ctx), body.slot as never, body.artifactId);
-  });
 }
