@@ -642,6 +642,9 @@ export class Battle {
           // Every perfect Parry answers its blow at once (split across a multi-hit attack's blows).
           this.counter(t, foe, plan.attack.hits.length, events);
         } else if (isDodge(d)) {
+          // A Dodge in the wide window grazes; only a Perfect one avoids the blow outright.
+          if (d === "dodge") this.hurt(foe, t, foe.power * hit.power * RULES.grazeDamage, events);
+          if (!t.alive) continue;
           this.react(t, foe, "dodge", d === "perfect-dodge", events);
           if (d === "perfect-dodge") this.react(t, foe, "perfect-dodge", true, events);
         }

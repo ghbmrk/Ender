@@ -51,7 +51,7 @@ export const LESSONS: Record<"dodge" | "parry" | "skill", Lesson> = {
       good: "Good. Tap a touch closer to the mark for a **Perfect**: it hits harder.",
       miss: "Missed the beat. Wait for the ring to meet the mark, then tap.",
       defend: "It strikes back! Tap **DODGE** as the red ring closes on your hero.",
-      dodged: "**Dodged.** Dodge is forgiving: its window is wide. Next, the harder one: **PARRY**.",
+      dodged: "**Dodged.** Near the ring it grazes you; right on it, the blow misses. Next, the harder one: **PARRY**.",
       hit: "Too early or too late. Tap **DODGE** just as the ring closes.",
       ap: "Each Basic also builds **AP**: the blue pips. Crafted skills spend it.",
       now: "**Now!** Tap **DODGE**.",
@@ -196,9 +196,9 @@ export function lessonEnded(step: TutStep, won: boolean) {
   goTo(n);
 }
 
-export function finishTutorial() {
+export function finishTutorial(panel: "gate" | null = null) {
   save("done");
-  setState({ tutorial: null, screen: "crossing", panel: null, loomEditable: true });
+  setState({ tutorial: null, screen: "crossing", panel, loomEditable: true });
 }
 
 /** Skipping puts the hero's lifted Action back so nobody is left without a skill. */
@@ -216,5 +216,6 @@ export async function skipTutorial() {
       .catch(() => null);
     await refreshLoom().catch(() => null);
   }
-  finishTutorial();
+  // Home is the Realm choice: skipping lands there, as finishing the prologue does.
+  finishTutorial("gate");
 }

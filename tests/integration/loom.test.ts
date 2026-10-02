@@ -16,7 +16,7 @@ const affs = (id: string) => affinitiesOf(h.ctx.reality.candidateSync(id).qualit
 const has = (a: [Affinity, Affinity], x: Affinity, y: Affinity) => a.includes(x) && a.includes(y);
 
 describe("Inscribe (§51)", () => {
-  it("needs an Attuned Form, charges the production recipe, and charges again only for a different role", async () => {
+  it("needs an Attuned Form, weaves free the first time, and charges the recipe only for a different role", async () => {
     h = await harness();
     await h.call("POST", "/api/dev/grant", { essences: PLENTY });
     const c = h.ctx.reality.all()[0]!;
@@ -34,7 +34,7 @@ describe("Inscribe (§51)", () => {
     const before = (await h.character()).essences;
     const ins = await h.call("POST", `/api/artifacts/${f.id}/inscribe`, { role: "action" });
     expect(ins.artifact.inscribedRole).toBe("action");
-    for (const [e, q] of Object.entries(recipe)) expect(ins.essences[e]).toBe(before[e] - q!);
+    for (const e of Object.keys(recipe)) expect(ins.essences[e]).toBe(before[e]);
 
     const same = await h.raw("POST", `/api/artifacts/${f.id}/inscribe`, { role: "action" });
     expect(same.status).toBe(400);
@@ -44,10 +44,10 @@ describe("Inscribe (§51)", () => {
     const again = await h.call("POST", `/api/artifacts/${f.id}/inscribe`, { role: "reaction" });
     expect(again.artifact.inscribedRole).toBe("reaction");
     expect(again.artifact.loom).toEqual({ root: "iron", q: 1, r: 0 });
-    for (const [e, q] of Object.entries(recipe)) expect(again.essences[e]).toBe(before[e] - 2 * q!);
+    for (const [e, q] of Object.entries(recipe)) expect(again.essences[e]).toBe(before[e] - q!);
   });
 
-  it("refuses when an Essence runs short", async () => {
+  it("a first weave never waits on Essences; a change of role refuses when one runs short", async () => {
     h = await harness();
     // A Form whose recipe needs more of some Essence than the starting 6.
     const held = (await h.character()).essences;
@@ -55,10 +55,11 @@ describe("Inscribe (§51)", () => {
     const c = h.ctx.reality.all().find((x) => ESSENCE_IDS.some((e) => (need(x)[e] ?? 0) > held[e]))!;
     const short = ESSENCE_IDS.find((e) => (need(c)[e] ?? 0) > held[e]);
     const f = await grantForm(c.id);
-    const r = await h.raw("POST", `/api/artifacts/${f.id}/inscribe`, { role: "modifier" });
+    expect((await h.call("POST", `/api/artifacts/${f.id}/inscribe`, { role: "modifier" })).artifact.inscribedRole).toBe("modifier");
+    const r = await h.raw("POST", `/api/artifacts/${f.id}/inscribe`, { role: "action" });
     expect(r.status).toBe(400);
     expect(r.body.error).toBe(`not enough ${short}`);
-    expect((await h.call("GET", `/api/artifacts/${f.id}`)).artifact.inscribedRole).toBeNull();
+    expect((await h.call("GET", `/api/artifacts/${f.id}`)).artifact.inscribedRole).toBe("modifier");
   });
 
   it("offers Keystone only to a Witnessed Form with technical score ≥ 80", async () => {

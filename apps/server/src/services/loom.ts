@@ -101,8 +101,8 @@ export function carryInscription(ctx: Ctx, parent: ArtifactRow, childId: string)
 }
 
 /**
- * INSCRIBE (§51): choose the Form's Loom role. Costs the Form's production recipe in Essences from inventory
- * (never auto-bought); re-inscribing to a different role charges the full recipe again. A placed Form stays placed.
+ * INSCRIBE (§51): choose the Form's Loom role. The first weave is free; a change of role costs the production recipe in Essences
+ * from inventory (never auto-bought). A placed Form stays placed.
  */
 export function inscribe(ctx: Ctx, charId: string, artifactId: string, role: Role) {
   const a = getArtifact(ctx, artifactId, charId);
@@ -112,7 +112,9 @@ export function inscribe(ctx: Ctx, charId: string, artifactId: string, role: Rol
   if (role === "keystone" && !keystoneEligible(loomScore(ctx, a) ?? 0, a.evidence_tier))
     throw new HttpError(400, "only a Witnessed Form with technical score ≥ 80 can be a Keystone");
   if (a.inscribed_role === role) throw new HttpError(400, `already Inscribed as ${role}`);
-  const recipe = productionRecipe(trueQualities(ctx, a)).essenceCosts;
+  // The first weave is free, so a Form never sits unusable for want of Essences (Mark, 2026-10-02: the roles
+  // all greyed out after a reveal). Changing a woven Form's role charges its recipe.
+  const recipe = a.inscribed_role ? productionRecipe(trueQualities(ctx, a)).essenceCosts : {};
   const cost = ESSENCE_IDS.filter((e) => (recipe[e] ?? 0) > 0).map((e) => [e, recipe[e]!] as [EssenceId, number]);
   for (const [e, q] of cost) if (itemQty(ctx, charId, "essence", e) < q) throw new HttpError(400, `not enough ${e}`);
   return tx(ctx.db, () => {

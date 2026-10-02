@@ -49,9 +49,9 @@ describe("timing (§64, §67–69)", () => {
     expect(t.expire(1400)).toEqual([2]);
     expect(t.result()).toEqual(["perfect", "good", "miss"]);
   });
-  it("Dodge is wide (−260..+100); Parry is one tight window (−70..+60) and anything else is a hit", () => {
+  it("Dodge is wide (−170..+80, perfect −90..+60); Parry is one tight window (−70..+60) and anything else is a hit", () => {
     const d = new DefenseTracker([1000, 2000, 3000, 4000]);
-    expect(d.press(1000 - 250, "dodge")).toEqual({ index: 0, result: "dodge" });
+    expect(d.press(1000 - 160, "dodge")).toEqual({ index: 0, result: "dodge" });
     expect(d.press(2000 + 80, "parry")).toEqual({ index: 1, result: "hit" });
     expect(d.press(3000 - 60, "parry")).toEqual({ index: 2, result: "perfect-parry" });
     expect(d.press(4000 - 150, "parry")).toEqual({ index: 3, result: "hit" });
@@ -253,14 +253,17 @@ describe("combat rules (§61–72)", () => {
     expect(husk.breakVal).toBeCloseTo(24, 5);
     expect(husk.hp).toBeLessThan(husk.maxHp);
   });
-  it("Dodge takes no damage and earns nothing; getting hit hurts", () => {
+  it("a Perfect Dodge takes no damage, a Dodge grazes, a hit hurts most; none earns AP", () => {
     const b = new Battle({ seed: "d", party: party(), waves: [["husk"]], difficulty: 1 });
     const plan = { actor: "husk-1", attack: FOES.husk.attacks[0]!, targets: ["quick"] };
-    b.resolveFoe(plan, ["dodge", "perfect-dodge"]);
+    b.resolveFoe(plan, plan.attack.hits.map(() => "perfect-dodge"));
     expect(b.unit("quick").hp).toBe(ROOTS.quick.hp);
     expect(b.unit("quick").ap).toBe(3);
-    b.resolveFoe(plan, ["hit", "hit"]);
-    expect(b.unit("quick").hp).toBeLessThan(ROOTS.quick.hp);
+    b.resolveFoe(plan, plan.attack.hits.map(() => "dodge"));
+    const grazed = ROOTS.quick.hp - b.unit("quick").hp;
+    expect(grazed).toBeGreaterThan(0);
+    b.resolveFoe(plan, plan.attack.hits.map(() => "hit"));
+    expect(ROOTS.quick.hp - grazed - b.unit("quick").hp).toBeGreaterThan(grazed);
   });
   it("Bond Root: a successful Parry gives 1 AP to the party member with the least AP", () => {
     const b = new Battle({ seed: "bond", party: party(), waves: [["husk"]], difficulty: 1 });
@@ -415,7 +418,8 @@ describe("duel balance", () => {
     }
     return n;
   };
-  const decent = (k: number): Defense => (k % 3 === 2 ? "hit" : k % 3 ? "dodge" : "perfect-parry");
+  // Decent play: a third of blows land, a third are dodged (half of those perfectly), a third parried.
+  const decent = (k: number): Defense => (k % 3 === 2 ? "hit" : k % 3 ? (k % 6 === 1 ? "perfect-dodge" : "dodge") : "perfect-parry");
   const strong = (k: number): Defense => (k % 4 === 3 ? "hit" : "perfect-parry");
   it("a first-run Boss is a real fight: decent play wins some, strong play wins nearly always", () => {
     const d = wins([["king"]], "boss", "good", decent);

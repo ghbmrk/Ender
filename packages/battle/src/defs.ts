@@ -133,11 +133,14 @@ export const RULES = {
    * only avoids the hit. Parry has one tight window: inside it the hit is blocked and answered with a counter;
    * outside it the Parry does nothing and the full hit lands.
    */
-  dodge: [-260, 100] as const,
+  dodge: [-170, 80] as const,
   parry: [-70, 60] as const,
   perfectParry: [-70, 60] as const,
-  /** (Ender default) A Perfect Dodge uses the Parry window. */
-  perfectDodge: [-120, 90] as const,
+  /** Only a Perfect Dodge avoids the whole blow; a Dodge inside the wider window grazes (Mark, 2026-10-02: an easy
+   *  Dodge that avoided everything made you immune). */
+  perfectDodge: [-90, 60] as const,
+  /** Share of a blow a non-perfect Dodge still takes. */
+  grazeDamage: 0.35,
   parryAp: 1,
   parryBreak: 10,
   counterPotency: 0.65,

@@ -486,8 +486,8 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
             const [mx, my] = [(ax + bx) / 2, (ay + by) / 2];
             return (
               <g key={`boost-${m.id}-${n.id}`} className="boost-link" style={{ transformOrigin: `${mx}px ${my}px` }}>
-                <circle cx={mx} cy={my} r={34} fill="#ecc56a" stroke="#1d1822" strokeWidth={8} />
-                <text x={mx} y={my + 16} textAnchor="middle" className="boost-plus">+</text>
+                <circle cx={mx} cy={my} r={24} fill="#ecc56a" stroke="#1d1822" strokeWidth={6} />
+                <text x={mx} y={my + 12} textAnchor="middle" className="boost-plus" style={{ fontSize: 34 }}>+</text>
               </g>
             );
           })}
@@ -572,7 +572,8 @@ export function LoomScreen({ ghost = false }: { ghost?: boolean }) {
         <WeaveSheet
           form={weaving}
           free={compiled.capacity - compiled.usedCapacity}
-          onClose={() => setWeaving(null)}
+          // A Form revealed and then put away shows as revealed in the tray, not veiled again.
+          onClose={() => (setWeaving(null), void loadRaw())}
           onWoven={(id) => {
             setWeaving(null);
             setPlacing(id);
@@ -626,6 +627,10 @@ function hitTest(x: number, y: number, rank: number): { q: number; r: number } |
 /** What a Modifier adds to the Actions beside it, in a word or two that fits on its hex. */
 const MOD_SHORT: Record<string, string> = { burden: "+Break", veil: "+Crits", reach: "+Weak spot", knots: "+Finisher", flex: "+Speed", bond: "+AP share" };
 
+const nodeLabel = (n: LoomNode): string => (n.role === "action" ? TEMPLATES[templateFor(n.affinities[0])].name : n.role === "modifier" ? MOD_SHORT[n.affinities[0]] : (ROLE_NAME[n.role] ?? "")) ?? "";
+/** Squeeze an SVG label that would run wider than `max` (a rough width from its letter count). */
+const fit = (text: string, size: number, max: number) => (text.length * size * 0.62 > max ? { textLength: max, lengthAdjust: "spacingAndGlyphs" as const } : {});
+
 function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, landed }: { landed?: boolean; n: LoomNode; x: number; y: number; dormant?: boolean; reason?: string; selected?: boolean; small?: boolean; lifted?: boolean; ghost?: boolean }) {
   const [a, b] = n.affinities;
   const s = small ? 76 : HEX - 12;
@@ -638,26 +643,33 @@ function NodeHex({ n, x, y, dormant, reason, selected, small, lifted, ghost, lan
       {n.evidence === "witnessed" && <path d={hexPath(x, y, s + 5)} fill="none" stroke="#ecc56a" strokeWidth={4} />}
       {/* What the piece does on the Loom, readable at a glance (Mark, 22:05): its role named on a plate across the
           top and its role sigil large in the middle, then the two Affinities it links by, then what it is. */}
-      <rect x={x - s * 0.5} y={y - s * 0.74} width={s} height={s * 0.3} rx={s * 0.15} className={`node-plate role-${n.role}`} />
-      <text x={x} y={y - s * 0.52} className="node-rolename" style={{ fontSize: s * 0.2 }}>
+      {/* Every word stays inside its own hex and clear of the gold boost badges on the edges (Mark, 2026-10-02:
+          overlapping words on the Loom): the plate is narrower than the top edge, and long words are squeezed to fit. */}
+      <rect x={x - s * 0.39} y={y - s * 0.74} width={s * 0.78} height={s * 0.26} rx={s * 0.13} className={`node-plate role-${n.role}`} />
+      <text x={x} y={y - s * 0.55} className="node-rolename" style={{ fontSize: s * 0.15 }} {...fit(ROLE_NAME[n.role], s * 0.15, s * 0.66)}>
         {ROLE_NAME[n.role].toUpperCase()}
       </text>
-      <text x={x} y={y + s * 0.14} className={`node-glyph role-${n.role}`} style={{ fontSize: s * 0.56 }}>
-        {ROLE_GLYPH[n.role]}
-      </text>
-      <text x={x} y={y + s * 0.4} className="node-aff" fill={AFF_COLOR[b]} style={{ fontSize: s * 0.2 }}>
-        {AFF_GLYPH[a]} {AFF_GLYPH[b]}
-      </text>
-      <text x={x} y={y + s * 0.68} className="node-name">
-        {n.role === "action" ? TEMPLATES[templateFor(a)].name : n.role === "modifier" ? MOD_SHORT[a] : ROLE_NAME[n.role]}
+      {/* Asleep, the words take the middle in place of the sigil, so the two never print over each other. */}
+      {!dormant && (
+        <text x={x} y={y + s * 0.12} className={`node-glyph role-${n.role}`} style={{ fontSize: s * 0.42 }}>
+          {ROLE_GLYPH[n.role]}
+        </text>
+      )}
+      {!dormant && (
+        <text x={x} y={y + s * 0.34} className="node-aff" fill={AFF_COLOR[b]} style={{ fontSize: s * 0.16 }}>
+          {AFF_GLYPH[a]} {AFF_GLYPH[b]}
+        </text>
+      )}
+      <text x={x} y={y + s * 0.62} className="node-name" style={{ fontSize: s * 0.19 }} {...fit(nodeLabel(n), s * 0.19, s * 0.96)}>
+        {nodeLabel(n)}
       </text>
       {dormant && (
-        <text x={x} y={y + 6} className="node-dormant">
+        <text x={x} y={y - s * 0.06} className="node-dormant" style={{ fontSize: s * 0.18 }} {...fit("DORMANT", s * 0.18, s * 1.0)}>
           DORMANT
         </text>
       )}
       {dormant && reason && (
-        <text x={x} y={y + 30} className="node-reason">
+        <text x={x} y={y + s * 0.24} className="node-reason" style={{ fontSize: s * 0.14 }} {...fit(reason, s * 0.14, s * 1.1)}>
           {reason}
         </text>
       )}

@@ -72,7 +72,8 @@ export function WeaveSheet({ form, free, onClose, onWoven }: { form: any; free: 
   const [justRevealed, setJustRevealed] = useState(false);
   const focus = c?.focus ?? 0;
   const have = (c?.essences ?? {}) as Record<string, number>;
-  const cost = Object.entries((a.inscribeCost ?? {}) as Record<string, number>).filter(([, q]) => q > 0);
+  // Weaving a new Form is free; only giving a woven one a different role costs Essences (server loom.inscribe).
+  const cost = a.inscribedRole ? Object.entries((a.inscribeCost ?? {}) as Record<string, number>).filter(([, q]) => q > 0) : [];
   const afford = cost.every(([e, q]) => (have[e] ?? 0) >= q);
   const roles = offeredRoles(free, !!a.keystoneEligible);
 

@@ -117,7 +117,7 @@ const RIDER_SHORT: Record<string, string> = {
   flex: "Perfect timing: act sooner",
   bond: "gives an ally 1 AP",
 };
-const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PARRY! COUNTER", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "DODGE", hit: "HIT" };
+const DEF_LABEL: Record<Defense, string> = { "perfect-parry": "PARRY! COUNTER", parry: "PARRY", "perfect-dodge": "PERFECT DODGE", dodge: "GRAZED", hit: "HIT" };
 const STATUS_GLYPH: Record<string, string> = { marked: "◎", slow: "≋", fracture: "⟋", burn: "♨", poison: "☠" };
 
 type CamKick = "shake" | "big" | "punch" | "finale";

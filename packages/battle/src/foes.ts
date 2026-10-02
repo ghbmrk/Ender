@@ -150,6 +150,6 @@ export const DUEL_HP = { normal: 0.45, elite: 0.45, boss: 0.34 } as const;
  * And at this share of their attack. A Boss was built to wear down three heroes; with a run's first Loom, a
  * balance sim of its duel (good presses, a third of blows each parried, dodged and taken) won 0 of 30 at full
  * HP and attack, and about half at these values, while players who parry well still win comfortably
- * (test/battle.test.ts holds it there).
+ * (test/battle.test.ts holds it there). Boss attack went 0.85 → 0.75 when a non-perfect Dodge began to graze.
  */
-export const DUEL_ATK = { normal: 1, elite: 1, boss: 0.85 } as const;
+export const DUEL_ATK = { normal: 1, elite: 1, boss: 0.75 } as const;
