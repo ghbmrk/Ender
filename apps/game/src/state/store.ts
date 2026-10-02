@@ -3,7 +3,7 @@ import type { RootId } from "@ender/battle";
 
 /** Scenes drawn on the portrait stage. Menu sheets (panels) open over them at the device's own pixel size. */
 export type Screen = "boot" | "landing" | "title" | "create" | "crossing" | "map" | "battle" | "loom";
-export type Panel = null | "gate" | "crucible" | "bazaar" | "grimoire" | "inventory" | "provenance" | "rewards" | "summary" | "codex";
+export type Panel = null | "gate" | "crucible" | "bazaar" | "grimoire" | "inventory" | "provenance" | "rewards" | "summary" | "codex" | "familiar";
 
 export type Toast = { id: number; text: string; tone?: "gain" | "loss" | "info" | "mastery" };
 
@@ -21,6 +21,8 @@ export type Expedition = {
 export type State = {
   screen: Screen;
   panel: Panel;
+  /** What the Familiar did while you were away (thread "Agent play while away"). */
+  familiarAway?: any;
   crucibleFocus?: string | null;
   crucibleMode?: "craft" | "mirror";
   /** The Loom opened straight after a fight to weave what dropped (Mark: crafting follows combat). */

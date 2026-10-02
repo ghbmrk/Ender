@@ -98,7 +98,28 @@ export const CritiqueResultSchema = z.object({
 });
 export type CritiqueResult = z.infer<typeof CritiqueResultSchema>;
 
-export type InferenceKind = "attune" | "transform" | "critique";
+/**
+ * Plan: the Familiar's next move while the player is away (thread "Agent play while away"). The caller lists the
+ * legal moves; the provider picks one or stops. `ruleValue` is the rules' own value per Focus, a hint a model may
+ * ignore. A model is meant to answer this rarely (the player's plan quota is the attention budget), never per action.
+ */
+export type PlanOption = { id: string; label: string; focusCost: number; ruleValue: number; facts: Record<string, string | number | boolean | null> };
+export type PlanRequest = {
+  question: "next-move" | "temper-pick";
+  mandate: { id: string; title: string };
+  focusLeft: number;
+  target?: { name: string; power: number | null; cost: number | null } | null;
+  options: PlanOption[];
+};
+
+export const PlanResultSchema = z.object({
+  /** An option id, or "stop" when nothing is worth the attention. */
+  choice: z.string(),
+  rationale: z.string().min(2).max(160),
+});
+export type PlanResult = z.infer<typeof PlanResultSchema>;
+
+export type InferenceKind = "attune" | "transform" | "critique" | "plan";
 
 export type InferenceEnvelope<T> = {
   result: T;
@@ -112,13 +133,15 @@ export interface InferenceProvider {
   attune(request: AttuneRequest): Promise<InferenceEnvelope<AttuneResult>>;
   transform(request: TransformRequest): Promise<InferenceEnvelope<TransformResult>>;
   critique(request: CritiqueRequest): Promise<InferenceEnvelope<CritiqueResult>>;
+  plan(request: PlanRequest): Promise<InferenceEnvelope<PlanResult>>;
 }
 
 export const RESULT_SCHEMAS = {
   attune: AttuneResultSchema,
   transform: TransformResultSchema,
   critique: CritiqueResultSchema,
+  plan: PlanResultSchema,
 } as const;
 
 /** Default normalized Work Units per inference call. */
-export const DEFAULT_WU: Record<InferenceKind, number> = { attune: 1, transform: 3, critique: 1 };
+export const DEFAULT_WU: Record<InferenceKind, number> = { attune: 1, transform: 3, critique: 1, plan: 0 };

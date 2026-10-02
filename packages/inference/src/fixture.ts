@@ -9,6 +9,7 @@ import {
   type InferenceEnvelope,
   type InferenceKind,
   type InferenceProvider,
+  type PlanRequest,
   type TransformRequest,
 } from "./types";
 
@@ -113,5 +114,8 @@ export class FixtureInferenceProvider implements InferenceProvider {
   }
   critique(r: CritiqueRequest) {
     return this.run("critique", r, () => this.fallback.critique(r));
+  }
+  plan(r: PlanRequest) {
+    return this.run("plan", r, () => this.fallback.plan(r));
   }
 }

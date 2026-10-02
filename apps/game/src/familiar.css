@@ -1,0 +1,73 @@
+/* The Familiar (thread "Agent play while away"): its task chip on the Crossing and the return summary. */
+.stage button.fam-chip {
+  position: absolute;
+  left: 24px;
+  top: 200px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 96px;
+  max-width: 640px;
+  padding: 14px 26px;
+  border: 3px solid #c9a24a88;
+  border-radius: 18px;
+  background: #15121ccc;
+  color: var(--text);
+  box-shadow: none;
+  text-align: left;
+}
+.fam-chip .fam-what {
+  font: 600 34px var(--serif);
+  color: var(--gold-soft);
+}
+.fam-chip .fam-focus {
+  font: 400 26px var(--sans);
+  color: var(--dim);
+}
+.fam-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fam-card {
+  padding: 12px 14px;
+  border-left: 5px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.fam-card b {
+  display: block;
+  font: 600 17px var(--sans);
+  color: var(--text);
+}
+.fam-card p {
+  margin: 4px 0 0;
+  font: 400 15px/1.4 var(--sans);
+  color: var(--dim);
+}
+.fam-card.k-improved {
+  border-left-color: var(--good);
+}
+.fam-card.k-decision {
+  border-left-color: var(--gold);
+}
+.fam-card.k-failed {
+  border-left-color: var(--bad);
+}
+.fam-card.k-unusual {
+  border-left-color: var(--violet);
+}
+.fam-card button.fam-act {
+  margin-top: 10px;
+  min-height: 44px;
+}
+.fam-tally {
+  margin: 0;
+  font: 400 15px/1.4 var(--sans);
+  color: var(--dim);
+}
+.fam-list > button.primary {
+  min-height: 48px;
+}

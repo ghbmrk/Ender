@@ -8,6 +8,7 @@ import { HttpError, addItem, adjustCrowns, awardXp, charRow, characterView, getM
 import { artifactView, createArtifact, getArtifact, type ArtifactView } from "./artifacts";
 import { loomSnapshot, type LoomSnapshot } from "./loom";
 import { currentSnapshot } from "./world";
+import { bankFocus } from "./familiar";
 
 // ───────────────────────────── The expedition map (§76–77) ─────────────────────────────
 
@@ -261,9 +262,12 @@ export function startRun(ctx: Ctx, charId: string, realmId: string) {
     const me = masteryEffects(getMastery(ctx, charId));
     // Unused Focus converts to Crowns at the start of the next expedition.
     let converted = 0;
+    // With a Familiar mandate set, it is banked for the Familiar instead (thread "Agent play while away").
+    let banked = 0;
     if (c.runs_started > 0 && c.focus > 0) {
-      converted = round(c.focus * me.focusConversion);
-      adjustCrowns(ctx, charId, converted);
+      banked = bankFocus(ctx, charId, c.focus);
+      converted = round((c.focus - banked) * me.focusConversion);
+      if (converted > 0) adjustCrowns(ctx, charId, converted);
     }
     const n = c.runs_started + 1;
     const focus = BASE_FOCUS;
@@ -285,8 +289,8 @@ export function startRun(ctx: Ctx, charId: string, realmId: string) {
       JSON.stringify(loom),
       now(),
     );
-    run(ctx.db, "INSERT INTO run_events (run_id, type, payload, created_at) VALUES (?, 'start', ?, ?)", runId, JSON.stringify({ realmId, focus, converted }), now());
-    return { plan, focus, focusConverted: converted, loom };
+    run(ctx.db, "INSERT INTO run_events (run_id, type, payload, created_at) VALUES (?, 'start', ?, ?)", runId, JSON.stringify({ realmId, focus, converted, banked }), now());
+    return { plan, focus, focusConverted: converted, focusBanked: banked, loom };
   });
 }
 

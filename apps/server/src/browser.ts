@@ -16,6 +16,7 @@ import { registerArtifactRoutes } from "./routes/artifacts";
 import { registerBazaarRoutes } from "./routes/bazaar";
 import { registerDevRoutes } from "./routes/dev";
 import { registerLoomRoutes } from "./routes/loom";
+import { registerFamiliarRoutes } from "./routes/familiar";
 
 type Handler = (req: { params: Record<string, string>; body: unknown; query: Record<string, string> }) => unknown;
 type Route = { method: string; parts: string[]; handler: Handler };
@@ -37,6 +38,7 @@ export function createInPageServer(parts: { db: Db; reality: PubChemRealityAdapt
   registerArtifactRoutes(app, ctx);
   registerBazaarRoutes(app, ctx);
   registerLoomRoutes(app, ctx);
+  registerFamiliarRoutes(app, ctx);
   registerDevRoutes(app, ctx);
   routes.push({ method: "GET", parts: ["api", "health"], handler: () => ({ ok: true, provider: ctx.inference.name, mode: "in-page" }) });
 
