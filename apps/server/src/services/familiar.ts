@@ -4,6 +4,7 @@
 // time only refills the attention budget (one daily Watch), and every outcome comes from an action performed.
 // Decisions are rules over what the player can also see (Readings until a Trial), so no paid inference.
 import { round } from "@ender/shared";
+import { rulePlan, type PlanRequest } from "@ender/inference";
 import { get, now } from "../db";
 import type { Ctx } from "./context";
 import { artifactView, getArtifact, heldArtifacts, type ArtifactRow } from "./artifacts";
@@ -84,6 +85,26 @@ function options(ctx: Ctx, charId: string, m: Mandate, focus: number, target: Fo
   return out.filter((o) => o.cost <= focus);
 }
 
+const VERB: Record<Option["action"], string> = { trial: "Trial", attune: "Attune", mirror: "Mirror", temper: "Temper" };
+
+/** What the chooser may see about a Form: the same facts the player sees (estimates until a Trial). */
+const facts = (f: FormInfo) => ({ form: f.name, tier: f.row.evidence_tier, woven: f.woven, power: f.power, cost: f.cost, realm: f.row.objective_id });
+
+/**
+ * Every choice goes through the inference provider's `plan`, the same slot a player's own model would fill later.
+ * An answer that isn't one of the listed moves falls back to the rules, so a bad model reply can't stall or cheat.
+ */
+async function decide(ctx: Ctx, req: PlanRequest): Promise<{ choice: string; rationale: string; provider: string }> {
+  const ok = (c: string) => c === "stop" || req.options.some((o) => o.id === c);
+  try {
+    const env = await ctx.inference.plan(req);
+    if (ok(env.result.choice)) return { ...env.result, provider: env.provenance.provider };
+  } catch {
+    /* fall through to the rules */
+  }
+  return { ...rulePlan(req), provider: "rule" };
+}
+
 function pickTarget(ctx: Ctx, charId: string, m: Mandate): FormInfo | null {
   if (m.id !== "cheaper") return null;
   if (m.targetId) {
@@ -105,7 +126,9 @@ export type Session = {
   focusSpent: number;
   reserveLeft: number;
   steps: number;
-  actions: { action: Option["action"]; formId: string; focus: number }[];
+  actions: { action: Option["action"]; formId: string; focus: number; why: string }[];
+  /** Who made the choices: "rule" today; a model provider later (thread "Agent play while away"). */
+  provider: string;
   tally: Record<string, number>;
   xpGained: number;
   cards: Card[];
@@ -145,6 +168,7 @@ export async function familiarReturn(ctx: Ctx, charId: string, today = new Date(
   const searched: { from: string; power: number; cost: number }[] = [];
   let found: FormInfo | null = null;
   let steps = 0;
+  let provider = ctx.inference.name as string;
 
   try {
     while (steps++ < MAX_STEPS) {
@@ -152,8 +176,16 @@ export async function familiarReturn(ctx: Ctx, charId: string, today = new Date(
       if (m.id === "cheaper" && !target) target = pickTarget(ctx, charId, m);
       const opts = options(ctx, charId, m, focus, target, touched);
       if (!opts.length) break;
-      // Best value per Focus; ties broken by the order the player sees Forms in (stable, so runs are reproducible).
-      const best = opts.reduce((a, b) => (b.value / Math.max(1, b.cost) > a.value / Math.max(1, a.cost) ? b : a));
+      const plan = await decide(ctx, {
+        question: "next-move",
+        mandate: { id: m.id, title: MANDATES[m.id].title },
+        focusLeft: focus,
+        target: target && { name: target.name, power: target.power, cost: target.cost },
+        options: opts.map((o, i) => ({ id: String(i), label: `${VERB[o.action]} ${o.form.name}`, focusCost: o.cost, ruleValue: o.value, facts: facts(o.form) })),
+      });
+      if (plan.choice === "stop") break;
+      const best = opts[Number(plan.choice)]!;
+      provider = plan.provider;
       const id = best.form.row.id;
       if (best.action === "trial") trial(ctx, charId, id);
       else if (best.action === "attune") await attune(ctx, charId, id);
@@ -162,12 +194,21 @@ export async function familiarReturn(ctx: Ctx, charId: string, today = new Date(
         const r = await mirror(ctx, charId, id);
         (r.mirror.consistent ? witnessed : unsteady).push(id);
       } else {
-        // Temper: take the option that best closes on the target (Power at least the target's, for less).
+        // Temper: the Familiar picks among the options the Temper offers.
         touched.add(id);
         const t = await temperOptions(ctx, charId, id);
         const T = target!;
+        // Closing on the target: Power at least the target's, for less. Temper must take one of its options.
         const u = (o: (typeof t.options)[number]) => Math.min(0, o.predictedTechnicalScore - T.power!) * 2 + ((T.cost! - o.productionCost) / Math.max(1, T.cost!)) * 50;
-        const pick = [...t.options].sort((a, b) => u(b) - u(a))[0];
+        const floor = Math.min(0, ...t.options.map(u)) - 1;
+        const choice = await decide(ctx, {
+          question: "temper-pick",
+          mandate: { id: m.id, title: MANDATES[m.id].title },
+          focusLeft: charRow(ctx, charId).focus,
+          target: { name: T.name, power: T.power, cost: T.cost },
+          options: t.options.map((o, i) => ({ id: String(i), label: o.name, focusCost: 0, ruleValue: u(o) - floor, facts: { predictedPower: o.predictedTechnicalScore, cost: o.productionCost, distance: o.distance, emphasis: o.emphasis } })),
+        });
+        const pick = t.options[choice.choice === "stop" ? 0 : Number(choice.choice)];
         if (pick) {
           const child = temperChoose(ctx, charId, id, pick.candidateId).artifact.id;
           trial(ctx, charId, child); // free; the claim is checked before it's reported
@@ -177,7 +218,7 @@ export async function familiarReturn(ctx: Ctx, charId: string, today = new Date(
         }
       }
       // Actual Focus, not the list price: a Mirror charge or Broken Seal pays for some of it.
-      actions.push({ action: best.action, formId: id, focus: focus - charRow(ctx, charId).focus });
+      actions.push({ action: best.action, formId: id, focus: focus - charRow(ctx, charId).focus, why: plan.rationale });
     }
   } finally {
     const left = charRow(ctx, charId).focus;
@@ -228,7 +269,7 @@ export async function familiarReturn(ctx: Ctx, charId: string, today = new Date(
 
   const tally: Record<string, number> = {};
   for (const a of actions) tally[a.action] = (tally[a.action] ?? 0) + 1;
-  const session: Session = { at: now(), mandate: m, focusSpent, reserveLeft: s.reserve, steps: actions.length, actions, tally, xpGained: charRow(ctx, charId).xp - xp0, cards: rankCards(cards) };
+  const session: Session = { at: now(), mandate: m, provider, focusSpent, reserveLeft: s.reserve, steps: actions.length, actions, tally, xpGained: charRow(ctx, charId).xp - xp0, cards: rankCards(cards) };
   setState(ctx, lastKey(charId), session);
   return session;
 }

@@ -83,4 +83,29 @@ describe("Familiar while away", () => {
     const f = await h.call("GET", "/api/familiar");
     expect(f.reserve).toBe(start.focusBanked);
   });
+
+  it("every choice goes through the provider's plan slot; a bad answer falls back to the rules, and a model can stop early", async () => {
+    h = await harness();
+    const { runId } = await h.runExpedition();
+    await h.finishRun(runId);
+    await h.call("POST", "/api/familiar/mandate", { id: "validate" });
+    const inf = h.ctx.inference as any;
+    const original = inf.plan.bind(inf);
+    const asked: any[] = [];
+    // A stand-in for a player's model: answers nonsense first, then stops after three moves.
+    inf.plan = async (req: any) => {
+      asked.push(req);
+      if (asked.length === 1) return { result: { choice: "not-an-option", rationale: "??" }, usage: { workUnits: 0 }, provenance: { provider: "future-chatgpt", requestHash: "x" } };
+      if (asked.length > 3) return { result: { choice: "stop", rationale: "Saving the rest for later." }, usage: { workUnits: 0 }, provenance: { provider: "future-chatgpt", requestHash: "x" } };
+      return original(req);
+    };
+    const s = (await ret("2026-10-02")).session;
+    inf.plan = original;
+    expect(asked.length).toBe(4);
+    expect(asked[0].options.length).toBeGreaterThan(0);
+    expect(asked[0].options[0].facts).toHaveProperty("tier");
+    expect(s.steps).toBe(3);
+    expect(s.actions[0].why.length).toBeGreaterThan(0);
+    expect(s.reserveLeft).toBe(12 - s.focusSpent);
+  });
 });
