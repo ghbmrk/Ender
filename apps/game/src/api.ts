@@ -48,4 +48,7 @@ export const api = {
   analytics: () => call("GET", "/api/dev/analytics"),
   missingFixtures: () => call("GET", "/api/dev/inference/missing"),
   snapshots: () => call("GET", "/api/dev/snapshots"),
+  familiar: () => call("GET", "/api/familiar"),
+  familiarMandate: (id: string | null) => call("POST", "/api/familiar/mandate", { id }),
+  familiarReturn: () => call("POST", "/api/familiar/return", {}),
 };

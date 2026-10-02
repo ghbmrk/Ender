@@ -17,6 +17,7 @@ import { Grimoire } from "./Grimoire";
 import { Inventory } from "./Inventory";
 import { Provenance } from "./Provenance";
 import { RunSummary } from "./RunSummary";
+import { FamiliarAway } from "./Familiar";
 import { Rewards, SpoilsStrip } from "./Rewards";
 import { BattleScreen } from "./battle/BattleScreen";
 import { Crossing } from "./scenes/Crossing";
@@ -121,6 +122,7 @@ export function App() {
       {panel === "provenance" && <Provenance />}
       {panel === "rewards" && <Rewards />}
       {panel === "summary" && <RunSummary />}
+      {panel === "familiar" && <FamiliarAway />}
       <Toasts />
     </div>
   );

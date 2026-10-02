@@ -26,6 +26,7 @@ import { Coach } from "../Coach";
 import { finishTutorial, practiseDefence } from "../../game/tutorial";
 import { weaves } from "../loom/Weave";
 import { startOver } from "../../game/reset";
+import { FamiliarChip, familiarOn } from "../Familiar";
 
 /**
  * The hub opens up as you play: at first only the Gate and the Loom; the other stations appear as you weave,
@@ -193,6 +194,7 @@ export function Crossing() {
             ))}
         </div>
       </header>
+      {!lesson && familiarOn() && <FamiliarChip />}
       {lesson && <Coach text="You're ready. Tap **Set out**. Every fight drops **Forms**, the pieces your skills are made of." style={{ bottom: 250 }} />}
       {/* The two things done most here, Set out and the Loom, sit in the bottom-right thumb zone. */}
       <div className="hub-party hub-bar">
