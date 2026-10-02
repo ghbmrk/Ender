@@ -132,14 +132,14 @@ export function MapScreen() {
   };
   if (!ex) return null;
   const layers = ex.plan.map.layers;
-  // The route scrolls as you climb: where you stand sits at the bottom, so the next choice is always under
-  // the thumb, and the layers left to climb spread over the rest of the screen.
+  // The whole route holds still from the first stop to the Boss, and the way you came stays drawn: a route that
+  // re-spread itself at every stop and dropped the climbed layers lost the path between stops (Mark, 2026-10-02).
   const anchor = ex.at ? (nodeById(ex.at)?.layer ?? 0) : 0;
-  const step = (BOTTOM - TOP) / Math.max(1, layers.length - 1 - anchor);
+  const step = (BOTTOM - TOP) / Math.max(1, layers.length - 1);
   const pos = (n: MapNode): [number, number] => {
     const layer = layers[n.layer]!;
     const i = layer.findIndex((x) => x.id === n.id);
-    const y = BOTTOM - step * (n.layer - anchor);
+    const y = BOTTOM - step * n.layer;
     const x = layer.length === 1 ? 540 : 200 + (680 * i) / (layer.length - 1);
     // A little hand-drawn wobble, deterministic per node.
     const w = ((n.id.charCodeAt(n.id.length - 1) * 37) % 60) - 30;
@@ -264,11 +264,13 @@ export function MapScreen() {
         {layers.flat().flatMap((n) =>
           n.links.map((l) => {
             const m = nodeById(l);
-            if (!m || n.layer < anchor) return null;
+            if (!m) return null;
             const [x1, y1] = pos(n);
             const [x2, y2] = pos(m);
             const walked = ex.visited.includes(n.id) && ex.visited.includes(l);
-            return <path key={`${n.id}-${l}`} d={`M${x1} ${y1} Q${(x1 + x2) / 2 + (y1 % 40) - 20} ${(y1 + y2) / 2} ${x2} ${y2}`} className={`map-link ${walked ? "walked" : ""}`} />;
+            // Roads not taken behind you fade, so the walked trail reads as the one gold line.
+            const behind = !walked && n.layer < anchor;
+            return <path key={`${n.id}-${l}`} d={`M${x1} ${y1} Q${(x1 + x2) / 2 + (y1 % 40) - 20} ${(y1 + y2) / 2} ${x2} ${y2}`} className={`map-link ${walked ? "walked" : behind ? "behind" : ""}`} />;
           }),
         )}
       </svg>
@@ -279,7 +281,7 @@ export function MapScreen() {
         return (
           <button
             key={n.id}
-            className={`map-node k-${n.kind} ${n.layer < anchor ? "past" : n.layer === anchor && ex.at !== n.id ? "passed" : ""} ${next.has(n.id) ? "next" : ""} ${visited ? "visited" : ""} ${ex.at === n.id ? "here" : ""} ${next.has(n.id) && nudge ? `nudge-${nudge % 2}` : ""} ${!next.has(n.id) && n.layer > anchor ? "ahead" : ""}`}
+            className={`map-node k-${n.kind} ${n.layer <= anchor && ex.at !== n.id && !visited ? "passed" : ""} ${next.has(n.id) ? "next" : ""} ${visited ? "visited" : ""} ${ex.at === n.id ? "here" : ""} ${next.has(n.id) && nudge ? `nudge-${nudge % 2}` : ""} ${!next.has(n.id) && n.layer > anchor ? "ahead" : ""}`}
             style={{ left: x, top: y }}
             onClick={() => go(n)}
             aria-disabled={!next.has(n.id)}

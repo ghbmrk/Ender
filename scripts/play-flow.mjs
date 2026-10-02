@@ -204,6 +204,7 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
       continue;
     }
     if (fights === 2) await shot("flow-map-2");
+    if (fights === 4) await shot("flow-map-4");
     await next.click();
     await page.waitForTimeout(700);
     continue;

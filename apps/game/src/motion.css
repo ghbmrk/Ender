@@ -725,11 +725,7 @@
   }
 }
 
-/* Map: layers already climbed slide away below; the choices ahead pulse gently. */
-.map-node.past {
-  opacity: 0;
-  pointer-events: none;
-}
+/* Map: the choices ahead pulse gently; stops left behind stay on the route. */
 .map-node.next {
   animation: node-next 1.4s ease-in-out infinite;
 }
@@ -745,6 +741,9 @@
 }
 .map-node.passed {
   opacity: 0.35;
+}
+.map-link.behind {
+  opacity: 0.3;
 }
 
 /* A lone hero's plaque: big portrait, chunky health and AP, filling the column top to bottom. */
