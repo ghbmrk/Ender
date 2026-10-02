@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { startExpedition, refreshWorld } from "../game/flow";
 import { getState, setState, toast, useStore } from "../state/store";
 import { Panel } from "./Panel";
+import { PurseChip } from "./Purse";
 import { bests } from "../game/records";
 import { finishTutorial } from "../game/tutorial";
 import { crowns, essenceColor, essenceGlyph } from "../economy/format";
@@ -102,6 +103,7 @@ export function RealmGate() {
         <button className="realm-more" onClick={() => setContracts(!contracts)}>
           Contracts ({world.contracts.length}) {contracts ? "▴" : "▾"}
         </button>
+        <PurseChip />
         <button onClick={() => setState({ screen: "loom", panel: null, loomEditable: true })} data-testid="gate-loom">
           The Loom
         </button>

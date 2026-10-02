@@ -139,6 +139,9 @@ export const RULES = {
   /** Only a Perfect Dodge avoids the whole blow; a Dodge inside the wider window grazes (Mark, 2026-10-02: an easy
    *  Dodge that avoided everything made you immune). */
   perfectDodge: [-90, 60] as const,
+  /** Chains (two or more beats or blows) widen every window by this much: a run of notes is read and played as a
+   *  rhythm, so each one is judged more kindly than a lone blow (Mark, 2026-10-02). */
+  chainEase: 1.4,
   /** Share of a blow a non-perfect Dodge still takes. */
   grazeDamage: 0.35,
   parryAp: 1,

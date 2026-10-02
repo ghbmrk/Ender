@@ -3,6 +3,7 @@ import { setState, useStore } from "../state/store";
 import { sfx } from "./battle/sfx";
 import { Panel } from "./Panel";
 import { essenceColor, essenceGlyph, essenceName } from "../economy/format";
+import { learned } from "../game/firstUse";
 
 /** Spoils after a fight or a Mystery (§78): Essences, Veiled Forms, Mirror charges. No equipment. */
 export function Rewards() {
@@ -90,7 +91,8 @@ export function SpoilsStrip() {
   useEffect(() => {
     if (!r) return;
     sfx.loot((r.crowns > 0 ? 1 : 0) + Object.keys(r.essences ?? {}).length + (r.forms?.length ?? 0));
-    const t = setTimeout(() => setState({ spoils: null }), 2600);
+    // The first spoils carry a line about the purse, so they stay long enough to read it.
+    const t = setTimeout(() => setState({ spoils: null }), learned("purse") ? 2600 : 5000);
     return () => clearTimeout(t);
   }, [r?.at]);
   if (!r) return null;
@@ -114,6 +116,8 @@ export function SpoilsStrip() {
           </span>
         )}
       </div>
+      {/* Until the purse has been opened once, the first spoils say what they are and where to see them. */}
+      {!learned("purse") && <div className="ss-hint">Crowns ◈ and Essences ✦ buy and shape Forms at the Bazaar. Tap the purse beside the Realm's name to see what you hold.</div>}
     </div>
   );
 }

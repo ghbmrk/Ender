@@ -203,7 +203,15 @@ for (let step = 0; step < 400 && (fights < maxFights || (await visible(tid("loom
       await page.waitForTimeout(300);
       continue;
     }
-    if (fights === 2) await shot("flow-map-2");
+    if (fights === 2) {
+      await shot("flow-map-2");
+      // The purse: what Crowns and Essences are, and how many are held.
+      await page.click(tid("purse"));
+      await page.waitForSelector(tid("purse-sheet"));
+      await shot("flow-purse");
+      await page.click(`${tid("purse-sheet")} .close`);
+      await page.waitForTimeout(300);
+    }
     if (fights === 4) await shot("flow-map-4");
     await next.click();
     await page.waitForTimeout(700);

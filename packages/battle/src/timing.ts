@@ -17,10 +17,11 @@ export class AttackTracker {
   press(t: number): { index: number; grade: Grade } | null {
     const good = RULES.timing.good * this.scale;
     const perfect = RULES.timing.perfect * this.scale;
-    const index = this.grades.findIndex((g, i) => g === null && t <= this.beats[i]! + good);
-    if (index < 0) return null;
+    // A press answers the open beat nearest to it, so a quick run of beats reads like a rhythm game: an early tap
+    // for the second beat never spends the first (Mark, 2026-10-02: chains should be forgiving, like DDR).
+    const index = nearest(this.beats, this.grades, t, (b) => t <= b + good && t >= b - 2 * good);
     // A press long before the beat is ignored rather than wasting the beat.
-    if (t < this.beats[index]! - 2 * good) return null;
+    if (index < 0) return null;
     const dt = Math.abs(t - this.beats[index]!);
     const grade: Grade = dt <= perfect ? "perfect" : dt <= good ? "good" : "miss";
     this.grades[index] = grade;
@@ -37,12 +38,26 @@ export class AttackTracker {
     });
     return out;
   }
+  /** Beat `i`'s grade, or null while it is still open. */
+  gradeAt(i: number) {
+    return this.grades[i] ?? null;
+  }
   get done() {
     return this.grades.every((g) => g !== null);
   }
   result(): Grade[] {
     return this.grades.map((g) => g ?? "miss");
   }
+}
+
+/** The open slot (null) whose time is closest to `t`, among those `ok` allows; -1 if none. */
+function nearest(times: number[], open: unknown[], t: number, ok: (at: number) => boolean): number {
+  let best = -1;
+  times.forEach((at, i) => {
+    if (open[i] !== null || !ok(at)) return;
+    if (best < 0 || Math.abs(t - at) < Math.abs(t - times[best]!)) best = i;
+  });
+  return best;
 }
 
 const within = (dt: number, [lo, hi]: readonly [number, number], scale: number) => dt >= lo * scale && dt <= hi * scale;
@@ -61,11 +76,11 @@ export class DefenseTracker {
   }
   press(t: number, kind: "parry" | "dodge"): { index: number; result: Defense } | null {
     this.expire(t);
-    const index = this.results.findIndex((r) => r === null);
+    // A press well before any window is ignored rather than spending the defence, so an eager tap is not punished.
+    // Otherwise it answers the open impact nearest to it (a press between two blows of a chain goes to the closer).
+    const index = nearest(this.impacts, this.results, t, (at) => t - at >= (RULES.dodge[0] - 200) * this.scale);
     if (index < 0) return null;
     const dt = t - this.impacts[index]!;
-    // A press well before any window is ignored rather than spending the defence, so an eager tap is not punished.
-    if (dt < (RULES.dodge[0] - 200) * this.scale) return null;
     let result: Defense = "hit";
     // A Parry is all or nothing: perfect, or the hit lands.
     if (kind === "parry") result = within(dt, RULES.perfectParry, this.scale) ? "perfect-parry" : "hit";

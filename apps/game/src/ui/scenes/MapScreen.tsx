@@ -1,3 +1,4 @@
+import { PurseChip } from "../Purse";
 import { Guide, type GuideStep } from "../Guide";
 import { learned } from "../../game/firstUse";
 import { useEffect, useRef, useState } from "react";
@@ -235,7 +236,12 @@ export function MapScreen() {
       <header className="map-head">
         <div>
           {/* While the first road is walked through, the guide takes the title's place too, so the header keeps its height. */}
-          {(learned("map-1") || !!ex.at) && <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>}
+          {(learned("map-1") || !!ex.at) && (
+            <div className="map-title-row">
+              <div className="map-title">{REALM_NAME[ex.plan.realmId] ?? ex.plan.realmId}</div>
+              <PurseChip className="in-map" />
+            </div>
+          )}
           {/* The first road is walked through in three steps before the usual line takes over (Mark, 2026-10-02). */}
           {!learned("map-1") && !ex.at ? (
             <Guide id="map-1" steps={MAP_GUIDE} className="in-head" onStep={() => setGuideTick((t) => t + 1)} />

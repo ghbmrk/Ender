@@ -42,6 +42,8 @@ export type State = {
   /** The fight in progress: which map node it came from. */
   battle: { nodeId: string; kind: string; waves: string[][]; difficulty: number } | null;
   rewards: any | null;
+  /** The purse sheet: what Crowns and Essences you hold, and what they are for. */
+  purse?: boolean;
   /** A fight's spoils, shown as a passing strip over the map (no stop); cleared when it has played. */
   spoils?: any | null;
   runSummary: any | null;

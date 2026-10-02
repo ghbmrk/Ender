@@ -8,6 +8,7 @@ import {
   DefenseTracker,
   FOES,
   ROOTS,
+  RULES,
   affinitiesOf,
   capacityForRank,
   compileLoom,
@@ -62,6 +63,17 @@ describe("timing (§64, §67–69)", () => {
     // The next press goes to the next impact, not back to the first.
     expect(d.press(1300, "parry")).toEqual({ index: 1, result: "hit" });
     expect(d.result()).toEqual(["hit", "hit"]);
+  });
+  it("in a chain a press answers the nearest open blow, and the eased windows are wider", () => {
+    const d = new DefenseTracker([1000, 1150, 2000], RULES.chainEase);
+    // A tap meant for the second blow goes to it, not the first; the first then lands.
+    expect(d.press(1140, "dodge")).toEqual({ index: 1, result: "perfect-dodge" });
+    expect(d.resultAt(0)).toBe("hit");
+    // −220 ms is outside a lone Dodge window (−170) but inside a chain's.
+    expect(d.press(2000 - 220, "dodge")).toEqual({ index: 2, result: "dodge" });
+    const a = new AttackTracker([500, 720, 940], RULES.chainEase);
+    expect(a.press(940 - 90)).toEqual({ index: 2, grade: "perfect" });
+    expect(a.press(500 + 100)).toEqual({ index: 0, grade: "good" });
   });
   it("a tap long before any window is ignored rather than spending the defence", () => {
     const d = new DefenseTracker([1000]);

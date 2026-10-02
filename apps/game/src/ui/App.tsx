@@ -19,6 +19,7 @@ import { Provenance } from "./Provenance";
 import { RunSummary } from "./RunSummary";
 import { FamiliarAway } from "./Familiar";
 import { Rewards, SpoilsStrip } from "./Rewards";
+import { PurseSheet } from "./Purse";
 import { BattleScreen } from "./battle/BattleScreen";
 import { Crossing } from "./scenes/Crossing";
 import { MapScreen } from "./scenes/MapScreen";
@@ -123,6 +124,7 @@ export function App() {
       {panel === "rewards" && <Rewards />}
       {panel === "summary" && <RunSummary />}
       {panel === "familiar" && <FamiliarAway />}
+      <PurseSheet />
       <Toasts />
     </div>
   );

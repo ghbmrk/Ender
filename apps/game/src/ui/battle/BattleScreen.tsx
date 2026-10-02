@@ -61,6 +61,13 @@ const RING_TAIL = 150;
  * (more warning), a light jab a small late one; a skill's lead-in beats are small quick rings and its last beat a
  * wide finisher. A rhythm of mixed blows reads as rings of different sizes.
  */
+/**
+ * Chains (two or more beats or blows) play like a rhythm game (Mark, 2026-10-02: "more forgiving, more like DDR"):
+ * each beat is a note sliding from attacker to target at one constant speed, arriving on the mark at its beat, so
+ * the spacing of the notes is the rhythm. Every note takes this long to cross, and each window is RULES.chainEase wider.
+ */
+const LANE_MS = 1100;
+const noteSize = (power: number) => (power >= 1.2 ? 96 : power <= 0.5 ? 60 : 76);
 const hitLead = (power: number) => (power >= 1.2 ? 1150 : power <= 0.5 ? 700 : 950);
 const beatLead = (i: number, n: number) => (n === 1 ? RING_LEAD : i === n - 1 ? 1100 : 700);
 /** The foe's lunge: it leaves this long before the impact and lands on the hero exactly at it, then recovers. */
@@ -95,8 +102,10 @@ type AttackSeq = {
   pressed: { t: number; grade: Grade }[];
   /** Slow-motion factor while a lesson teaches this input (1 = real time). */
   scale: number;
+  /** Two or more beats: played as notes on a lane, with wider windows (see LANE_MS). */
+  chain: boolean;
 };
-type DefendSeq = { k: "defend"; scale: number; plan: FoePlan; t0: number; impacts: number[]; leads: number[]; tracker: DefenseTracker; shown: (Defense | null)[]; landed: boolean[]; frozenAt?: number };
+type DefendSeq = { k: "defend"; chain: boolean; scale: number; plan: FoePlan; t0: number; impacts: number[]; leads: number[]; tracker: DefenseTracker; shown: (Defense | null)[]; landed: boolean[]; frozenAt?: number };
 type Seq = AttackSeq | DefendSeq;
 
 type Phase =
@@ -592,7 +601,8 @@ export function BattleScreen({
     const weak = !!action?.weakPoint;
     const weakMs = weak ? RULES.weakPointMs + (hero.farSight ? 300 : 0) : 0;
     const beats = action ? TEMPLATES[action.template].beats : BASIC_BEATS;
-    const leads = beats.map((_, i) => beatLead(i, beats.length));
+    const chain = beats.length > 1;
+    const leads = beats.map((_, i) => (chain ? LANE_MS : beatLead(i, beats.length)));
     // How far the first rings must start before the beats' clock does.
     const ahead = Math.max(0, ...beats.map((b, i) => leads[i]! - b));
     const t = battle.unit(foe);
@@ -619,9 +629,10 @@ export function BattleScreen({
       beatsAt: weakMs,
       beats,
       leads,
-      tracker: new AttackTracker(beats),
+      tracker: new AttackTracker(beats, chain ? RULES.chainEase : 1),
       pressed: [],
       scale: slowScale(),
+      chain,
     };
     seq.current = s;
     setPhase({ k: "attack" });
@@ -635,28 +646,31 @@ export function BattleScreen({
     }
     if (s.weakHit === null) return;
     const bt = t - s.beatsAt;
-    const lateBy = RULES.timing.good;
+    const lateBy = RULES.timing.good * (s.chain ? RULES.chainEase : 1);
     const k = debug.timeScale * s.scale;
     const color = s.action ? AFF_COLOR[s.action.dominant] ?? "#efe3c8" : "#efe3c8";
     s.beats.forEach((beat, i) => {
-      if (s.pressed.length <= i && beat - bt <= s.leads[i]! + 60) cues()?.ensure(i, chest(battle.unit(s.target)), s.t0 + (s.beatsAt + beat - s.leads[i]!) * k, k, color, s.leads[i]);
+      if (s.tracker.gradeAt(i) !== null || beat - bt > s.leads[i]! + 60) return;
+      const start = s.t0 + (s.beatsAt + beat - s.leads[i]!) * k;
+      if (s.chain) cues()?.note(i, chest(battle.unit(s.actor)), chest(battle.unit(s.target)), start, k, color, i === s.beats.length - 1 ? 92 : 68, s.leads[i]!);
+      else cues()?.ensure(i, chest(battle.unit(s.target)), start, k, color, s.leads[i]);
     });
-    cues()?.focus(s.pressed.length);
-    for (const _ of s.tracker.expire(bt)) gradeFeedback(s, "miss");
+    cues()?.focus(s.beats.findIndex((_, i) => s.tracker.gradeAt(i) === null));
+    for (const i of s.tracker.expire(bt)) gradeFeedback(s, "miss", i);
     if (debug.autoplay) {
-      const next = s.beats.findIndex((b, i) => s.tracker.result()[i] === "miss" && s.pressed.length <= i && bt >= b);
+      const next = s.beats.findIndex((b, i) => s.tracker.gradeAt(i) === null && bt >= b);
       if (next >= 0) pressAttack(s, t);
     }
     const last = s.beats.length ? s.beats[s.beats.length - 1]! + lateBy + 60 : 0;
     if ((s.tracker.done || bt > last) && seq.current === s) resolveAttack(s);
   };
 
-  const gradeFeedback = (s: AttackSeq, g: Grade) => {
+  const gradeFeedback = (s: AttackSeq, g: Grade, i: number) => {
     const t = battle.unit(s.target);
     s.pressed.push({ t: performance.now(), grade: g });
     // Instant: the word, the ring, the mark and the sound, all without a React render.
     const c = cues();
-    c?.drop(s.pressed.length - 1, g !== "miss");
+    c?.drop(i, g !== "miss");
     // Perfect and Good must read apart at a glance: Perfect is bigger, gold and says what it adds.
     c?.judge(g === "perfect" ? `PERFECT +${Math.round((RULES.gradeMult.perfect - 1) * 100)}%` : g === "good" ? "Good" : "Off-beat", `grade ${g}`, [chest(t)[0], chest(t)[1] - 140]);
     c?.pulse(markEl.current, g);
@@ -686,7 +700,7 @@ export function BattleScreen({
       return;
     }
     const r = s.tracker.press(t - s.beatsAt);
-    if (r) gradeFeedback(s, r.grade);
+    if (r) gradeFeedback(s, r.grade, r.index);
     else {
       // Pressed with no beat near: say so at once rather than ignore the tap.
       const tt = chest(battle.unit(s.target));
@@ -741,9 +755,10 @@ export function BattleScreen({
       return;
     }
     const impacts = plan.attack.hits.map((h) => h.t);
-    const leads = plan.attack.hits.map((h) => hitLead(h.power));
+    const chain = impacts.length > 1;
+    const leads = plan.attack.hits.map((h) => (chain ? LANE_MS : hitLead(h.power)));
     const ahead = Math.max(0, ...impacts.map((at, i) => leads[i]! - at));
-    seq.current = { k: "defend", scale: slowScale(), plan, t0: performance.now() + Math.max(TURN_IN, ahead), impacts, leads, tracker: new DefenseTracker(impacts), shown: impacts.map(() => null), landed: impacts.map(() => false) };
+    seq.current = { k: "defend", chain, scale: slowScale(), plan, t0: performance.now() + Math.max(TURN_IN, ahead), impacts, leads, tracker: new DefenseTracker(impacts, chain ? RULES.chainEase : 1), shown: impacts.map(() => null), landed: impacts.map(() => false) };
     setPhase({ k: "defend" });
     say("defend");
   };
@@ -794,7 +809,11 @@ export function BattleScreen({
     }
     s.tracker.expire(t);
     s.impacts.forEach((imp, i) => {
-      if (!s.tracker.resultAt(i) && imp - t <= s.leads[i]! + 60) cues()?.ensure(i, chest(battle.unit(s.plan.targets[0]!)), s.t0 + (imp - s.leads[i]!) * k, k, "#ff6b6b", s.leads[i]);
+      if (s.tracker.resultAt(i) || imp - t > s.leads[i]! + 60) return;
+      const to = chest(battle.unit(s.plan.targets[0]!));
+      const start = s.t0 + (imp - s.leads[i]!) * k;
+      if (s.chain) cues()?.note(i, chest(battle.unit(s.plan.actor)), to, start, k, "#ff6b6b", noteSize(s.plan.attack.hits[i]!.power), s.leads[i]!);
+      else cues()?.ensure(i, to, start, k, "#ff6b6b", s.leads[i]);
     });
     cues()?.focus(s.impacts.findIndex((_, i) => s.tracker.resultAt(i) === null));
     s.impacts.forEach((at, i) => {
@@ -812,7 +831,7 @@ export function BattleScreen({
         sfx.hurt();
       }
     });
-    const last = s.impacts[s.impacts.length - 1]! + Math.max(RULES.dodge[1], RULES.parry[1]) + 80;
+    const last = s.impacts[s.impacts.length - 1]! + Math.max(RULES.dodge[1], RULES.parry[1]) * (s.chain ? RULES.chainEase : 1) + 80;
     if (s.tracker.done && t > last && seq.current === s) resolveDefend(s);
   };
 
@@ -1061,7 +1080,12 @@ export function BattleScreen({
         {fx.map((f) => (
           <FxMark key={f.id} f={f} />
         ))}
-        {s && <CueBands kind={s.k} at={s.k === "attack" ? chest(battle.unit(s.target)) : chest(battle.unit(s.plan.targets[0]!))} />}
+        {s &&
+          (s.chain ? (
+            <LaneBands kind={s.k} from={chest(battle.unit(s.k === "attack" ? s.actor : s.plan.actor))} to={s.k === "attack" ? chest(battle.unit(s.target)) : chest(battle.unit(s.plan.targets[0]!))} />
+          ) : (
+            <CueBands kind={s.k} at={s.k === "attack" ? chest(battle.unit(s.target)) : chest(battle.unit(s.plan.targets[0]!))} />
+          ))}
       </svg>
       {s?.k === "attack" &&
         s.weakHit === null &&
@@ -1701,6 +1725,38 @@ function CueBands({ kind, at: [cx, cy] }: { kind: "attack" | "defend"; at: [numb
       {!attack && <circle cx={cx} cy={cy} r={band.inner[0]} fill="none" stroke="#fbe8b0" strokeWidth={4} opacity={0.8} />}
       {!attack && <circle cx={cx} cy={cy} r={band.inner[1]} fill="none" stroke="#fbe8b0" strokeWidth={4} opacity={0.8} />}
       <circle cx={cx} cy={cy} r={MARK_R} fill="none" stroke="#1d1822" strokeWidth={12} opacity={0.85} />
+    </g>
+  );
+}
+
+/**
+ * A chain's lane: the track the notes slide along, from attacker to target, and the scoring zone around the mark
+ * drawn along it, as long as the (eased) window is wide at the notes' speed. A note inside the gold reads as a hit.
+ */
+function LaneBands({ kind, from, to }: { kind: "attack" | "defend"; from: [number, number]; to: [number, number] }) {
+  const attack = kind === "attack";
+  const len = Math.hypot(to[0] - from[0], to[1] - from[1]) || 1;
+  const v = len / LANE_MS;
+  const ux = (to[0] - from[0]) / len;
+  const uy = (to[1] - from[1]) / len;
+  const e = RULES.chainEase;
+  // Window edges as [early, late] ms; early sits up the lane (towards the attacker), late past the mark.
+  const outer: [number, number] = attack ? [-RULES.timing.good * e, RULES.timing.good * e] : [RULES.dodge[0] * e, RULES.dodge[1] * e];
+  const inner: [number, number] = attack ? [-RULES.timing.perfect * e, RULES.timing.perfect * e] : [RULES.parry[0] * e, RULES.parry[1] * e];
+  const at = (ms: number) => [to[0] + ux * ms * v, to[1] + uy * ms * v] as const;
+  const seg = ([a, b]: [number, number]) => {
+    const [x1, y1] = at(a);
+    const [x2, y2] = at(b);
+    return `M${x1} ${y1} L${x2} ${y2}`;
+  };
+  const [tx, ty] = at(RULES.dodge[1] * e + 160);
+  return (
+    <g className="cues lane">
+      <path d={`M${from[0]} ${from[1]} L${tx} ${ty}`} stroke="#1d1822" strokeWidth={40} strokeLinecap="round" opacity={0.55} />
+      <path d={`M${from[0]} ${from[1]} L${tx} ${ty}`} stroke="#efe3c8" strokeWidth={4} strokeDasharray="6 22" strokeLinecap="round" opacity={0.6} />
+      <path d={seg(outer)} stroke={attack ? "#ecc56a" : "#86c6f2"} strokeWidth={48} strokeLinecap="round" opacity={0.3} />
+      <path d={seg(inner)} stroke="#ecc56a" strokeWidth={48} strokeLinecap="round" opacity={0.55} />
+      <circle cx={to[0]} cy={to[1]} r={MARK_R} fill="none" stroke="#1d1822" strokeWidth={12} opacity={0.85} />
     </g>
   );
 }

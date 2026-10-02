@@ -47,6 +47,35 @@ export class Cues {
     this.rings.set(i, { el, anim });
   }
 
+  /**
+   * A chain's note `i` (Mark, 2026-10-02: chains should play like DDR): a gem that slides along the lane from the
+   * attacker to the mark at one constant speed, reaching it at its beat, so the run of notes shows the rhythm ahead
+   * by its spacing. It keeps going past the mark for the late window, then fades.
+   */
+  note(i: number, from: [number, number], to: [number, number], start: number, k: number, color: string, size: number, lead: number) {
+    if (this.rings.has(i)) return;
+    const { tail } = this.geo;
+    const el = document.createElement("div");
+    el.className = "cue-note";
+    el.style.cssText = `left:${to[0] - size / 2}px;top:${to[1] - size / 2}px;width:${size}px;height:${size}px;background:${color}`;
+    this.box.appendChild(el);
+    const dx = from[0] - to[0];
+    const dy = from[1] - to[1];
+    const past = tail / lead;
+    const anim = el.animate(
+      [
+        { transform: `translate(${dx}px,${dy}px) rotate(45deg)`, opacity: 0 },
+        { transform: `translate(${dx * 0.85}px,${dy * 0.85}px) rotate(45deg)`, opacity: 1, offset: (0.15 * lead) / (lead + tail) },
+        { transform: "translate(0px,0px) rotate(45deg)", opacity: 1, offset: lead / (lead + tail) },
+        { transform: `translate(${-dx * past}px,${-dy * past}px) rotate(45deg)`, opacity: 0 },
+      ],
+      { duration: (lead + tail) * k, easing: "linear", fill: "both" },
+    );
+    anim.startTime = start;
+    anim.finished.then(() => this.drop(i)).catch(() => undefined);
+    this.rings.set(i, { el, anim });
+  }
+
   /** Ring `i` is the one the next tap answers: it shows solid, and the rings queued behind it show dashed. */
   focus(i: number) {
     for (const [j, r] of this.rings) r.el.classList.toggle("queued", j !== i);
@@ -61,6 +90,7 @@ export class Cues {
     // Freeze where it was answered, flare white and fade (a second animation layered over the first).
     r.anim.pause();
     r.el.style.borderColor = "#fff8e6";
+    if (r.el.classList.contains("cue-note")) r.el.style.background = "#fff8e6";
     r.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: "ease-out", fill: "forwards" });
     setTimeout(() => r.el.remove(), 240);
   }

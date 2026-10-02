@@ -2640,6 +2640,19 @@
   pointer-events: none;
   box-shadow: 0 0 18px #0009;
 }
+/* A chain's notes: gems sliding along the lane onto the mark (see LaneBands). */
+.battle .cue-note {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 6px solid #fff4dc;
+  will-change: transform, opacity;
+  pointer-events: none;
+  box-shadow: 0 0 0 5px #1d1822d9, 0 0 22px #000a;
+}
+.battle .cue-note.queued {
+  border-color: #fff4dc88;
+}
 /* Rings queued behind the one the next tap answers. */
 .battle .cue-ring.queued {
   border-style: dashed;

@@ -433,3 +433,116 @@ button.guide:active {
   font-weight: 700;
   vertical-align: middle;
 }
+
+/* The purse (Mark, 2026-10-02): the balance where you choose where to go next; a tap says what each is for. */
+.purse-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0;
+  padding: 0.3em 0.8em;
+  border-radius: 999px;
+  border: 2px solid #8f642099;
+  background: #120c0899;
+  color: #f4d58c;
+  font-family: var(--serif-body);
+  font-weight: 700;
+  white-space: nowrap;
+  min-height: 44px;
+}
+.purse-chip .pc-ess {
+  color: #b9e6e2;
+}
+.purse-chip .pc-new {
+  position: absolute;
+  top: -0.45em;
+  right: -0.35em;
+  width: 1.3em;
+  height: 1.3em;
+  border-radius: 50%;
+  background: #ecc56a;
+  color: #1d1208;
+  font-style: normal;
+  font-size: 0.75em;
+  line-height: 1.3em;
+  text-align: center;
+}
+.purse-chip.unread {
+  animation: purse-call 1.6s ease-in-out infinite;
+}
+@keyframes purse-call {
+  50% { box-shadow: 0 0 0 4px #ecc56a55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .purse-chip.unread { animation: none; }
+}
+.map-title-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.stage .map-head .purse-chip.in-map {
+  font-size: 30px;
+  min-height: 64px;
+  padding: 0 20px;
+}
+.panel .gate-tools .purse-chip {
+  font-size: 16px;
+}
+.purse-part {
+  margin: 0 0 14px;
+}
+.purse-part .pp-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--display);
+  font-size: 20px;
+  color: #f4d58c;
+}
+.purse-part .pp-head b {
+  font-size: 26px;
+}
+.purse-part .pp-glyph {
+  font-size: 24px;
+}
+.purse-part p {
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+.purse-part .pp-ess {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+.purse-part .pp-ess span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.purse-part .pp-ess span.none {
+  opacity: 0.45;
+}
+.purse-part .pp-ess i {
+  font-style: normal;
+  font-size: 20px;
+}
+.purse-part .pp-ess b {
+  font-size: 20px;
+}
+.purse-part .pp-ess small {
+  color: #e8d9b8;
+  font-size: 14px;
+}
+.panel button.pp-go {
+  width: 100%;
+  margin: 4px 0 0;
+}
+.spoils-strip .ss-hint {
+  margin-top: 8px;
+  font-family: var(--serif-body);
+  font-size: 28px;
+  color: #efe3c8;
+}
